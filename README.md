@@ -614,6 +614,59 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 
 ---
 
+## 自定义提示语（Tips）
+
+游戏会在**主菜单、加载、战役胜利、战役失败**时随机显示一条提示。
+
+**所有提示都写在项目根的 `tips.txt` 里，你可以随便改。**
+
+### 怎么写
+
+一行一条，想加多少加多少：
+
+```
+薄牌组通常比厚牌组强 —— 商店可以删卡。
+遇到打不过的精英，绕开也是一种战术。
+```
+
+- 空行会被忽略
+- `#` 开头的行是注释，不会显示
+- 不用加引号、不用编号
+- **改完重启游戏生效**，不用重新打包
+
+### 想让不同场景显示不同的话
+
+用标记分节：
+
+```
+[菜单]
+只有主菜单会显示这句
+
+[加载]
+只有加载时会显示这句
+
+[胜利]
+通关时才显示
+
+[失败]
+战败时才显示
+```
+
+**没有归入任何分节的提示 = 通用提示**，上面所有场景都可能出现。
+
+### 文件在哪
+
+| 情况 | 位置 |
+|---|---|
+| 源码运行 | 项目根目录的 `tips.txt` |
+| 装了 DMG | DMG 里的 `tips.txt`（拖到桌面改也行），或放到 App 旁边 |
+| 想用自己的一份 | 放进 `~/Documents/钢铁战线/data/tips.txt`（优先级最高） |
+
+> 如果 `tips.txt` 是空的（或者全被注释掉了），游戏会显示内置的几条兜底提示，
+> 保证不会出现空白。
+
+---
+
 ## 存档管理
 
 主菜单 → **存档管理**。可以同时保留多个存档，每个都是独立文件。
@@ -1214,6 +1267,60 @@ Then double-click as usual.
 > ($99/year) and notarised; unsigned apps are blocked by default. This is normal
 > for small open-source projects and **does not mean anything is wrong** — the
 > full source is in this repository, so you can read it and build it yourself.
+
+---
+
+## Custom Tips
+
+The game shows a random tip on the **main menu, while loading, on victory and on
+defeat**.
+
+**All tips live in `tips.txt` at the project root — edit it however you like.**
+
+### Format
+
+One tip per line, as many as you want:
+
+```
+Thin decks usually beat fat decks — the shop lets you remove cards.
+Skipping an elite you cannot beat is a valid tactic.
+```
+
+- Blank lines are ignored
+- Lines starting with `#` are comments
+- No quotes, no numbering needed
+- **Restart the game to apply** — no rebuild required
+
+### Different tips for different screens
+
+Use section markers:
+
+```
+[菜单]   (or [menu])
+main menu only
+
+[加载]   (or [load])
+loading only
+
+[胜利]   (or [win])
+victory only
+
+[失败]   (or [lose])
+defeat only
+```
+
+Tips outside any section are **general** and may appear anywhere.
+
+### Where the file lives
+
+| Situation | Location |
+|---|---|
+| Running from source | `tips.txt` in the project root |
+| Installed from the DMG | `tips.txt` in the DMG (or next to the app) |
+| Your own override | `~/Documents/钢铁战线/data/tips.txt` (highest priority) |
+
+> If `tips.txt` is empty (or entirely commented out), a few built-in fallback
+> tips are shown, so the UI is never blank.
 
 ---
 
