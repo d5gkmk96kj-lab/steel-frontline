@@ -296,7 +296,7 @@ class MenuScreen(QWidget):
         try:
             import core.version as _V
             import core.i18n as _i18n_m
-            # 版本标签按语言显示：0.9.01 测试版 / 0.9.01 Beta
+            # 版本标签按语言显示：0.9.02 测试版 / 0.9.02 Beta
             _ver = "  ·  %s" % _V.short()
         except Exception:
             pass

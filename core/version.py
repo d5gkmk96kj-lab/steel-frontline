@@ -10,9 +10,9 @@ from __future__ import annotations
 # --------------------------------------------------------------------------
 # 版本
 # --------------------------------------------------------------------------
-VERSION = "0.9.01"
-VERSION_LABEL = "0.9.01 测试版"
-VERSION_LABEL_EN = "0.9.01 Beta"
+VERSION = "0.9.02"
+VERSION_LABEL = "0.9.02 测试版"
+VERSION_LABEL_EN = "0.9.02 Beta"
 
 # 版本阶段：alpha / beta / rc / stable
 STAGE = "beta"
@@ -49,17 +49,17 @@ def _is_en() -> bool:
 
 
 def _label() -> str:
-    """当前语言下的版本标签（0.9.01 测试版 / 0.9.01 Beta）。"""
+    """当前语言下的版本标签（0.9.02 测试版 / 0.9.02 Beta）。"""
     return VERSION_LABEL_EN if _is_en() else VERSION_LABEL
 
 
 def title() -> str:
-    """窗口标题：钢铁战线 Steel Frontline · v0.9.01 测试版"""
+    """窗口标题：钢铁战线 Steel Frontline · v0.9.02 测试版"""
     return "%s · v%s" % (FULL_NAME, _label())
 
 
 def short() -> str:
-    """短版本：v0.9.01 测试版 / v0.9.01 Beta"""
+    """短版本：v0.9.02 测试版 / v0.9.02 Beta"""
     return "v" + _label()
 
 

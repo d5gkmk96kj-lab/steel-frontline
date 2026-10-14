@@ -96,18 +96,33 @@ def auto_next(cur: str) -> str:
 
 def main():
     argv = sys.argv[1:]
+    auto_mode = False
     # --auto：自动在当前版本上 +0.01
     if argv and argv[0] in ("--auto", "-a", "auto"):
+        auto_mode = True
+        cur = None
+        # 直接读 core/version.py，避免依赖 import 路径
         try:
-            from core import version as _V
-            ver = auto_next(_V.VERSION)
+            import re as _re
+            src = _read("core/version.py")
+            m = _re.search(r'^VERSION\s*=\s*"([^"]+)"', src, _re.M)
+            if m:
+                cur = m.group(1)
         except Exception:
+            cur = None
+        if not cur:
+            try:
+                sys.path.insert(0, ROOT)
+                from core import version as _V
+                cur = _V.VERSION
+            except Exception:
+                cur = None
+        if not cur:
             print("读不到当前版本，请手动指定")
             return 1
+        ver = auto_next(cur)
         argv = argv[1:]
         print("自动递增 -> %s" % ver)
-    elif argv:
-        ver = argv[0].strip()
     else:
         print(__doc__)
         print("\n也可以用： python3 packaging/bump_version.py --auto \"改了什么\"")
@@ -115,7 +130,9 @@ def main():
     if not re.match(r"^\d+(\.\d+)+$", ver):
         print("版本号必须是数字点分，例如 0.9.02 或 1.0")
         return 1
-    notes = [a for a in argv[1:] if a.strip()]
+    # --auto 时 argv 里只有备注（版本号自动算）；手动指定时 argv[0] 是版本号。
+    notes = ([a for a in argv if a.strip()] if auto_mode
+             else [a for a in argv[1:] if a.strip()])
     label, label_en = set_version_file(ver)
     set_manifest(ver, notes, label, label_en)
     print("已升级到 %s" % label)
