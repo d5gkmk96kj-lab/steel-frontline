@@ -49,7 +49,7 @@
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
 >
-> 已知问题（修好前不用重复报）见 [Wiki 的 Known Issues 页](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki)。
+> 已知问题（修好前不用重复报）见 [Wiki 的 Known Issues 页](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki)已修复bug可以直接在更新日志查看（微小bug不写上去哦）
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
