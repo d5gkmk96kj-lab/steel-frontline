@@ -161,7 +161,7 @@ class GameWindow(QMainWindow):
             if not silent:
                 try:
                     from core import version as _V
-                    label = _V.VERSION_LABEL
+                    label = _V.short()
                 except Exception:
                     label = "?"
                 QMessageBox.information(

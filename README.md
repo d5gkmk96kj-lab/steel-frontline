@@ -631,13 +631,16 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 
 ### 怎么写
 
-一行一条，想加多少加多少：
+一行一条，想加多少加多少。**想同时支持中英文，就用 `|` 分开**：
 
 ```
-薄牌组通常比厚牌组强 —— 商店可以删卡。
-遇到打不过的精英，绕开也是一种战术。
+薄牌组通常比厚牌组强 —— 商店可以删卡。 | Thin decks usually beat fat decks.
+遇到打不过的精英，绕开也是一种战术。 | Skipping an unbeatable elite is valid.
+只有中文也行，英文界面会回落显示这句。
 ```
 
+- `|` 前面是中文，后面是英文
+- 只写中文也可以 —— 英文界面会回落显示中文那条（不会空白）
 - 空行会被忽略
 - `#` 开头的行是注释，不会显示
 - 不用加引号、不用编号
@@ -750,7 +753,7 @@ whale-card-battle/
 ## 开发 / 验证
 
 ```bash
-# 运行全部测试（426 个用例）
+# 运行全部测试（516 个用例）
 python3 -m unittest discover -s tests -v
 
 # 引擎与数据层冒烟
@@ -769,6 +772,41 @@ python3 tests/test_balance.py --full
 - 端到端：开局 → 战斗 → 存档读档 → 12 个界面切换，全部正常
 - 蒙特卡洛 2000 场：`act1 普通战胜率 100%`，通关率随难度单调下降
   （难度 0 → 43%，难度 20 → 5%），0 超时 0 崩溃
+
+---
+
+---
+
+## 关于素材
+
+本项目**不含任何外部素材文件**：
+
+- 所有美术均为**程序化绘制**（Tkinter Canvas / QPainter 代码生成）——坦克、碉堡、
+  飞机、铁丝网、勋章、卡面质感等全部由代码绘制，无图片文件依赖
+- 无音频文件
+- 因此**没有任何版权问题**，也不会因为缺少素材文件而无法运行
+
+---
+
+## 常见问题
+
+**Q: 提示 `No module named tkinter`？**
+macOS 自带 Python 3 已包含 tkinter。若使用自定义 Python，请安装带 tk 支持的版本。
+
+**Q: 窗口显示异常 / 卡住？**
+本机 Python 3.9 自带 Tk 8.5 在 macOS 上较旧。若遇到渲染问题，可尝试
+`qt/` 目录下的 PyQt6 版本（需先 `pip install PyQt6`）。
+
+**Q: 存档在哪？**
+`~/Documents/钢铁战线/data/saves/`（多个存档，每个一个文件）。
+成就等永久进度在 `data/meta.json`。改了 `data/` 之外的位置都不影响存档。
+
+**Q: 遇到 Bug 怎么办？**
+到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交，
+带上版本号、复现步骤和截图。详细要求见 [下载区上方的说明](#-下载--download)。
+
+**Q: 怎么玩得更好？**
+薄牌组通常强于厚牌组 —— 商店可以删卡。专注一个流派比什么都拿更强。
 
 ---
 
@@ -1298,13 +1336,15 @@ defeat**.
 
 ### Format
 
-One tip per line, as many as you want:
+One tip per line. **To support both languages, separate them with `|`**:
 
 ```
-Thin decks usually beat fat decks — the shop lets you remove cards.
-Skipping an elite you cannot beat is a valid tactic.
+Thin decks usually beat fat decks. | 薄牌组通常比厚牌组强。
+Skipping an elite is a valid tactic. | 绕开打不过的精英也是战术。
 ```
 
+- Chinese first, then `|`, then English
+- Chinese-only is fine: the English UI falls back to the Chinese line
 - Blank lines are ignored
 - Lines starting with `#` are comments
 - No quotes, no numbering needed
@@ -1407,7 +1447,7 @@ whale-card-battle/
 ## Development / Verification
 
 ```bash
-# all tests (426 cases)
+# all tests (516 cases)
 python3 -m unittest discover -s tests
 
 # engine + data smoke test
@@ -1470,36 +1510,3 @@ crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
 **Is there a mobile version?**
 No. Desktop only (macOS tested; the code is portable Python and should run on
 Linux/Windows with a Python 3.9+ interpreter, though that is untested).
-
----
-
-## 关于素材
-
-本项目**不含任何外部素材文件**：
-
-- 所有美术均为**程序化绘制**（Tkinter Canvas / QPainter 代码生成）——坦克、碉堡、
-  飞机、铁丝网、勋章、卡面质感等全部由代码绘制，无图片文件依赖
-- 无音频文件
-- 因此**没有任何版权问题**，也不会因为缺少素材文件而无法运行
-
----
-
-## 常见问题
-
-**Q: 提示 `No module named tkinter`？**
-macOS 自带 Python 3 已包含 tkinter。若使用自定义 Python，请安装带 tk 支持的版本。
-
-**Q: 窗口显示异常 / 卡住？**
-本机 Python 3.9 自带 Tk 8.5 在 macOS 上较旧。若遇到渲染问题，可尝试
-`qt/` 目录下的 PyQt6 版本（需先 `pip install PyQt6`）。
-
-**Q: 存档在哪？**
-`data/save.json`（当前局）与 `data/meta.json`（永久进度）。
-删掉即可重置进度。
-
-**Q: 遇到 Bug 怎么办？**
-到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交，
-带上版本号、复现步骤和截图。详细要求见 [下载区上方的说明](#-下载--download)。
-
-**Q: 怎么玩得更好？**
-薄牌组通常强于厚牌组 —— 商店可以删卡。专注一个流派比什么都拿更强。

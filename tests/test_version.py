@@ -96,3 +96,45 @@ class TestVersionIsSingleSourced(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestVersionLabelLanguage(unittest.TestCase):
+    """版本标签必须跟随语言（0.9.01 测试版 / 0.9.01 Beta）。"""
+
+    def setUp(self):
+        from core import i18n
+        self._old = i18n.lang()
+
+    def tearDown(self):
+        from core import i18n
+        i18n.set_lang(self._old)
+
+    def test_chinese(self):
+        from core import version as V, i18n
+        i18n.set_lang("zh")
+        self.assertIn("测试版", V.title())
+        self.assertIn("测试版", V.short())
+        self.assertIn("测试版", V.about())
+
+    def test_english(self):
+        from core import version as V, i18n
+        i18n.set_lang("en")
+        self.assertIn("Beta", V.title())
+        self.assertIn("Beta", V.short())
+        self.assertIn("Beta", V.about())
+        self.assertNotIn("测试版", V.short(),
+                         "英文界面不该出现中文版本标签")
+
+    def test_version_number_consistent(self):
+        """core/version.py 与 version.json 必须一致。"""
+        import json
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        p = os.path.join(root, "version.json")
+        if not os.path.isfile(p):
+            self.skipTest("version.json 不存在")
+        with open(p, encoding="utf-8") as f:
+            d = json.load(f)
+        from core import version as V
+        self.assertEqual(d["version"], V.VERSION)
+        self.assertEqual(d["label"], V.VERSION_LABEL)
+        self.assertEqual(d["label_en"], V.VERSION_LABEL_EN)

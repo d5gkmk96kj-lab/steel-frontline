@@ -1,34 +1,42 @@
 # 钢铁战线 · 提示语
 #
 # 一行一条，游戏每次随机挑一条显示。
+# 想中英都显示就写成：  中文 | English
 # 改完重启游戏生效。以 # 开头的行不会显示。
 
 
-
-
 # ========== 通用（主菜单/加载/胜利/失败 都可能显示）==========
-
-
+蒋介石游戏反动派AI！ | Chiang Kai-shek's reactionary AI game!
+屎山代码！ | Codebase? More like a landfill.
+英文翻译堪比土豆 | The English translation is potato-grade.
+AI：lets me fixit！ | AI: let me fix it!
 
 
 # ========== 只在主菜单显示 ==========
 [菜单]
-
-
+这个AI已经吃了我7亿tok了我求你了 | This AI has eaten 700 million of my tokens. Please.
+大心脏AI满权限！ | Big-hearted AI with full permissions!
+作者只有12岁！ | The author is only 12 years old!
+去码头整点薯条？！ | Go get some fries at the pier?!
 
 
 # ========== 只在加载时显示 ==========
 [加载]
-
-
+今天做不了明天做，明天做不了AI做 | Can't do it today, do it tomorrow. Can't tomorrow — the AI does it.
+压力一个38mb的游戏？！ | Stress-testing a 38 MB game?!
+Bug最多的其实是翻译 | The buggiest part is actually the translation.
 
 
 # ========== 只在通关时显示 ==========
 [胜利]
-
-
+38天速推法国吗 | Speedrunning France in 38 days?
+闪电战老祖？！ | The original blitzkrieg?!
+kards老玩家了 | KARDS veteran, I see.
+我去？ | Wait, what?
 
 
 # ========== 只在战败时显示 ==========
 [失败]
+LOL😂 | LOL 😂
+蒋介石都比你强哈哈哈 | Even Chiang Kai-shek beats you, hahaha
 

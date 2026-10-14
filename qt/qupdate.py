@@ -54,7 +54,7 @@ class UpdateDialog(QDialog):
         root.addWidget(title)
 
         # --- 版本对比 ---
-        cur = _V.VERSION_LABEL if _V else "?"
+        cur = _V.short() if _V else "?"
         new = info.display_label() if hasattr(info, "display_label") else info.version
         cmp_lbl = QLabel("当前版本：%s　→　最新版本：%s" % (cur, new), self)
         cmp_lbl.setStyleSheet(

@@ -297,9 +297,7 @@ class MenuScreen(QWidget):
             import core.version as _V
             import core.i18n as _i18n_m
             # 版本标签按语言显示：0.9.01 测试版 / 0.9.01 Beta
-            _lbl = (_V.VERSION_LABEL_EN if _i18n_m.is_english()
-                    else _V.VERSION_LABEL)
-            _ver = "  ·  v%s" % _lbl
+            _ver = "  ·  %s" % _V.short()
         except Exception:
             pass
         self.lbl_sub = QLabel(
@@ -2223,9 +2221,7 @@ class SettingsScreen(QWidget):
             # 那会让 _i18n 变成整个方法的局部变量，遮蔽模块级导入，
             # 导致上面语言下拉的 _i18n.LANG_ORDER 报 UnboundLocalError。
             import core.i18n as _i18n_mod
-            ver = QLabel(("v" + _V.VERSION_LABEL_EN)
-                         if _i18n_mod.is_english()
-                         else ("v" + _V.VERSION_LABEL), self)
+            ver = QLabel(_V.short(), self)
             ver.setStyleSheet(
                 f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"
                 f"background:transparent;padding-left:6px;")

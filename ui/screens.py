@@ -408,7 +408,7 @@ class MenuView(View):
         _ver = ""
         try:
             from core import version as _V
-            _ver = "  ·  v%s" % _V.VERSION_LABEL
+            _ver = "  ·  %s" % _V.short()
         except Exception:
             pass
         self.app.text_shadow(cx, h - 22,

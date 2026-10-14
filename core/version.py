@@ -39,19 +39,33 @@ BUNDLE_ID_PUBLIC = "local.steelfrontline.game.public"
 # --------------------------------------------------------------------------
 # 拼接好的显示串
 # --------------------------------------------------------------------------
+def _is_en() -> bool:
+    """当前界面语言是不是英文。取不到就当中文。"""
+    try:
+        from . import i18n
+        return bool(i18n.is_english())
+    except Exception:
+        return False
+
+
+def _label() -> str:
+    """当前语言下的版本标签（0.9.01 测试版 / 0.9.01 Beta）。"""
+    return VERSION_LABEL_EN if _is_en() else VERSION_LABEL
+
+
 def title() -> str:
-    """窗口标题：钢铁战线 Steel Frontline · v0.9 测试版"""
-    return "%s · v%s" % (FULL_NAME, VERSION_LABEL)
+    """窗口标题：钢铁战线 Steel Frontline · v0.9.01 测试版"""
+    return "%s · v%s" % (FULL_NAME, _label())
 
 
 def short() -> str:
-    """短版本：v0.9 测试版"""
-    return "v" + VERSION_LABEL
+    """短版本：v0.9.01 测试版 / v0.9.01 Beta"""
+    return "v" + _label()
 
 
 def about() -> str:
     """关于页用的一行。"""
-    return "%s v%s" % (FULL_NAME, VERSION_LABEL)
+    return "%s v%s" % (FULL_NAME, _label())
 
 
 def macos_version_string() -> str:
