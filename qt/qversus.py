@@ -994,7 +994,7 @@ class VersusScreen(QWidget):
         cb.addWidget(self.btn_cheat)
         self.cheat_input = QLineEdit(self.cheat_box)
         self.cheat_input.setFixedWidth(152)
-        self.cheat_input.setPlaceholderText("作弊码，回车")
+        self.cheat_input.setPlaceholderText(T.tr("作弊码，回车"))
         self.cheat_input.returnPressed.connect(self._submit_cheat)
         cb.addWidget(self.cheat_input)
         self.cheat_msg = QLabel("", self.cheat_box)

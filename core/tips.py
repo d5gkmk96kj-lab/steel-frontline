@@ -26,6 +26,15 @@ DEFAULT_TIPS = [
     "遇到打不过的精英，绕开也是一种战术。",
 ]
 
+# 英文模式的兜底（tips.txt 由用户自己写，中英随他；
+# 但如果文件是空的，英文界面不该蹦出中文）
+DEFAULT_TIPS_EN = [
+    "Thin decks usually beat fat decks — the shop lets you remove cards.",
+    "Spending resources early beats hoarding them: win sooner, bleed less.",
+    "Medals combine in ways you will not expect; do not judge them alone.",
+    "Skipping an elite you cannot beat is a legitimate tactic.",
+]
+
 # 按场景分节的文件标记
 SECTION_MARKERS = {
     "menu": ("[菜单]", "[menu]", "[主菜单]"),
@@ -133,10 +142,20 @@ def random_tip(scene: str = "general", rng: Optional[random.Random] = None) -> s
     scene: menu / load / win / lose / general
     找不到对应场景就用 general，再没有就用内置兜底。绝不返回空串。
     """
-    data = load()
+    # 判断内容到底来自用户的 tips.txt，还是 load() 的兜底 ——
+    # load() 已经做过兜底，不能只看它的返回值。
+    raw = _raw_file_sections()
+    from_file = any(raw.values())
+    data = raw if from_file else {}
     pool = list(data.get(scene) or []) or list(data.get("general") or [])
     if not pool:
-        pool = list(DEFAULT_TIPS)
+        # 用户文件为空（或没写这一节）-> 内置兜底，英文界面用英文的
+        try:
+            from . import i18n as _i18n
+            pool = (list(DEFAULT_TIPS_EN) if _i18n.is_english()
+                    else list(DEFAULT_TIPS))
+        except Exception:
+            pool = list(DEFAULT_TIPS)
     r = rng or random
     try:
         return str(r.choice(pool))
@@ -181,5 +200,5 @@ def count(scene: Optional[str] = None) -> int:
     return sum(len(v) for v in data.values())
 
 
-__all__ = ["DEFAULT_TIPS", "load", "reload", "tips_path", "random_tip",
+__all__ = ["DEFAULT_TIPS", "DEFAULT_TIPS_EN", "load", "reload", "tips_path", "random_tip",
            "count", "SECTION_MARKERS", "file_is_empty", "source"]

@@ -557,7 +557,7 @@ class DeckBuildScreen(QWidget):
         bar.setSpacing(9)
 
         self.ed_search = QLineEdit(self)
-        self.ed_search.setPlaceholderText("搜索卡名 / 效果关键字…")
+        self.ed_search.setPlaceholderText(T.tr("搜索卡名 / 效果关键字…"))
         self.ed_search.setFixedWidth(248)
         self.ed_search.setClearButtonEnabled(True)
         self.ed_search.textChanged.connect(self._on_search)
@@ -600,7 +600,7 @@ class DeckBuildScreen(QWidget):
 
         self.cb_reco = QComboBox(self)
         self.cb_reco.setFixedWidth(110)
-        self.cb_reco.setToolTip("推荐流派列表")
+        self.cb_reco.setToolTip(T.tr("推荐流派列表"))
         bar.addWidget(self.cb_reco)
 
         root.addLayout(bar)

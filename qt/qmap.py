@@ -548,12 +548,12 @@ class MapHUD(QFrame):
         try:
             from core import run as run_mod
             par = run_mod.ascension_params(int(run.ascension))
-            self.lbl_diff.setText(f"战役难度 {run.ascension} · {par.get('name','')}")
+            self.lbl_diff.setText(T.tr("战役难度 %d · %s") % (run.ascension, T.tr(par.get('name',''))))
         except Exception:
             self.lbl_diff.setText(f"战役难度 {run.ascension}")
         seed = getattr(run, "seed", 0)
         daily = " · 每日种子" if getattr(run, "daily", False) else ""
-        self.lbl_seed.setText(f"种子 {seed}{daily}")
+        self.lbl_seed.setText(T.tr("种子 %s") % ("%s%s" % (seed, daily)))
         self.lbl_floor.setText(f"{run.floor} 层")
         hp_ratio = float(run.hp) / max(1, float(run.max_hp))
         self.lbl_hp.setText(f"{run.hp}/{run.max_hp}")

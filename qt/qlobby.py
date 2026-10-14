@@ -339,7 +339,7 @@ class LobbyScreen(QWidget):
         jv.addWidget(j1)
 
         self.ed_ip = QLineEdit(self.join_box)
-        self.ed_ip.setPlaceholderText("例如 192.168.1.42")
+        self.ed_ip.setPlaceholderText(T.tr("例如 192.168.1.42"))
         self.ed_ip.setMinimumHeight(52)
         self.ed_ip.setStyleSheet(
             f"QLineEdit{{background:{T.PANEL_LO}; border:1px solid {T.BORDER};"

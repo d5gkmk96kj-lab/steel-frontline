@@ -1096,6 +1096,40 @@ def install_i18n_patch() -> None:
     except Exception:
         pass
 
+    # QComboBox 的下拉项也是玩家可见文案，一并翻译。
+    try:
+        from PyQt6.QtWidgets import QComboBox
+
+        def _wrap_combo(name):
+            orig = getattr(QComboBox, name, None)
+            if orig is None or getattr(orig, "_i18n_wrapped", False):
+                return
+
+            def patched(self, *a, **kw):
+                try:
+                    if name == "addItems" and a and isinstance(a[0], (list, tuple)):
+                        a = ([_i18n.t(x) for x in a[0]],) + tuple(a[1:])
+                    elif name in ("addItem", "setItemText") and len(a) >= 1:
+                        idx = 0 if name == "addItem" else 1
+                        if len(a) > idx and isinstance(a[idx], str):
+                            a = list(a)
+                            a[idx] = _i18n.t(a[idx])
+                            a = tuple(a)
+                except Exception:
+                    pass
+                return orig(self, *a, **kw)
+
+            patched._i18n_wrapped = True
+            try:
+                setattr(QComboBox, name, patched)
+            except Exception:
+                pass
+
+        for _n in ("addItem", "addItems", "setItemText"):
+            _wrap_combo(_n)
+    except Exception:
+        pass
+
     classes = [QLabel, QPushButton, QCheckBox, QRadioButton, QGroupBox]
     if QAction is not None:
         classes.append(QAction)

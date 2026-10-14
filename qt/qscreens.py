@@ -299,7 +299,7 @@ class MenuScreen(QWidget):
         except Exception:
             pass
         self.lbl_sub = QLabel(
-            "STEEL FRONTLINE  ·  装甲战争 · 卡牌构筑  ·  🤖 全部由 AI 生成" + _ver,
+            T.tr("STEEL FRONTLINE  ·  装甲战争 · 卡牌构筑  ·  🤖 全部由 AI 生成") + _ver,
             left)
         self.lbl_sub.setStyleSheet(
             f"color:{T.TEXT_DIM}; font-size:{T.FONT_H2-3}px; "
@@ -409,7 +409,7 @@ class MenuScreen(QWidget):
         rv.addWidget(W.SectionTitle("自 定 义 种 子", right))
         seed_row = QHBoxLayout()
         self.edit_seed = QLineEdit(right)
-        self.edit_seed.setPlaceholderText("留空 = 随机种子")
+        self.edit_seed.setPlaceholderText(T.tr("留空 = 随机种子"))
         seed_row.addWidget(self.edit_seed, 1)
         btn_dice = QPushButton("随机", right)
         btn_dice.setFixedWidth(70)
@@ -661,7 +661,7 @@ class RewardScreen(QWidget):
         self._picked = False
         self._gold = int(gold)
         self.tb.subtitle = f"第 {run.act} 幕 · 已推进 {run.floor} 层"
-        self.lbl_gold.setText(f"缴获 {gold} 金币" if gold else "")
+        self.lbl_gold.setText(T.tr("缴获 %d 金币") % gold if gold else "")
         self.btn_skip.setEnabled(True)
         self.btn_skip.setText("放 弃 奖 励")
 
@@ -842,7 +842,7 @@ class ShopScreen(QWidget):
 
     def setup(self, run, inv: Optional[Dict] = None) -> None:
         self.tb.subtitle = f"第 {run.act} 幕 · 战役难度 {run.ascension}"
-        self.lbl_gold.setText(f"金币 {run.gold}")
+        self.lbl_gold.setText(T.tr("金币 %d") % run.gold)
         if inv is None:
             try:
                 from core import events as EV
@@ -859,7 +859,7 @@ class ShopScreen(QWidget):
         dicts, extra = [], {}
         for i, cd in enumerate(inv.get("cards", [])):
             dicts.append(RewardScreen._card_dict(cd))
-            extra[i] = f"{prices.get(cd.id, '?')} 金币"
+            extra[i] = T.tr("%s 金币") % prices.get(cd.id, '?')
         self.card_page.set_cards(dicts, payloads=[c.id for c in inv.get("cards", [])],
                                  extra=extra)
 
@@ -879,7 +879,7 @@ class ShopScreen(QWidget):
                               "rarity": rd.rarity, "counter": -1}, box, size=64)
             bv.addWidget(rv, 0, Qt.AlignmentFlag.AlignHCenter)
             price = int(rprices.get(rd.id, 0))
-            lbl = QLabel(f"{rd.name}\n{price} 金币", box)
+            lbl = QLabel(T.tr("%s\n%d 金币") % (T.tr(rd.name), price), box)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setWordWrap(True)
             lbl.setFixedWidth(170)
@@ -916,7 +916,7 @@ class ShopScreen(QWidget):
                                tooltip=pnames.get(pid, pid))
             bv.addWidget(art, 0, Qt.AlignmentFlag.AlignHCenter)
             nm = pnames.get(pid, str(pid))
-            lbl = QLabel(f"{nm}\n{pprice} 金币", box)
+            lbl = QLabel(T.tr("%s\n%d 金币") % (T.tr(nm), pprice), box)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setWordWrap(True)
             lbl.setFixedWidth(160)
@@ -934,9 +934,9 @@ class ShopScreen(QWidget):
             self.potion_lay.addWidget(box)
 
         self.lbl_remove.setText(
-            f"战地工兵可以帮你从牌组中移除一张卡牌。\n"
-            f"当前价格：{int(inv.get('remove_price', 75))} 金币"
-            f"（每次移除后价格会上涨）")
+            T.tr("战地工兵可以帮你从牌组中移除一张卡牌。\n"
+                 "当前价格：%d 金币（每次移除后价格会上涨）")
+            % int(inv.get('remove_price', 75)))
 
     def _on_card(self, idx: int, payload) -> None:
         prices = self._inv.get("card_prices", {}) or {}
@@ -1030,7 +1030,7 @@ class RestScreen(QWidget):
     def setup(self, run) -> None:
         self.tb.subtitle = f"第 {run.act} 幕 · 第 {run.floor} 层"
         heal = run.rest_heal_amount() if hasattr(run, "rest_heal_amount") else 20
-        self.lbl_hp.setText(f"总部耐久 {run.hp} / {run.max_hp}")
+        self.lbl_hp.setText(T.tr("总部耐久 %d / %d") % (run.hp, run.max_hp))
         # Qt 的 QLabel 只在字符串**以标签开头**时按富文本渲染。旧代码把
         # <b> 放在中间，于是标签被当成纯文本显示出来（用户看到的
         # 「回复 <b style='color:#6B7F3A'>22</b> 点…」）。
@@ -1369,7 +1369,7 @@ class DeckScreen(QWidget):
             d["upgraded"] = int(getattr(ci, "upgraded", 0) or 0)
             dicts.append(d)
         self.scroll.set_cards(dicts, payloads=[c.uid for c in out], footer=False)
-        self.lbl_count.setText(f"显示 {len(out)} / {len(self._cards)} 张")
+        self.lbl_count.setText(T.tr("显示 %d / %d 张") % (len(out), len(self._cards)))
 
     def _on_pick(self, idx: int, payload) -> None:
         if self.select_mode and payload is not None:
@@ -2215,7 +2215,13 @@ class SettingsScreen(QWidget):
 
         try:
             from core import version as _V
-            ver = QLabel("v" + _V.VERSION_LABEL, self)
+            # 注意：不要在这里 `from core import i18n as _i18n` ——
+            # 那会让 _i18n 变成整个方法的局部变量，遮蔽模块级导入，
+            # 导致上面语言下拉的 _i18n.LANG_ORDER 报 UnboundLocalError。
+            import core.i18n as _i18n_mod
+            ver = QLabel(("v" + _V.VERSION_LABEL_EN)
+                         if _i18n_mod.is_english()
+                         else ("v" + _V.VERSION_LABEL), self)
             ver.setStyleSheet(
                 f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"
                 f"background:transparent;padding-left:6px;")
