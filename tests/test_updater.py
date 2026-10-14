@@ -41,10 +41,57 @@ class TestVersionCompare(unittest.TestCase):
         self.assertFalse(U.is_newer(None, "0.9"))
 
     def test_parse_version(self):
-        self.assertEqual(U.parse_version("0.10.2"), (0, 10, 2))
-        self.assertEqual(U.parse_version("v1.2"), (1, 2))
-        self.assertEqual(U.parse_version("garbage"), (0,))
-        self.assertEqual(U.parse_version(""), (0,))
+        # 每段编成 (数值, 原始长度)，用来区分 0.9.01 与 0.9.1
+        self.assertEqual(U.parse_version("0.10.2"), ((0, 1), (10, 2), (2, 1)))
+        self.assertEqual(U.parse_version("v1.2"), ((1, 1), (2, 1)))
+        self.assertEqual(U.parse_version("garbage"), ((0, 1),))
+        self.assertEqual(U.parse_version(""), ((0, 1),))
+
+    def test_patch_numbering_sequence(self):
+        """0.9.01 起每次 +0.01 的整条序列必须严格递增。"""
+        seq = ["0.9", "0.9.01", "0.9.02", "0.9.09", "0.9.10",
+               "0.9.99", "0.10", "0.10.01", "1.0"]
+        for a, b in zip(seq, seq[1:]):
+            with self.subTest(a=a, b=b):
+                self.assertTrue(U.is_newer(b, a), "%s 应该比 %s 新" % (b, a))
+                self.assertFalse(U.is_newer(a, b), "%s 不该比 %s 新" % (a, b))
+
+    def test_same_version_not_newer(self):
+        for v in ("0.9", "0.9.01", "0.9.10", "1.0"):
+            with self.subTest(v=v):
+                self.assertFalse(U.is_newer(v, v))
+
+    def test_leading_zero_distinguished(self):
+        """0.9.01 与 0.9.1 不是同一个版本（补零编号要能区分）。"""
+        self.assertTrue(U.is_newer("0.9.01", "0.9.1"))
+        self.assertFalse(U.is_newer("0.9.1", "0.9.01"))
+
+
+class TestAutoBump(unittest.TestCase):
+    """发版脚本的自动 +0.01。"""
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        spec = importlib.util.spec_from_file_location(
+            "bv", os.path.join(root, "packaging", "bump_version.py"))
+        cls.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.m)
+
+    def test_sequence(self):
+        cases = {"0.9": "0.9.01", "0.9.01": "0.9.02", "0.9.09": "0.9.10",
+                 "0.9.99": "0.10", "0.10": "0.10.01", "0.10.01": "0.10.02"}
+        for cur, want in cases.items():
+            with self.subTest(cur=cur):
+                self.assertEqual(self.m.auto_next(cur), want)
+
+    def test_bumped_is_newer(self):
+        for cur in ("0.9", "0.9.01", "0.9.98", "0.10"):
+            with self.subTest(cur=cur):
+                nxt = self.m.auto_next(cur)
+                self.assertTrue(U.is_newer(nxt, cur),
+                                "%s -> %s 应该更新" % (cur, nxt))
 
 
 class TestManifest(unittest.TestCase):

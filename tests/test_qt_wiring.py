@@ -360,3 +360,73 @@ class TestCheatEndsBattleUi(unittest.TestCase):
         self.assertTrue(callable(CH._battle_over_hook),
                         "没有注册战斗结束钩子，兑换码会导致卡死")
         w.close()
+
+
+@unittest.skipUnless(_qt_ok(), "PyQt6 不可用")
+class TestLanLobbyAdvance(unittest.TestCase):
+    """联机：连上后必须进入卡组构筑。
+
+    回归：connected 事件原本只改状态文字，而 connected 信号要等到
+    收到 start 才发，start 又需要双方都 send_deck —— 玩家根本没机会
+    去编卡组，于是永远卡在「正在交换卡组…」（用户实际遇到）。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+        import qt.qtheme as T
+        T.install_i18n_patch()
+
+    def setUp(self):
+        import tempfile
+        from core import run as run_mod
+        self.tmp = tempfile.mkdtemp(prefix="sf_lan_")
+        self._old = (run_mod.DATA_DIR, run_mod.SAVE_PATH)
+        run_mod.DATA_DIR = self.tmp
+        run_mod.SAVE_PATH = os.path.join(self.tmp, "save.json")
+        self._nets = []
+
+    def tearDown(self):
+        from core import run as run_mod
+        for n in self._nets:
+            try:
+                n.close()
+            except Exception:
+                pass
+        run_mod.DATA_DIR, run_mod.SAVE_PATH = self._old
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _pump(self, ms=200):
+        from PyQt6.QtCore import QEventLoop, QTimer
+        l = QEventLoop()
+        QTimer.singleShot(ms, l.quit)
+        l.exec()
+
+    def test_join_advances_to_deckbuild(self):
+        from core import netplay as N
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+
+        host = N.Host(name="房主", port=45888)
+        self.assertTrue(host.start(), "测试用房间没开起来")
+        self._nets.append(host)
+
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.show_screen("lobby")
+        self._pump(150)
+        lb = w.screens["lobby"]
+        lb.sp_jport.setValue(45888)
+        lb.ed_ip.setText("127.0.0.1")
+        lb.btn_join_now.click()
+        self._pump(1500)
+        self._nets.append(lb.client)
+
+        cur = w.stack.currentWidget().__class__.__name__
+        self.assertEqual(cur, "DeckBuildScreen",
+                         "连上后没进入卡组构筑，界面卡在大厅")
+        self.assertIsNotNone(w._net, "联机对象没有交给主窗口")
+        w.close()

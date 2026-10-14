@@ -63,15 +63,59 @@ def set_manifest(new_ver, notes, label, label_en):
     _write(p, json.dumps(d, ensure_ascii=False, indent=2) + "\n")
 
 
+def auto_next(cur: str) -> str:
+    """按「每发一次加 0.01」推进末段。
+
+        0.9     -> 0.9.01
+        0.9.01  -> 0.9.02
+        0.9.09  -> 0.9.10
+        0.9.99  -> 0.10        (进位)
+        0.10    -> 0.10.01
+    """
+    cur = str(cur or "").strip().lstrip("vV")
+    parts = cur.split(".")
+    if len(parts) < 3:
+        # 只有 X.Y -> 补一个 .01
+        return ".".join(parts[:2]) + ".01"
+    try:
+        last = int(re.sub(r"\D", "", parts[-1]) or "0")
+    except Exception:
+        last = 0
+    last += 1
+    width = max(2, len(re.sub(r"\D", "", parts[-1])))
+    if last >= 10 ** width:            # 99 -> 100，进位到上一段
+        head = parts[:-1]
+        try:
+            head[-1] = str(int(head[-1]) + 1)   # 0.9.99 -> 0.10
+        except Exception:
+            head.append("1")
+        return ".".join(head)
+    parts[-1] = str(last).zfill(2)
+    return ".".join(parts)
+
+
 def main():
-    if len(sys.argv) < 2:
+    argv = sys.argv[1:]
+    # --auto：自动在当前版本上 +0.01
+    if argv and argv[0] in ("--auto", "-a", "auto"):
+        try:
+            from core import version as _V
+            ver = auto_next(_V.VERSION)
+        except Exception:
+            print("读不到当前版本，请手动指定")
+            return 1
+        argv = argv[1:]
+        print("自动递增 -> %s" % ver)
+    elif argv:
+        ver = argv[0].strip()
+    else:
         print(__doc__)
+        print("\n也可以用： python3 packaging/bump_version.py --auto \"改了什么\"")
         return 1
-    ver = sys.argv[1].strip()
-    if not re.match(r"^\d+(\.\d+)*$", ver):
-        print("版本号必须是纯数字点分，例如 0.10 或 1.0")
+    if not re.match(r"^\d+(\.\d+)+$", ver):
+        print("版本号必须是数字点分，例如 0.9.02 或 1.0")
         return 1
-    notes = [a for a in sys.argv[2:] if a.strip()]
+    notes = [a for a in argv[1:] if a.strip()]
     label, label_en = set_version_file(ver)
     set_manifest(ver, notes, label, label_en)
     print("已升级到 %s" % label)

@@ -1,22 +1,30 @@
 {
-  "version": "0.9",
-  "label": "0.9 测试版",
-  "label_en": "0.9 Beta",
+  "version": "0.9.01",
+  "label": "0.9.01 测试版",
+  "label_en": "0.9.01 Beta",
   "released": "2026-10-14",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "首次公开测试版",
-    "单人战役：134 张卡 / 53 种敌人 / 31 个事件 / 52 个勋章",
-    "局域网 1v1 对战",
-    "中英双语，设置界面可切换",
-    "多存档管理，支持导入导出分享"
+    "修复：控制台输入 kill / win 后界面卡死",
+    "修复：「保存并关闭」不保存战役进度",
+    "修复：局域网联机连上后卡在「正在交换卡组」，无法进入对战",
+    "修复：App 签名损坏，导致新机「隐私与安全性」里没有「仍要打开」按钮",
+    "修复：英文版遗漏 38 处翻译",
+    "新增：存档管理（多存档 / 导入导出分享）",
+    "新增：检查更新，发现新版本会列出修复与新增内容",
+    "新增：清理旧版本（不会删除存档）",
+    "新增：自定义提示语 tips.txt"
   ],
   "notes_en": [
-    "First public beta",
-    "Solo campaign: 134 cards / 53 enemies / 31 events / 52 medals",
-    "LAN 1v1 versus mode",
-    "Chinese and English, switchable in Settings",
-    "Multi-slot saves with import/export for sharing"
+    "Fix: console kill / win froze the interface",
+    "Fix: 'Save & Close' did not save campaign progress",
+    "Fix: LAN versus hung on 'exchanging decks' after connecting",
+    "Fix: broken app signature removed the 'Open Anyway' button on new Macs",
+    "Fix: 38 untranslated strings in the English build",
+    "New: save management (multiple slots / import-export)",
+    "New: update checker listing fixes and new features",
+    "New: clean up old versions (never deletes saves)",
+    "New: custom tips via tips.txt"
   ]
 }

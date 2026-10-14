@@ -79,8 +79,28 @@ def _candidate_paths() -> List[str]:
     return out
 
 
+def split_bilingual(line: str) -> tuple:
+    """把「中文 | 英文」拆成两半。
+
+    支持的分隔符：主用 ``|``，也兼容全角 ``｜``。
+    没写英文时返回 (中文, "")，英文界面就回落到中文那条。
+
+        薄牌组通常比厚牌组强。 | Thin decks usually beat fat decks.
+
+    ->  ("薄牌组通常比厚牌组强。", "Thin decks usually beat fat decks.")
+    """
+    for sep in ("|", "｜"):
+        if sep in line:
+            zh, _, en = line.partition(sep)
+            return zh.strip(), en.strip()
+    return line.strip(), ""
+
+
 def _parse(text: str) -> dict:
-    """解析 tips.txt，支持 [菜单] / [胜利] 这类分节标记。"""
+    """解析 tips.txt，支持 [菜单] / [胜利] 这类分节标记。
+
+    返回值里每条都是 ``(中文, 英文)`` 二元组；英文为空表示只写了中文。
+    """
     sections: dict = {"general": []}
     cur = "general"
     for raw in str(text or "").splitlines():
@@ -97,7 +117,7 @@ def _parse(text: str) -> dict:
             cur = matched
             sections.setdefault(cur, [])
             continue
-        sections.setdefault(cur, []).append(line)
+        sections.setdefault(cur, []).append(split_bilingual(line))
     return sections
 
 
@@ -147,15 +167,30 @@ def random_tip(scene: str = "general", rng: Optional[random.Random] = None) -> s
     raw = _raw_file_sections()
     from_file = any(raw.values())
     data = raw if from_file else {}
-    pool = list(data.get(scene) or []) or list(data.get("general") or [])
-    if not pool:
-        # 用户文件为空（或没写这一节）-> 内置兜底，英文界面用英文的
-        try:
-            from . import i18n as _i18n
-            pool = (list(DEFAULT_TIPS_EN) if _i18n.is_english()
-                    else list(DEFAULT_TIPS))
-        except Exception:
-            pool = list(DEFAULT_TIPS)
+    entries = list(data.get(scene) or []) or list(data.get("general") or [])
+
+    try:
+        from . import i18n as _i18n
+        want_en = _i18n.is_english()
+    except Exception:
+        want_en = False
+
+    if entries:
+        # 每条是 (zh, en)。英文界面优先取英文；没写英文就回落中文，
+        # 保证英文界面也不会空白。
+        pool = []
+        for item in entries:
+            if isinstance(item, (tuple, list)) and len(item) >= 2:
+                zh, en = item[0], item[1]
+            else:
+                zh, en = str(item), ""
+            pick = (en or zh) if want_en else (zh or en)
+            if pick:
+                pool.append(pick)
+    else:
+        # 文件里没内容 -> 内置兜底
+        pool = list(DEFAULT_TIPS_EN) if want_en else list(DEFAULT_TIPS)
+
     r = rng or random
     try:
         return str(r.choice(pool))

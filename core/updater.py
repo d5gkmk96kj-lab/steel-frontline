@@ -50,12 +50,39 @@ TIMEOUT = 6
 # 版本号比较
 # --------------------------------------------------------------------------
 def parse_version(text: str) -> tuple:
-    """把 "0.10.2" 解析成 (0, 10, 2)。非数字段丢弃。
+    """解析版本号成可比较的元组。
 
-    这样 ``0.10`` 才会正确地大于 ``0.9``（字符串比较会反过来）。
+    规则：按点分段，**保留每段的前导零信息**，这样
+    ``0.9.01`` 与 ``0.9.1`` 不会被当成同一个版本。
+
+        0.9     -> (0, 9)
+        0.9.01  -> (0, 9, 1)   但记录"本段有前导零"
+        0.9.1   -> (0, 9, 1)   无前导零
+
+    为了区分，这里把每段编成 ``(数值, 原始长度)``：数值先比，
+    数值相同再比原始长度 —— 于是 0.9.01 (长度3) > 0.9.1 (长度2)。
+    这也符合直觉：补零编号是「同一个大版本的后续小更新」。
+
+    非数字段（如 ``v``、``beta``）直接丢弃。
     """
-    parts = re.findall(r"\d+", str(text or ""))
-    return tuple(int(p) for p in parts) if parts else (0,)
+    raw = str(text or "").strip().lstrip("vV")
+    if not raw:
+        return ((0, 1),)
+    out = []
+    for seg in raw.split("."):
+        digits = re.sub(r"\D", "", seg)
+        if not digits:
+            continue
+        out.append((int(digits), len(digits)))
+    return tuple(out) if out else ((0, 1),)
+
+
+def version_key(text: str):
+    """把版本号转成可直接比较的键（补零对齐，避免长度不同没法比）。"""
+    t = parse_version(text)
+    # 统一到 4 段，缺的补 (0,1)，这样 0.9 与 0.9.01 也能比较
+    pad = ((0, 1),) * max(0, 4 - len(t))
+    return t + pad
 
 
 def is_newer(remote: str, local: str = "") -> bool:
@@ -63,7 +90,7 @@ def is_newer(remote: str, local: str = "") -> bool:
     if not remote:
         return False
     try:
-        return parse_version(remote) > parse_version(local or V.VERSION)
+        return version_key(remote) > version_key(local or V.VERSION)
     except Exception:
         return False
 
@@ -216,6 +243,6 @@ def open_download_page(url: str = "") -> bool:
 
 __all__ = [
     "MANIFEST_URL", "DOWNLOAD_PAGE", "UpdateInfo",
-    "parse_version", "is_newer", "parse_manifest", "fetch_manifest",
+    "parse_version", "version_key", "is_newer", "parse_manifest", "fetch_manifest",
     "check_for_update", "check_async", "open_download_page",
 ]

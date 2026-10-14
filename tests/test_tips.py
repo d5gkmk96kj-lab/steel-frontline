@@ -19,29 +19,30 @@ class TestParse(unittest.TestCase):
 
     def test_basic_lines(self):
         d = tips._parse("第一条\n第二条\n\n第三条\n")
-        self.assertEqual(d["general"], ["第一条", "第二条", "第三条"])
+        self.assertEqual(d["general"],
+                         [("第一条", ""), ("第二条", ""), ("第三条", "")])
 
     def test_comments_and_blanks_ignored(self):
         d = tips._parse("# 注释\n\n真的提示\n   \n# 又一条注释\n")
-        self.assertEqual(d["general"], ["真的提示"])
+        self.assertEqual(d["general"], [("真的提示", "")])
 
     def test_sections(self):
         text = "通用一\n[菜单]\n菜单一\n菜单二\n[胜利]\n胜利一\n"
         d = tips._parse(text)
-        self.assertEqual(d["general"], ["通用一"])
-        self.assertEqual(d["menu"], ["菜单一", "菜单二"])
-        self.assertEqual(d["win"], ["胜利一"])
+        self.assertEqual(d["general"], [("通用一", "")])
+        self.assertEqual(d["menu"], [("菜单一", ""), ("菜单二", "")])
+        self.assertEqual(d["win"], [("胜利一", "")])
 
     def test_english_section_markers(self):
         d = tips._parse("[menu]\nA\n[load]\nB\n[win]\nC\n[lose]\nD\n")
-        self.assertEqual(d["menu"], ["A"])
-        self.assertEqual(d["load"], ["B"])
-        self.assertEqual(d["win"], ["C"])
-        self.assertEqual(d["lose"], ["D"])
+        self.assertEqual(d["menu"], [("A", "")])
+        self.assertEqual(d["load"], [("B", "")])
+        self.assertEqual(d["win"], [("C", "")])
+        self.assertEqual(d["lose"], [("D", "")])
 
     def test_whitespace_trimmed(self):
         d = tips._parse("   前后有空格   \n")
-        self.assertEqual(d["general"], ["前后有空格"])
+        self.assertEqual(d["general"], [("前后有空格", "")])
 
     def test_empty_text(self):
         d = tips._parse("")
@@ -141,3 +142,58 @@ class TestFileHandling(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestBilingual(unittest.TestCase):
+    """中文 | 英文 一行两条。"""
+
+    def test_split(self):
+        self.assertEqual(tips.split_bilingual("中文A | English B"),
+                         ("中文A", "English B"))
+        self.assertEqual(tips.split_bilingual("中文A｜English B"),
+                         ("中文A", "English B"))
+        self.assertEqual(tips.split_bilingual("只有中文"), ("只有中文", ""))
+
+    def test_parse_keeps_pairs(self):
+        d = tips._parse("甲 | Alpha\n乙\n")
+        self.assertEqual(d["general"], [("甲", "Alpha"), ("乙", "")])
+
+    def test_language_picks_right_half(self):
+        from core import i18n
+        s = open('tips.txt', encoding='utf-8').read() if os.path.isfile('tips.txt') else ''
+        p = os.path.join(tempfile.mkdtemp(prefix="sf_bi_"), "tips.txt")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("中文甲 | EnglishA\n中文乙 | EnglishB\n")
+        old = tips._candidate_paths
+        old_lang = i18n.lang()
+        try:
+            tips._candidate_paths = lambda: [p]
+            tips.reload()
+            i18n.set_lang("en")
+            got = {tips.random_tip("general") for _ in range(20)}
+            self.assertEqual(got, {"EnglishA", "EnglishB"})
+            i18n.set_lang("zh")
+            got = {tips.random_tip("general") for _ in range(20)}
+            self.assertEqual(got, {"中文甲", "中文乙"})
+        finally:
+            i18n.set_lang(old_lang)
+            tips._candidate_paths = old
+            tips.reload()
+
+    def test_english_falls_back_to_chinese(self):
+        """只写了中文时，英文界面也要有内容（回落中文）。"""
+        from core import i18n
+        p = os.path.join(tempfile.mkdtemp(prefix="sf_bi2_"), "tips.txt")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("只有中文\n")
+        old = tips._candidate_paths
+        old_lang = i18n.lang()
+        try:
+            tips._candidate_paths = lambda: [p]
+            tips.reload()
+            i18n.set_lang("en")
+            self.assertEqual(tips.random_tip("general"), "只有中文")
+        finally:
+            i18n.set_lang(old_lang)
+            tips._candidate_paths = old
+            tips.reload()

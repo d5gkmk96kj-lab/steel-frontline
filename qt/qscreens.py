@@ -294,8 +294,12 @@ class MenuScreen(QWidget):
 
         _ver = ""
         try:
-            from core import version as _V
-            _ver = "  ·  v%s" % _V.VERSION_LABEL
+            import core.version as _V
+            import core.i18n as _i18n_m
+            # 版本标签按语言显示：0.9.01 测试版 / 0.9.01 Beta
+            _lbl = (_V.VERSION_LABEL_EN if _i18n_m.is_english()
+                    else _V.VERSION_LABEL)
+            _ver = "  ·  v%s" % _lbl
         except Exception:
             pass
         self.lbl_sub = QLabel(
