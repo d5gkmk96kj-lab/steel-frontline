@@ -84,6 +84,21 @@ class Console:
     _COLORS = {"ok": "#7BC950", "err": "#A8322D", "gold": "#C9A227",
                "dim": "#9AB0C6", "text": "#E8E2D4"}
 
+    def _notify_battle_over(self) -> None:
+        """让战斗界面走正常的结束流程（含结算跳转）。"""
+        try:
+            view = getattr(self.app, "view", None)
+            fn = getattr(view, "_check_end", None)
+            if callable(fn):
+                fn()
+                return
+            # 退路：直接推进结算
+            run = getattr(self.app, "run", None)
+            if run is not None:
+                self.app.show("reward")
+        except Exception:
+            pass
+
     def _say(self, text: str, kind: str = "text") -> None:
         self.lines.append((str(text), kind))
         if len(self.lines) > 120:
@@ -273,6 +288,9 @@ class Console:
                 b._check_end()
             except Exception:
                 pass
+            # 必须通知**界面**战斗结束了。只调引擎的 _check_end()，
+            # BattleView.finished 仍是 False，画面会卡在战斗里按不动。
+            self._notify_battle_over()
             self._say("已肃清全部敌人。", "ok")
             return
 

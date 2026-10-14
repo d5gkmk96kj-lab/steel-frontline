@@ -239,3 +239,124 @@ class TestSaveScreenWiring(unittest.TestCase):
         self.assertEqual(saved.get("hp"), 77,
                          "设置界面没有保存战役进度")
         w.close()
+
+
+@unittest.skipUnless(_qt_ok(), "PyQt6 不可用")
+class TestConsoleKillWin(unittest.TestCase):
+    """控制台 kill / win 必须真的结束战斗。
+
+    回归：过去只调引擎的 _check_end()，界面层不知情，
+    画面卡在战斗里什么键都按不动（用户实际报告）。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+        import qt.qtheme as T
+        T.install_i18n_patch()
+
+    def _pump(self, ms=200):
+        from PyQt6.QtCore import QEventLoop, QTimer
+        l = QEventLoop()
+        QTimer.singleShot(ms, l.quit)
+        l.exec()
+
+    def _battle_window(self):
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.start_new_run(0, None)
+        self._pump(250)
+        w.start_battle({"kind": "normal",
+                        "enemies": ["infantry_squad"], "name": "t"})
+        self._pump(500)
+        return w
+
+    def _run_cmd(self, w, cmd):
+        w.console._run(cmd)
+        self._pump(1600)
+
+    def test_kill_leaves_battle(self):
+        w = self._battle_window()
+        self.assertEqual(w.stack.currentWidget().__class__.__name__,
+                         "BattleScreen", "没能进入战斗，测试前提不成立")
+        self._run_cmd(w, "kill")
+        cur = w.stack.currentWidget().__class__.__name__
+        self.assertNotEqual(cur, "BattleScreen",
+                            "kill 之后仍卡在战斗界面")
+        self.assertTrue(all(e.hp <= 0 for e in (w.battle.enemies or []))
+                        if w.battle else True)
+        w.close()
+
+    def test_win_leaves_battle(self):
+        w = self._battle_window()
+        self._run_cmd(w, "win")
+        cur = w.stack.currentWidget().__class__.__name__
+        self.assertNotEqual(cur, "BattleScreen",
+                            "win 之后仍卡在战斗界面")
+        w.close()
+
+    def test_kill_outside_battle_says_so(self):
+        """不在战斗中时只提示，不崩。"""
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.console._run("kill")      # 不应抛异常
+        self._pump(200)
+        w.close()
+
+
+@unittest.skipUnless(_qt_ok(), "PyQt6 不可用")
+class TestCheatEndsBattleUi(unittest.TestCase):
+    """兑换码结束战斗后，界面也必须跟着走（与 kill/win 同一类 bug）。"""
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+        import qt.qtheme as T
+        T.install_i18n_patch()
+
+    def _pump(self, ms=200):
+        from PyQt6.QtCore import QEventLoop, QTimer
+        l = QEventLoop()
+        QTimer.singleShot(ms, l.quit)
+        l.exec()
+
+    def test_annex_all_leaves_battle(self):
+        from qt.qapp import MainWindow
+        from core import cheats as CH
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.start_new_run(0, None)
+        self._pump(250)
+        w.start_battle({"kind": "normal",
+                        "enemies": ["infantry_squad"], "name": "t"})
+        self._pump(500)
+        self.assertEqual(w.stack.currentWidget().__class__.__name__,
+                         "BattleScreen")
+        CH.CheatRegistry().redeem("annex all", battle=w.battle)
+        self._pump(1800)
+        cur = w.stack.currentWidget().__class__.__name__
+        self.assertNotEqual(cur, "BattleScreen",
+                            "annex all 之后界面卡在战斗里")
+        w.close()
+
+    def test_hook_registered(self):
+        """主窗口初始化时应注册战斗结束钩子。"""
+        from qt.qapp import MainWindow
+        from core import cheats as CH
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(250)
+        self.assertTrue(callable(CH._battle_over_hook),
+                        "没有注册战斗结束钩子，兑换码会导致卡死")
+        w.close()

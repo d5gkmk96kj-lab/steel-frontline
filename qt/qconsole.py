@@ -134,6 +134,40 @@ class ConsoleOverlay(QWidget):
                "gold": T.Q_GOLD.name(), "dim": T.Q_TEXT_DIM.name(),
                "text": T.Q_TEXT.name()}
 
+    def _notify_battle_over(self, app) -> None:
+        """让对战界面走正常的结束流程（含横幅与结算跳转）。
+
+        控制台直接改引擎状态后，界面层并不知情；这里补上这一步。
+        """
+        try:
+            bs = None
+            screens = getattr(app, "screens", None)
+            if isinstance(screens, dict):
+                bs = screens.get("battle")
+            if bs is None:
+                bs = getattr(app, "battle_view", None)
+            if bs is None:
+                return
+            # 优先用界面自己的 _check_end（它会播横幅并 emit battle_finished）
+            fn = getattr(bs, "_check_end", None)
+            if callable(fn):
+                fn()
+                return
+            # 退路：直接发信号
+            sig = getattr(bs, "battle_finished", None)
+            if sig is not None:
+                res = "ongoing"
+                try:
+                    res = str(app.battle.result())
+                except Exception:
+                    res = "won"
+                if res not in ("won", "lost"):
+                    res = "won"
+                sig.emit(res)
+        except Exception as exc:
+            print("[qconsole] notify battle over failed: %r" % (exc,),
+                  flush=True)
+
     def _say(self, text: str, kind: str = "text") -> None:
         self.lines.append((str(text), kind))
         if len(self.lines) > 200:
@@ -330,6 +364,10 @@ class ConsoleOverlay(QWidget):
                 b._check_end()
             except Exception:
                 pass
+            # 关键：必须通知**界面**战斗已结束。
+            # 只调引擎的 _check_end() 会让 BattleScreen._ended 仍为 False，
+            # 于是画面卡在战斗里、什么键都按不动（用户实际遇到）。
+            self._notify_battle_over(a)
             self._say("已肃清全部敌人。", "ok")
             return
 

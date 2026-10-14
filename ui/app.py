@@ -484,6 +484,7 @@ class App(tk.Tk):
         except Exception:
             pass
 
+        self._install_cheat_hook()
         self.canvas.bind("<Configure>", self._on_configure)
         self.bind("<Escape>", self._on_escape)
         # 全局控制台（F1 呼出）
@@ -981,6 +982,24 @@ class App(tk.Tk):
                 con.draw(self.canvas, self.W, self.H)
             except Exception:
                 traceback.print_exc()
+
+    def _install_cheat_hook(self) -> None:
+        """兑换码结束战斗后通知界面（否则画面卡在战斗里）。"""
+        try:
+            from core import cheats as _ch
+
+            def _on_over(_result: str) -> None:
+                try:
+                    view = getattr(self, "view", None)
+                    fn = getattr(view, "_check_end", None)
+                    if callable(fn):
+                        fn()
+                except Exception:
+                    pass
+
+            _ch.set_battle_over_hook(_on_over)
+        except Exception:
+            pass
 
     def _on_configure(self, event) -> None:
         if abs(event.width - self._last_wh[0]) < 2 and \

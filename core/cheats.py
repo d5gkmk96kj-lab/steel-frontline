@@ -233,6 +233,43 @@ def code_god_mode(run, battle, state) -> Tuple[bool, str]:
     return True, "上帝模式已启用：本回合受到的伤害被强制抵消。"
 
 
+# --------------------------------------------------------------------------
+# 战斗结束通知
+# --------------------------------------------------------------------------
+# 兑换码直接改引擎状态后，**界面层并不知情** —— 于是画面卡在战斗里
+# 什么键都按不动（用户实际遇到）。core 不能 import UI，所以由 UI 注册
+# 一个回调，兑换码结束战斗时调用它。
+_battle_over_hook = None
+
+
+def set_battle_over_hook(fn) -> None:
+    """UI 注册：战斗被兑换码结束时如何通知界面。fn(result:str) -> None"""
+    global _battle_over_hook
+    _battle_over_hook = fn if callable(fn) else None
+
+
+def _notify_battle_over(battle) -> None:
+    """如果战斗已经结束，通知界面。"""
+    try:
+        res = str(battle.result()) if battle is not None else "ongoing"
+    except Exception:
+        res = "ongoing"
+    if res not in ("won", "lost"):
+        try:
+            ph = str(getattr(battle, "phase", "ongoing"))
+            if ph in ("won", "lost"):
+                res = ph
+        except Exception:
+            pass
+    if res not in ("won", "lost"):
+        return
+    try:
+        if callable(_battle_over_hook):
+            _battle_over_hook(res)
+    except Exception:
+        pass
+
+
 def code_annex_all(run, battle, state) -> Tuple[bool, str]:
     """annex all — 直接秒杀当前战斗所有敌人，瞬间结算。"""
     if battle is None:
@@ -247,6 +284,7 @@ def code_annex_all(run, battle, state) -> Tuple[bool, str]:
         battle._check_end()
     except Exception:
         pass
+    _notify_battle_over(battle)
     return True, "已肃清 %d 个敌方单位，战斗立即结算。" % killed
 
 

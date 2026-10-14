@@ -116,7 +116,27 @@ class GameWindow(QMainWindow):
 
         # 信号接线（必须在界面建好之后）
         self._wire()
+        self._install_cheat_hook()
         self.show_screen("menu")
+
+    def _install_cheat_hook(self) -> None:
+        """让兑换码结束战斗后能通知界面（否则画面会卡在战斗里）。"""
+        try:
+            from core import cheats as _ch
+
+            def _on_over(result: str) -> None:
+                try:
+                    bs = self.screens.get("battle")
+                    if bs is not None and callable(getattr(bs, "_check_end", None)):
+                        bs._check_end()          # 走正常结束流程
+                    else:
+                        self.on_battle_finished(str(result))
+                except Exception:
+                    pass
+
+            _ch.set_battle_over_hook(_on_over)
+        except Exception:
+            pass
 
     def _build_console(self) -> None:
         """构造/重建全局控制台（F1）。"""
@@ -200,6 +220,7 @@ class GameWindow(QMainWindow):
             # 其销毁而失效。必须在重建后重新接线，否则所有按钮都会失灵
             # （用户实际遇到：改完语言后点「开始战役」没反应）。
             self._wire()
+            self._install_cheat_hook()
             self.show_screen(cur if cur in self.screens else "menu")
         except Exception:
             try:
