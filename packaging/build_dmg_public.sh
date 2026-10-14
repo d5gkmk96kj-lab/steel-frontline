@@ -12,7 +12,7 @@ except Exception: print('dev')
 ")
 
 APP="$ROOT/dist_public/$NAME.app"
-STAGE="$ROOT/packaging/dmgstage_public"
+STAGE="${TMPDIR:-/tmp}/sf_dmgstage_dist_public"
 DMG="$ROOT/packaging/${NAME}-v${VER_LABEL}-安装包.dmg"
 
 [ -d "$APP" ] || { echo "请先运行 build_app.sh"; exit 1; }
@@ -20,6 +20,13 @@ DMG="$ROOT/packaging/${NAME}-v${VER_LABEL}-安装包.dmg"
 echo "=== 组装 DMG ==="
 rm -rf "$STAGE"; mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
+
+# 关键：在 /tmp 里重新签名。
+# 项目目录在 ~/Documents 下，文件同步服务会不断给 .app 加回
+# com.apple.FinderInfo，导致 codesign 失败；挪到 /tmp 就没这个问题。
+echo "=== 签名 ==="
+python3 "$ROOT/packaging/_sign_app.py" "$STAGE/$NAME.app" || \
+  echo "  ⚠️ 签名未通过（不影响功能，但用户放行会更麻烦）"
 
 # 音乐目录留空（公开版不带歌），只放一份说明
 mkdir -p "$STAGE/music" "$STAGE/data"

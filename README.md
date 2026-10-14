@@ -599,6 +599,15 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 7. 输入你的开机密码 / 用 Touch ID 确认
 8. 再双击 App，弹窗里点「**打开**」
 
+> **看不到「仍要打开」按钮？**
+>
+> 那说明你下载的是**旧版本**（v0.9 之前的包签名是坏的）。
+> 旧包的签名有缺陷，macOS 无法识别它，所以**不提供放行按钮** ——
+> 这种情况只能用下面的命令行方法。
+>
+> **现在的新包已经修好了签名**，正常会出现「仍要打开」。
+> 请重新下载最新的 DMG。
+
 ### 方法三：命令行（前两种都不行时）
 
 ```bash
@@ -1261,6 +1270,16 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 ```
 
 Then double-click as usual.
+
+> **No "Open Anyway" button?**
+>
+> That means you downloaded an **older build** (before v0.9's signing fix).
+> The old bundle had a broken signature, so macOS could not identify it and
+> therefore **offered no allow button at all** — the command-line method below
+> is the only way for those.
+>
+> **Current builds have a valid signature**, so "Open Anyway" does appear.
+> Please download the latest DMG.
 
 > **Why does this happen?**
 > Apple requires every app to be signed with a paid developer certificate

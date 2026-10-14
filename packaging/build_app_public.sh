@@ -124,6 +124,10 @@ else
   echo "  ⚠️ 找不到 $PLIST"
 fi
 
+# 注意：这里**不做签名**。
+# 项目在 ~/Documents 下，文件同步服务会不断加回 com.apple.FinderInfo，
+# 在这里签名必然失败。真正的签名在 build_dmg*.sh 里、于 /tmp 中完成。
+
 echo "=== 4. 结果 ==="
 APP="dist_public/$NAME.app"
 if [ ! -d "$APP" ]; then echo "打包失败"; exit 1; fi
