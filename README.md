@@ -24,14 +24,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.02 测试版** · *Current version: 0.9.02 Beta*
+**当前版本：v0.9.03 测试版** · *Current version: 0.9.03 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 钢铁战线 v0.9.02 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.02-beta.dmg)**
+**[⬇️ 钢铁战线 v0.9.03 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.03-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西**。
 安装方法见 [下载说明](releases/README.md)。
@@ -44,7 +44,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.02 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.03 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -53,8 +53,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.02 测试版 · 公开版** | `SteelFrontline-Public-v0.9.02-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.02 测试版 · 完整版 | `钢铁战线-v0.9.02 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.03 测试版 · 公开版** | `SteelFrontline-Public-v0.9.03-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.03 测试版 · 完整版 | `钢铁战线-v0.9.03 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
@@ -601,7 +601,7 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 
 > **看不到「仍要打开」按钮？**
 >
-> 那说明你下载的是**旧版本**（v0.9.02 之前的包签名是坏的）。
+> 那说明你下载的是**旧版本**（v0.9.03 之前的包签名是坏的）。
 > 旧包的签名有缺陷，macOS 无法识别它，所以**不提供放行按钮** ——
 > 这种情况只能用下面的命令行方法。
 >
@@ -664,7 +664,16 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 战败时才显示
 ```
 
-**没有归入任何分节的提示 = 通用提示**，上面所有场景都可能出现。
+**没有归入任何分节的提示 = 通用提示**。
+
+出现概率是这么分的：
+
+| | 概率 |
+|---|---|
+| 通用提示 | **50%** |
+| 该场景专属提示 | **50%**（多条则平分） |
+
+只写了其中一类时，100% 都给那一类，不会出现空白。
 
 ### 文件在哪
 
@@ -708,6 +717,32 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 3. 对方：存档管理 → 点**导入存档** → 选中这个文件
 
 导入时会校验文件格式，损坏或不是存档的文件会被拒绝，不会污染对方的存档列表。
+
+---
+
+## 版本号规则
+
+`钢铁战线` 用这样的版本号：
+
+```
+0.9  →  0.9.03  →  0.9.03  →  ...  →  0.9.99  →  0.10  →  1.0
+```
+
+- **每次推送 +0.01**（小更新）
+- 补零编号 `0.9.01 < 0.9.03 < ...`，到 `0.9.99` 自动进位成 `0.10`
+- **要上大版本就手动跳**，比如直接 `1.0` 或 `1.0.0.0`
+- 发版脚本：
+
+```bash
+# 小更新：自动 +0.01
+python3 packaging/bump_version.py --auto "修复了 xxx"
+
+# 大版本：手动指定
+python3 packaging/bump_version.py --set 1.0.0.0 "正式版发布"
+```
+
+游戏内的**检查更新**读的是仓库根目录的 `version.json`，所以发版时
+`core/version.py` 与 `version.json` 必须一致（发版脚本会自动同步）。
 
 ---
 
@@ -840,7 +875,7 @@ The human did exactly three things: **asked for it, ran it, reported bugs.**
 > - **Arguments of the form "AI-made things are not real games" are not welcome
 >   here.** This is an experiment: let us see what AI can build on its own today.
 
-**Current version: 0.9.02 Beta**
+**Current version: 0.9.03 Beta**
 
 > Bilingual document. Chinese is above; English starts here.
 > [Back to top / 回到顶部](#钢铁战线-steel-frontline)
@@ -1368,7 +1403,16 @@ victory only
 defeat only
 ```
 
-Tips outside any section are **general** and may appear anywhere.
+Tips outside any section are **general**.
+
+Probability:
+
+| | Chance |
+|---|---|
+| General tip | **50%** |
+| The scene's own tips | **50%** (split evenly) |
+
+If you only write one kind, it gets 100% — never blank.
 
 ### Where the file lives
 
@@ -1415,6 +1459,31 @@ write through.
 
 Imports are validated: corrupt files or non-save JSON are rejected, so a bad
 file cannot pollute your save list.
+
+---
+
+## Versioning
+
+```
+0.9  →  0.9.03  →  0.9.03  →  ...  →  0.9.99  →  0.10  →  1.0
+```
+
+- **Every push bumps +0.01**
+- Zero-padded numbers sort correctly (`0.9.01 < 0.9.03`), and `0.9.99`
+  carries over to `0.10`
+- **Major versions are manual** — jump straight to `1.0` or `1.0.0.0`
+- Release script:
+
+```bash
+# small update: auto +0.01
+python3 packaging/bump_version.py --auto "fixed xxx"
+
+# major version: explicit
+python3 packaging/bump_version.py --set 1.0.0.0 "official release"
+```
+
+The in-game update checker reads `version.json` at the repo root, so
+`core/version.py` and `version.json` must match (the script syncs them).
 
 ---
 
@@ -1503,7 +1572,7 @@ Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies 
 
 **I found a bug — where do I report it?**
 Please file it on the [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki).
-Include the version string (shown under the main menu title, e.g. `0.9.02 Beta`),
+Include the version string (shown under the main menu title, e.g. `0.9.03 Beta`),
 the exact steps to reproduce, and a screenshot if you have one. If the game
 crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
 

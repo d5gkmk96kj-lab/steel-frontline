@@ -1,20 +1,20 @@
 {
-  "version": "0.9.02",
-  "label": "0.9.02 测试版",
-  "label_en": "0.9.02 Beta",
+  "version": "0.9.03",
+  "label": "0.9.03 测试版",
+  "label_en": "0.9.03 Beta",
   "released": "2026-10-14",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：README「怎么加自己的音乐」完整教程（中英）",
-    "新增：README「自定义提示语 tips」教程，含双语写法与分场景说明（中英）",
-    "优化：版本号规范 —— 每次推送 +0.01（本版 0.9.02）",
-    "修复：英文界面版本标签显示中文「测试版」"
+    "新增：通用提示 50% / 场景专属 50% 的加权随机（用户指定）",
+    "新增：版本号支持手动跳大版本（--set 1.0.0.0）",
+    "修复：版本比较在 1.0 与 1.0.0.0 之间判断错误",
+    "文档：README 补充版本号规则与提示概率说明（中英）"
   ],
   "notes_en": [
-    "New: full 'How to add your own music' tutorial (zh/en)",
-    "New: custom tips tutorial with bilingual syntax and per-scene sections (zh/en)",
-    "Chore: versioning rule — every push bumps +0.01 (this is 0.9.02)",
-    "Fix: English UI showed the Chinese version label"
+    "New: weighted tips — 50% general / 50% scene-specific",
+    "New: manual major-version jumps (--set 1.0.0.0)",
+    "Fix: version comparison between 1.0 and 1.0.0.0",
+    "Docs: README versioning rules and tip probabilities (zh/en)"
   ]
 }

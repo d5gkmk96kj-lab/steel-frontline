@@ -197,3 +197,55 @@ class TestBilingual(unittest.TestCase):
             i18n.set_lang(old_lang)
             tips._candidate_paths = old
             tips.reload()
+
+
+class TestTipWeighting(unittest.TestCase):
+    """通用 50% / 场景专属 50%（用户指定）。"""
+
+    def setUp(self):
+        import tempfile
+        self.d = tempfile.mkdtemp(prefix="sf_w_")
+        self.p = os.path.join(self.d, "tips.txt")
+        with open(self.p, "w", encoding="utf-8") as f:
+            f.write("通用A\n通用B\n[菜单]\n菜单A\n菜单B\n")
+        self._old = tips._candidate_paths
+        tips._candidate_paths = lambda: [self.p]
+        tips.reload()
+
+    def tearDown(self):
+        import shutil
+        tips._candidate_paths = self._old
+        tips.reload()
+        shutil.rmtree(self.d, ignore_errors=True)
+
+    def test_half_general_half_scene(self):
+        import random
+        r = random.Random(7)
+        n = 4000
+        gen = sum(1 for _ in range(n)
+                  if tips.random_tip("menu", r) in ("通用A", "通用B"))
+        ratio = gen / float(n)
+        self.assertTrue(0.45 <= ratio <= 0.55,
+                        "通用占比 %.2f 不在 50%% 附近" % ratio)
+
+    def test_only_general_still_works(self):
+        with open(self.p, "w", encoding="utf-8") as f:
+            f.write("只有通用\n[菜单]\n")
+        tips.reload()
+        for _ in range(30):
+            self.assertEqual(tips.random_tip("menu"), "只有通用")
+
+    def test_only_scene_still_works(self):
+        with open(self.p, "w", encoding="utf-8") as f:
+            f.write("[菜单]\n只有菜单\n")
+        tips.reload()
+        for _ in range(30):
+            self.assertEqual(tips.random_tip("menu"), "只有菜单")
+
+    def test_scene_without_own_tips_uses_general(self):
+        """某场景没写专属提示时，不应空抽。"""
+        with open(self.p, "w", encoding="utf-8") as f:
+            f.write("通用A\n[菜单]\n菜单A\n")
+        tips.reload()
+        got = {tips.random_tip("win") for _ in range(30)}
+        self.assertEqual(got, {"通用A"})

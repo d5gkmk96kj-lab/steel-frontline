@@ -160,14 +160,18 @@ def random_tip(scene: str = "general", rng: Optional[random.Random] = None) -> s
     """随机取一条提示。
 
     scene: menu / load / win / lose / general
-    找不到对应场景就用 general，再没有就用内置兜底。绝不返回空串。
+
+    权重（用户指定）：
+      * 有通用提示时，50% 出通用
+      * 另外 50% 出该场景专属的（多条则平分）
+      * 只写了通用 / 只写了场景 -> 100% 给那一类
+    文件里什么都没有时用内置兜底。绝不返回空串。
     """
     # 判断内容到底来自用户的 tips.txt，还是 load() 的兜底 ——
     # load() 已经做过兜底，不能只看它的返回值。
     raw = _raw_file_sections()
     from_file = any(raw.values())
     data = raw if from_file else {}
-    entries = list(data.get(scene) or []) or list(data.get("general") or [])
 
     try:
         from . import i18n as _i18n
@@ -175,27 +179,45 @@ def random_tip(scene: str = "general", rng: Optional[random.Random] = None) -> s
     except Exception:
         want_en = False
 
-    if entries:
-        # 每条是 (zh, en)。英文界面优先取英文；没写英文就回落中文，
-        # 保证英文界面也不会空白。
-        pool = []
-        for item in entries:
-            if isinstance(item, (tuple, list)) and len(item) >= 2:
-                zh, en = item[0], item[1]
-            else:
-                zh, en = str(item), ""
-            pick = (en or zh) if want_en else (zh or en)
-            if pick:
-                pool.append(pick)
+    def _pick_text(item) -> str:
+        """从一条 (zh, en) 里取出当前语言该显示的那半。"""
+        if isinstance(item, (tuple, list)) and len(item) >= 2:
+            zh, en = item[0], item[1]
+        else:
+            zh, en = str(item), ""
+        return (en or zh) if want_en else (zh or en)
+
+    if from_file:
+        general = [t for t in (_pick_text(x) for x in (data.get("general") or [])) if t]
+        scene_list = [t for t in (_pick_text(x) for x in (data.get(scene) or [])) if t]
     else:
+        general, scene_list = [], []
+
+    if not general and not scene_list:
         # 文件里没内容 -> 内置兜底
         pool = list(DEFAULT_TIPS_EN) if want_en else list(DEFAULT_TIPS)
+        r = rng or random
+        try:
+            return str(r.choice(pool))
+        except Exception:
+            return pool[0] if pool else ""
 
+    # 权重规则（用户要求）：
+    #   * 通用提示 50%
+    #   * 场景专属提示 平分剩下的 50%
+    # 只写了其中一类时，就把 100% 都给那一类（不会出现空抽）。
     r = rng or random
     try:
-        return str(r.choice(pool))
+        if general and scene_list:
+            if r.random() < 0.5:
+                return str(r.choice(general))
+            return str(r.choice(scene_list))
+        if general:
+            return str(r.choice(general))
+        return str(r.choice(scene_list))
     except Exception:
-        return pool[0] if pool else ""
+        fallback = (general or scene_list)
+        return fallback[0] if fallback else ""
 
 
 def _raw_file_sections() -> dict:

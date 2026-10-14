@@ -97,8 +97,18 @@ def auto_next(cur: str) -> str:
 def main():
     argv = sys.argv[1:]
     auto_mode = False
+    manual_set = None
+
+    # --set 1.0.0.0 ：直接跳到指定版本（大版本升级用）
+    if argv and argv[0] in ("--set", "-s", "set"):
+        if len(argv) < 2:
+            print("用法： python3 packaging/bump_version.py --set 1.0.0.0 \"改了什么\"")
+            return 1
+        manual_set = argv[1].strip()
+        argv = argv[2:]
+
     # --auto：自动在当前版本上 +0.01
-    if argv and argv[0] in ("--auto", "-a", "auto"):
+    if not manual_set and argv and argv[0] in ("--auto", "-a", "auto"):
         auto_mode = True
         cur = None
         # 直接读 core/version.py，避免依赖 import 路径
@@ -123,13 +133,44 @@ def main():
         ver = auto_next(cur)
         argv = argv[1:]
         print("自动递增 -> %s" % ver)
+    elif manual_set:
+        ver = manual_set
+        auto_mode = True          # 备注同样从 argv[0] 开始
+        print("手动指定版本 -> %s" % ver)
     else:
         print(__doc__)
-        print("\n也可以用： python3 packaging/bump_version.py --auto \"改了什么\"")
+        print("\n也可以用：")
+        print("  python3 packaging/bump_version.py --auto \"改了什么\"")
+        print("  python3 packaging/bump_version.py --set 1.0.0.0 \"大版本更新\"")
         return 1
     if not re.match(r"^\d+(\.\d+)+$", ver):
-        print("版本号必须是数字点分，例如 0.9.02 或 1.0")
+        print("版本号必须是数字点分，例如 0.9.02 / 1.0 / 1.0.0.0")
         return 1
+
+    # 不允许倒退：新版本必须比当前版本新
+    try:
+        cur_ver = None
+        _m = re.search(r'^VERSION\s*=\s*"([^"]+)"', _read("core/version.py"),
+                       re.M)
+        if _m:
+            cur_ver = _m.group(1)
+        if cur_ver and not auto_mode:
+            pass
+        if cur_ver:
+            _t = lambda v: tuple(
+                (int(re.sub(r"\D", "", x) or 0), len(re.sub(r"\D", "", x)))
+                for x in v.split(".") if re.sub(r"\D", "", x))
+            a, b = _t(ver), _t(cur_ver)
+            n = max(len(a), len(b))
+            a += ((0, 1),) * (n - len(a))
+            b += ((0, 1),) * (n - len(b))
+            if a <= b:
+                print("⚠️ 新版本 %s 不比当前 %s 新 —— 更新检查会失效。"
+                      % (ver, cur_ver))
+                print("   如果确实想回退，请手动改 core/version.py。")
+                return 1
+    except Exception:
+        pass
     # --auto 时 argv 里只有备注（版本号自动算）；手动指定时 argv[0] 是版本号。
     notes = ([a for a in argv if a.strip()] if auto_mode
              else [a for a in argv[1:] if a.strip()])

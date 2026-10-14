@@ -50,20 +50,14 @@ TIMEOUT = 6
 # 版本号比较
 # --------------------------------------------------------------------------
 def parse_version(text: str) -> tuple:
-    """解析版本号成可比较的元组。
+    """解析版本号成可比较的元组（每段是 ``(数值, 原始位数)``）。
 
-    规则：按点分段，**保留每段的前导零信息**，这样
-    ``0.9.01`` 与 ``0.9.1`` 不会被当成同一个版本。
+    为什么要记「原始位数」：
+        0.9.01 与 0.9.1 的数值都是 (0,9,1)，但补零编号的含义是
+        「同一个小版本的后续更新」，必须让 0.9.01 > 0.9.1。
+        记录该段原始位数就能区分（3 位 > 2 位）。
 
-        0.9     -> (0, 9)
-        0.9.01  -> (0, 9, 1)   但记录"本段有前导零"
-        0.9.1   -> (0, 9, 1)   无前导零
-
-    为了区分，这里把每段编成 ``(数值, 原始长度)``：数值先比，
-    数值相同再比原始长度 —— 于是 0.9.01 (长度3) > 0.9.1 (长度2)。
-    这也符合直觉：补零编号是「同一个大版本的后续小更新」。
-
-    非数字段（如 ``v``、``beta``）直接丢弃。
+    非数字段（``v``、``beta``）丢弃。
     """
     raw = str(text or "").strip().lstrip("vV")
     if not raw:
@@ -78,11 +72,29 @@ def parse_version(text: str) -> tuple:
 
 
 def version_key(text: str):
-    """把版本号转成可直接比较的键（补零对齐，避免长度不同没法比）。"""
-    t = parse_version(text)
-    # 统一到 4 段，缺的补 (0,1)，这样 0.9 与 0.9.01 也能比较
-    pad = ((0, 1),) * max(0, 4 - len(t))
-    return t + pad
+    """把版本号转成可直接比较的键。
+
+    同时满足两条（容易互相打架的）规则：
+
+    1. ``0.9.01 > 0.9.1`` —— 补零 = 同一小版本的后续更新
+    2. ``1.0.0.0 > 1.0`` —— 补段 = 更明确的正式版
+
+    键是三元组 ``(数值段, 位数段, 原始段数)``：
+      * 先比数值段（不足 4 段补 0）
+      * 数值相同再比各段原始位数（0.9.01 的 "01" 比 "1" 宽）
+      * 仍相同再比**原始段数**（1.0.0.0 比 1.0 多两段）
+    """
+    t = parse_version(text)                       # ((值, 原始位数), ...)
+    n = max(len(t), 4)
+    vals = tuple(v for v, _ in t) + (0,) * (n - len(t))
+    # 不足的段不占"宽度优势"：补 0 宽，避免 1.0 被算得和 1.0.0.0 一样宽
+    widths = tuple(w for _, w in t) + (0,) * (n - len(t))
+    return (vals, widths, len(t))
+
+
+def _cmp_key(text: str):
+    """(数值段, 位数串)，可直接用元组比较。"""
+    return version_key(text)
 
 
 def is_newer(remote: str, local: str = "") -> bool:
@@ -90,7 +102,7 @@ def is_newer(remote: str, local: str = "") -> bool:
     if not remote:
         return False
     try:
-        return version_key(remote) > version_key(local or V.VERSION)
+        return _cmp_key(remote) > _cmp_key(local or V.VERSION)
     except Exception:
         return False
 

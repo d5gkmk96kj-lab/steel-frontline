@@ -41,11 +41,29 @@ class TestVersionCompare(unittest.TestCase):
         self.assertFalse(U.is_newer(None, "0.9"))
 
     def test_parse_version(self):
-        # 每段编成 (数值, 原始长度)，用来区分 0.9.01 与 0.9.1
+        # 每段编成 (数值, 原始位数)，用来区分 0.9.01 与 0.9.1
         self.assertEqual(U.parse_version("0.10.2"), ((0, 1), (10, 2), (2, 1)))
         self.assertEqual(U.parse_version("v1.2"), ((1, 1), (2, 1)))
         self.assertEqual(U.parse_version("garbage"), ((0, 1),))
         self.assertEqual(U.parse_version(""), ((0, 1),))
+
+    def test_major_jump(self):
+        """手动跳大版本：1.0.0.0 必须比 1.0 新。"""
+        self.assertTrue(U.is_newer("1.0.0.0", "1.0"))
+        self.assertFalse(U.is_newer("1.0", "1.0.0.0"))
+        self.assertTrue(U.is_newer("1.0", "0.99"))
+        self.assertTrue(U.is_newer("1.1", "1.0.0.0"))
+
+    def test_full_sequence_increasing(self):
+        """从 0.9 到大版本的整条序列必须严格递增。"""
+        seq = ["0.9", "0.9.02", "0.9.99", "0.10", "0.99", "1.0",
+               "1.0.0.0", "1.0.0.01", "1.1", "2.0"]
+        for a, b in zip(seq, seq[1:]):
+            with self.subTest(a=a, b=b):
+                self.assertTrue(U.is_newer(b, a))
+                self.assertFalse(U.is_newer(a, b))
+        for v in seq:
+            self.assertFalse(U.is_newer(v, v))
 
     def test_patch_numbering_sequence(self):
         """0.9.01 起每次 +0.01 的整条序列必须严格递增。"""
