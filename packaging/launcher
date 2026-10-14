@@ -1,0 +1,61 @@
+#!/bin/bash
+# 钢铁战线 Steel Frontline —— .app 启动器
+#
+# 这个 .app 是个「壳」：它定位到同目录下的游戏文件并启动。
+# 不打包 Python（用系统自带的），所以体积小、启动快。
+
+# .app 所在目录 = Contents/MacOS/ 的上级三级
+APP_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+GAME_DIR="$APP_DIR"
+
+# 允许把 .app 放进游戏目录，也允许游戏目录里放 .app
+if [ ! -f "$GAME_DIR/qt/main_qt.py" ]; then
+    # 尝试上一级（.app 与游戏文件夹并列时）
+    GAME_DIR="$(cd "$APP_DIR/.." && pwd)"
+fi
+
+if [ ! -f "$GAME_DIR/qt/main_qt.py" ]; then
+    osascript -e 'display alert "找不到游戏文件" message "请把本 App 放在「钢铁战线」文件夹里，或与该文件夹并列。\n\n缺少: qt/main_qt.py" as critical'
+    exit 1
+fi
+
+cd "$GAME_DIR" || exit 1
+
+# ---- 找一个可用的 python3 ----
+PY=""
+for cand in /usr/bin/python3 /usr/local/bin/python3 /opt/homebrew/bin/python3 python3; do
+    if command -v "$cand" >/dev/null 2>&1; then
+        PY="$cand"; break
+    fi
+done
+
+if [ -z "$PY" ]; then
+    osascript -e 'display alert "找不到 Python 3" message "本游戏需要 macOS 自带的 Python 3。" as critical'
+    exit 1
+fi
+
+# ---- 检查 PyQt6；缺失则提示并提供 Tkinter 后备 ----
+BACKEND="qt"
+if ! "$PY" -c "import PyQt6" >/dev/null 2>&1; then
+    BACKEND="tk"
+fi
+
+# ---- 启动 ----
+cd "$GAME_DIR" || exit 1
+LOG="$GAME_DIR/data/launch.log"
+mkdir -p "$GAME_DIR/data" 2>/dev/null
+
+if [ "$BACKEND" = "qt" ]; then
+    "$PY" qt/main_qt.py "$@" >"$LOG" 2>&1
+else
+    "$PY" main.py "$@" >"$LOG" 2>&1
+fi
+CODE=$?
+
+if [ $CODE -ne 0 ]; then
+    # 把日志末尾附在弹窗里，方便定位
+    TAIL="$(tail -c 600 "$LOG" 2>/dev/null)"
+    osascript -e "display alert \"游戏异常退出（代码 $CODE）\" message \"$TAIL\" as critical" 2>/dev/null \
+      || osascript -e 'display alert "游戏异常退出" message "详情见 data/launch.log" as critical'
+fi
+exit $CODE

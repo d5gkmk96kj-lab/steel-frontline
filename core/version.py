@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""钢铁战线 —— 版本与名称的**唯一**定义处。
+
+改版本号只需要改这里，界面标题、关于页、打包的 Info.plist 全部跟着变。
+"""
+
+from __future__ import annotations
+
+# --------------------------------------------------------------------------
+# 版本
+# --------------------------------------------------------------------------
+VERSION = "0.9"
+VERSION_LABEL = "0.9 测试版"
+VERSION_LABEL_EN = "0.9 Beta"
+
+# 版本阶段：alpha / beta / rc / stable
+STAGE = "beta"
+
+# 构建号（同版本多次出包时递增；打包脚本会读它）
+BUILD = 1
+
+# --------------------------------------------------------------------------
+# 名称
+# --------------------------------------------------------------------------
+NAME_ZH = "钢铁战线"
+NAME_EN = "Steel Frontline"
+
+# 界面上用的完整名（中英并排）
+FULL_NAME = "%s %s" % (NAME_ZH, NAME_EN)
+
+# 用于 .app 的 bundle 名（不要有空格，避免脚本引用出问题）
+BUNDLE_NAME = NAME_ZH
+BUNDLE_NAME_PUBLIC = NAME_ZH + "公开版"
+
+BUNDLE_ID = "local.steelfrontline.game"
+BUNDLE_ID_PUBLIC = "local.steelfrontline.game.public"
+
+# --------------------------------------------------------------------------
+# 拼接好的显示串
+# --------------------------------------------------------------------------
+def title() -> str:
+    """窗口标题：钢铁战线 Steel Frontline · v0.9 测试版"""
+    return "%s · v%s" % (FULL_NAME, VERSION_LABEL)
+
+
+def short() -> str:
+    """短版本：v0.9 测试版"""
+    return "v" + VERSION_LABEL
+
+
+def about() -> str:
+    """关于页用的一行。"""
+    return "%s v%s" % (FULL_NAME, VERSION_LABEL)
+
+
+def macos_version_string() -> str:
+    """Info.plist 的 CFBundleShortVersionString（必须是纯数字点分）。"""
+    return VERSION
+
+
+def macos_build_string() -> str:
+    """Info.plist 的 CFBundleVersion（纯数字点分）。"""
+    return "%s.%d" % (VERSION, BUILD)
+
+
+__all__ = [
+    "VERSION", "VERSION_LABEL", "VERSION_LABEL_EN", "STAGE", "BUILD",
+    "NAME_ZH", "NAME_EN", "FULL_NAME", "BUNDLE_NAME", "BUNDLE_NAME_PUBLIC",
+    "BUNDLE_ID", "BUNDLE_ID_PUBLIC",
+    "title", "short", "about", "macos_version_string", "macos_build_string",
+]

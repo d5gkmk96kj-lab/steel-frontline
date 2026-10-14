@@ -1,0 +1,1085 @@
+# 钢铁战线 Steel Frontline
+
+**当前版本：v0.9 测试版** · *Current version: 0.9 Beta*
+
+> **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
+> *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
+
+## 📥 下载 / Download
+
+**[⬇️ 钢铁战线 v0.9 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9-beta.dmg)**
+
+打包版自带 Python 与 Qt，**不需要安装任何东西**。
+安装方法见 [下载说明](releases/README.md)。
+
+> | 版本 | 文件名 | 大小 | 音乐 | 用途 |
+> |---|---|---|---|---|
+> | **0.9 测试版 · 公开版** | `SteelFrontline-Public-v0.9-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9 测试版 · 完整版 | `钢铁战线-v0.9 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+
+
+一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
+
+- **单人战役**：与 AI 敌军交战，爬塔、组卡、解锁成就
+- **局域网 1v1**：和朋友同一 WiFi 直接对战（[见教程](#局域网联机对战1v1)）
+
+> **完全离线**（联机也只在局域网内，不经过任何服务器）。有两个版本：
+>
+> | 版本 | 依赖 | 画风 | 启动 |
+> |---|---|---|---|
+> | **高画质版（推荐）** | 需要 PyQt6 | Qt 抗锯齿 / 真渐变 / 平滑动画 | 双击 `启动游戏_高画质版.command` |
+> | 经典版 | 零依赖（自带 Tkinter） | Tkinter 手绘 | 双击 `启动游戏.command` |
+>
+> 两个版本共享同一套 `core/` 引擎与同一份存档。
+
+---
+
+## 快速开始
+
+### 高画质版（PyQt6，推荐）
+
+```bash
+cd whale-card-battle
+python3 -m pip install --user PyQt6   # 只需一次，约 60MB
+python3 qt/main_qt.py
+```
+
+macOS 可直接双击 **`启动游戏_高画质版.command`**（会自动检测并安装 PyQt6）。
+
+### 经典版（Tkinter，零依赖）
+
+```bash
+cd whale-card-battle
+python3 main.py
+```
+
+macOS 可直接双击 **`启动游戏.command`**。
+
+### 命令行参数（两版通用）
+
+```bash
+python3 qt/main_qt.py --seed 42        # 指定种子
+python3 qt/main_qt.py --ascension 5    # 指定战役难度
+python3 qt/main_qt.py --fullscreen     # 全屏
+python3 qt/main_qt.py --selftest       # 无头自检
+```
+
+其它启动方式：
+
+```bash
+python3 main.py --seed 12345   # 指定种子（同种子可复现同一局）
+python3 main.py --asc 5        # 指定战役难度（0–20）
+python3 main.py --daily        # 每日挑战（全球同种子，按日期确定）
+python3 main.py --selftest     # 无窗口自检：数据层 + 引擎冒烟
+```
+
+macOS 用户也可以直接双击 **`启动游戏.command`**。
+
+---
+
+## 这是什么游戏
+
+你是**装甲指挥官**，率领部队向敌方纵深推进。每局从 10 张制式卡开始，
+沿途收集**攻击 / 战术 / 指令**三类卡牌与**勋章**，一步步构筑出属于你的战斗体系。
+
+- **目标**：通过 3 幕战区，击败最终要塞
+- **单局时长**：30–60 分钟
+- **失败**：总部 HP 归零（当局结束，但元进度永久保留）
+
+### 五大战术流派
+
+| 流派 | 核心机制 | 打法 |
+|---|---|---|
+| **突击** | 火力（每层 +1 伤害）、破甲（受伤 +50%） | 堆火力一回合爆发 |
+| **防御** | 掩体、铁丝网反伤、工事 | 叠甲反打，越打越硬 |
+| **燃烧弹** | 燃烧（每回合掉血后递减）、压制（敌人伤害 -25%） | 挂持续伤害，慢慢磨死 |
+| **后勤** | 额外补给、抽牌、连射、弹药储备 | 一回合打出十几张牌 |
+| **支援** | 附属单位（独立行动）、增援（每回合叠火力） | 铺场滚雪球 |
+
+---
+
+## 为什么能玩很久
+
+这是设计时最优先考虑的目标，共 7 层长期动力：
+
+1. **20 档战役难度**（`--asc 0..20`）——每档叠加真实难度：敌人血量/伤害递增、
+   开局携带诅咒、精英翻倍、Boss 额外阶段。通关一档解锁下一档。
+2. **元进度永久解锁**——即使这局失败，图鉴、成就、难度解锁全部保留。
+3. **30 个成就**——从「初次下潜」到「钢铁终焉」，覆盖各种极限玩法
+   （15 张以下薄牌组通关、20 分钟速通、5 点生命翻盘、纯防御流通关…）。
+4. **完整图鉴**——134 张卡 / 52 个勋章 / 53 种敌军全部可收集查阅。
+5. **每日挑战**——全球同种子，每天一张新地图。
+6. **自定义种子**——想复盘某个局面就输入同一个种子。
+7. **本地排行榜 + 存档**——Top 10 分数记录，随时中断续玩。
+
+### 内容量
+
+| 内容 | 数量 |
+|---|---|
+| 卡牌 | **134** 张（攻击 54 / 战术 46 / 指令 22 / 状态 6 / 诅咒 6） |
+| 勋章（遗物） | **52** 个，覆盖 11 类触发时机 |
+| 敌军 | **53** 种（含 3 个 multi-phase 要塞 Boss） |
+| 事件 | **31** 个战场抉择 |
+| 战役难度 | **20** 档 |
+| 成就 | **30** 个 |
+
+---
+
+## 操作
+
+| 操作 | 说明 |
+|---|---|
+| 鼠标悬停卡牌 | 放大 + 显示详细说明 |
+| 左键点击卡牌 | 选中（需要目标的牌再点敌人） |
+| 结束回合 | 敌方行动（逐个播放动画） |
+| `Esc` | 返回 / 关闭 |
+| 拖拽窗口边缘 | 窗口可缩放（最小 1280×800） |
+
+---
+
+## 局域网联机对战（1v1）
+
+**不需要联网，不需要服务器。** 两台电脑连同一个 WiFi（或同一路由器），一台开房间、一台加入即可。
+
+> 只有**高画质版（PyQt6）**有联机。经典版是纯单机。
+
+### 完整教程：开房间 + 加入
+
+#### 第一步：两台电脑在同一个局域网
+
+确认两台机器连的是**同一个 WiFi**（或同一台路由器的网口）。
+手机热点也行 —— 两台电脑都连你的热点即可。
+
+#### 第二步：房主开房间
+
+1. 打开游戏 → 主菜单点「**联 机 对 战**」
+2. 选「**创 建 房 间**」（默认就选中了）
+3. 界面会显示你的**本机 IP**，长得像 `192.168.1.7` 或 `10.42.100.2`
+4. 记下这个 IP，**念给对面的人**（或截图发给他）
+5. 点「**开 始 等 待**」，状态变成「等待对方连接…」
+
+> 端口默认 `45671`。如果提示「端口已被占用」，说明别的程序占了这个口，
+> 换一个端口再试（界面可改）。
+
+#### 第三步：另一台电脑加入
+
+1. 打开游戏 → 主菜单点「**联 机 对 战**」
+2. 选「**加 入 房 间**」
+3. 在输入框里填房主念给你的那个 IP
+4. 点「**连 接**」
+
+连上后两边都会进入**卡组构筑**界面。
+
+#### 第四步：各自组卡
+
+- 开局 **134 张卡全部解锁**，随便挑
+- 卡组需要 **20–40 张**
+- 同名卡最多 **2 张**（`步枪齐射`/`构筑掩体` 这类制式牌可以放 3 张）
+- 懒得组就点「**随机一套**」或选一套「**推荐流派**」：
+
+| 流派 | 打法 |
+|---|---|
+| **突击流** | 高伤害快攻，靠连射和火力压制抢节奏 |
+| **铁壁流** | 堆掩体反击，铁丝网反伤，越拖越强 |
+| **蚀骨流** | 上燃烧和破甲，让对手每回合流血 |
+| **后勤流** | 疯狂抽牌与补给，用牌差和信息优势碾压 |
+| **唤灵流** | 大量附属单位铺场，人海战术 |
+
+#### 第五步：开打
+
+- 双方各 **75 点总部耐久**，每回合 **3 点补给**，抽 5 张牌
+- 回合限时 **60 秒**，超时自动结束回合
+- 谁先被打到 0 谁输
+
+**先后手公平性**：后手第一回合多给 **2 点补给**作为补偿。
+（实测 1200 局镜像对战，先手胜率 50.4%，基本五五开。）
+
+### 联机的已知限制
+
+诚实说明，避免你踩坑：
+
+| 限制 | 说明 |
+|---|---|
+| **只支持 1v1** | 不支持 3 人以上 |
+| **不支持中途重连** | 一方掉线即对局结束，不能续玩 |
+| **只有局域网** | 同一 WiFi / 同一路由器。跨网络需要自己做端口转发 |
+| **明文传输、无密码** | 同一网段的人理论上能连进你的房间（谁先连上算谁的） |
+| **房主是权威端** | 房主自己作弊无法被防（但客户端作弊**一定会被抓**） |
+| **macOS 防火墙** | 首次开房间若对方连不上，去「系统设置 → 网络 → 防火墙」放行 |
+
+### 连不上时的排查顺序
+
+1. **确认在同一个 WiFi** —— 最常见的原因。手机热点测试最可靠
+2. **IP 填对了吗** —— 房主界面显示的那个，不是 `127.0.0.1`
+3. **防火墙** —— macOS 首次会弹「是否允许接受传入连接」，点「允许」
+4. **换端口** —— 45671 被占用时换一个
+5. **VPN 关掉** —— 部分 VPN 会把局域网流量劫走，导致同网段也连不上
+
+---
+
+## 关于作弊：我们的态度
+
+> **作弊是可耻的。**
+>
+> 控制台（F1）原本只是**调试与单人测试**用的工具，不是给你在联机里用的。
+>
+> **你不是房主，就没有修改别人对局的权限。**
+>
+> **请公平地玩。**
+
+### 具体规则
+
+**单人模式**：随便用作弊码，那是你自己的游戏体验，没人管你。
+
+**神人模式**（战役难度拉满到第 20 档）：
+**作弊全部失效**。这是最高难度的荣誉挑战，兑换码和调试指令一律拒绝，
+设置界面的兑换码区会直接显示红框「神人模式 —— 作弊已禁用」。
+想证明自己就老老实实打。
+
+**联机模式**：
+
+- **只有房主**能用作弊码，而且要**房主主动打开开关**（默认关闭）
+- **客户端在代码层面就没有作弊接口** —— 不是藏起来，是不存在
+- 客户端任何作弊发包**一律被拒绝**，并且：
+
+### 作弊被抓会怎样（彩蛋）
+
+系统会实时检测作弊发包行为。一旦命中：
+
+1. **作弊者的屏幕上弹出一行巨大的红字**：
+
+   > ## 作弊是可耻的
+
+2. **对手的界面上，作弊者头顶会挂一个红色的标签**：
+
+   > ## 作弊者
+
+对手会在战报里同时看到检测原因（例如「对手试图作弊（伪造房主专属消息），已拒绝并标记」）。
+
+> **说明**：完整版（自用）保留了一句更直白的措辞；公开版与仓库版本
+> 使用上面这套文明文案。两者逻辑完全相同，只是提示语不同。
+
+### 会被判定为作弊的行为
+
+| 行为 | 说明 |
+|---|---|
+| 伪造 `state` / `snapshot` / `start` / `over` | 冒充房主广播，试图改血量或直接判胜 |
+| 冒充作弊指令（`cheat` / `redeem` / `god_mode` / `hp` / `win`…） | 客户端根本没有这些接口，只能是手搓的包 |
+| 出牌序号越界（`999` / `-1` / 字符串 / `true`） | 正常 UI 只会点手上存在的牌 |
+| 发送协议外的消息类型 | 正常客户端不会发明协议 |
+
+### **不会**被判定为作弊的行为
+
+这些是操作失误，只走普通拒绝，不会挂标签：
+
+- 不是自己的回合出牌
+- 补给不够出牌
+- 出牌目标字段格式不对
+
+> 也就是说：**手滑不会被冤枉，只有蓄意发包才会被标记。**
+
+---
+
+## 控制台（F1）与兑换码
+
+### 全局控制台（推荐）
+
+在**任意界面**按 **F1** 呼出底部下拉式控制台，像正经 PC 游戏那样：
+
+| 按键 | 作用 |
+|---|---|
+| `F1` | 打开 / 关闭控制台 |
+| `Esc` | 关闭控制台（不会退出界面） |
+| `Enter` | 执行当前指令 |
+| `Tab` | 补全兑换码 |
+| `↑` / `↓` | 翻历史指令 |
+
+**内建指令**
+
+| 指令 | 作用 |
+|---|---|
+| `help` | 显示全部指令 |
+| `list` | 列出全部兑换码 |
+| `status` | 显示当前战役 / 战斗状态 |
+| `seed` | 显示当前种子 |
+| `give <卡牌id>` | 把指定卡加入手牌（战斗中） |
+| `heal [n]` | 回复总部耐久（默认 999） |
+| `hp <n>` / `maxhp <n>` | 设置当前 / 上限耐久 |
+| `gold <n>` | 设置金币 |
+| `energy <n>` / `block <n>` | 设置补给 / 掩体（战斗中） |
+| `kill` / `win` | 肃清当前战斗全部敌人 |
+| `clear` | 清空控制台输出 |
+| `close` | 关闭控制台 |
+
+在控制台里**也可以直接敲兑换码**（`manpower`、`god_mode`…），效果与设置界面里的输入框一致。
+
+### 设置界面输入框
+
+不想记快捷键也行：**设置** 界面底部有「兑换码」输入框，输入后点「兑换」。
+
+### 兑换码一览
+
+| 兑换码 | 名称 | 效果 |
+|---|---|---|
+| `it` | 闪电部署 | 立即完成本回合所有部署：补给回满、手牌补至 7 张，跳过等待 |
+| `research all` | 研究全解锁 | 解锁全部卡牌、勋章与支援装备，并填满图鉴 |
+| `ic` | 秒建防线 | 立刻瞬间完成全部工事建造：+999 掩体、+10 层铁丝网 |
+| `debug_nuke` | 战略轰炸 | 获得一张「战略轰炸」卡，打出后对敌方全体造成 **9999** 伤害 |
+| `god_mode` | 上帝模式 | 本回合我方受到的伤害强制归零 |
+| `annex all` | 全面吞并 | 直接肃清当前战斗全部敌人，瞬间结算通关 |
+| `manpower` | 兵力补充 | 总部 **+50** 耐久上限与当前耐久，并 +50 可用兵力 |
+
+**说明**
+
+- 大小写、下划线、空格都不敏感：`Research All` = `research_all` = `researchall`
+- `research all` 与 `annex all` **每局只能兑换一次**（防误触刷爆）
+- `it` / `ic` / `god_mode` / `debug_nuke` / `annex all` 需要在**战斗中**使用
+- `manpower` 在战役或战斗中都能用
+- 兑换记录写进 `CheatRegistry`，可在结算界面查阅
+- 作弊卡（战略轰炸 / 钢铁意志 / 兵力空投）是**真实的 CardDef**，走完整引擎管线，
+  能正常被打出、被 snapshot 读取、被 UI 渲染
+
+命令行也可以直接用：
+
+```python
+from core import cheats
+cheats.redeem_once("manpower", run=run, battle=battle)
+```
+
+---
+
+## 音乐 / BGM
+
+### 怎么加自己的音乐（完整教程）
+
+游戏本身**不带音乐**（版权原因）。加歌只要三步：
+
+**第 1 步：找到音乐目录**
+
+游戏第一次运行时会自动创建音乐目录：
+
+```
+~/Documents/钢铁战线/music/
+```
+
+> **在 Finder 里怎么过去**：菜单栏「前往」→「个人」→ 进 `Documents` → 进 `钢铁战线` → `music`
+> 或者按 `Cmd+Shift+G`，粘贴 `~/Documents/钢铁战线/music/` 回车。
+
+**第 2 步：把歌拷进去，按顺序命名**
+
+文件名必须是 `music1`、`music2`、`music3`……（**后面跟扩展名**）：
+
+```
+music1.ogg
+music2.ogg
+music3.ogg
+...
+```
+
+支持的格式：**`mp3` / `ogg` / `m4a` / `wav` / `aac` / `aiff` / `flac`**
+
+> **格式随便混**，`music1.mp3` 和 `music2.ogg` 可以共存，游戏内部按数字排序。
+> 注意 **`music10` 排在 `music2` 后面**（按数字排，不是按字母），放心加到 99 首。
+
+**第 3 步：重启游戏**
+
+就这么简单，不用任何设置。
+
+### 播放规则
+
+1. **开局固定放 `music1`**（每次打开游戏都是第一首）
+2. 一首放完 → **随机**挑下一首
+3. 再放完 → 再随机 → **永不停止**
+4. 随机时会避开刚放过的几首，不会短时间内反复听同一首
+
+### 常见问题
+
+| 问题 | 原因 / 解决 |
+|---|---|
+| **放进去了但没声音** | ① 文件名是不是 `music1.mp3` 这种格式；② 有没有重启游戏；③ 检查设置里「启用背景音乐」是否开着 |
+| **想换掉某一首** | 直接删掉旧的、放新的、名字保持不变即可 |
+| **想全部重来** | 把 `music/` 里清空，重新放 |
+| **顺序不对** | 检查文件名数字。游戏按**数字**排序：1, 2, 3 … 10, 11 |
+| **找不到 music 文件夹** | 先启动一次游戏，它会自动创建；或者手动建 `~/Documents/钢铁战线/music/` |
+| **音量太小 / 太大** | 设置界面有音量滑条；也可以用系统音量 |
+
+### 想按场景放不同的曲子（进阶）
+
+除了 `music1`/`music2` 这种电台模式，还可以按**场景**命名，游戏会优先用场景曲子：
+
+```
+menu.*        主菜单
+battle.*      战斗
+map.*         战区推进图
+shop.*        补给站 / 商店
+event.*       事件
+rest.*        战地医院
+reward.*      战利品结算
+victory.*     胜利
+defeat.*      失败
+ambient.*     通用兜底（任何场景缺曲子时用它）
+```
+
+例子：
+- 只想一首曲子全程循环 → 放一个 `ambient.mp3` 就够了
+- 主菜单和战斗要不同曲子 → `menu.mp3` + `battle.mp3`
+
+> 两种模式可以混用：有场景曲子时用场景曲子，没有就回落到 `music1/2/3…` 电台。
+
+### 电台模式（默认）
+
+**最省事的用法**：把歌丢进 `music/`，命名成 `music1.ogg`、`music2.ogg`、`music3.ogg`…
+然后**什么都不用设置**，游戏会自动：
+
+1. 启动时从 **`music1`** 开始播
+2. 一首放完 → **随机**挑下一首继续
+3. 再放完 → 再随机 → **永不停止**
+
+随机时会避开刚放过的几首，不会短时间内反复听同一首。
+
+设置界面里点「◀ 上一首 / 下一首 ▶」或双击列表可以随时手动切歌；
+关掉「启用背景音乐」再打开，会**从刚才那首继续**，不会跳回第一首。
+
+### 场景命名（可选，想精细控制时用）
+
+> 如果你的文件按下面这些**场景名**命名，游戏会用它们做「进战斗换战斗曲」这类自动切换，
+> 而不是电台随机。两种方式可以共存 —— 有场景命名的优先，其余走电台。
+
+### 场景对照表
+
+| 文件名 | 场景 |
+|---|---|
+| `menu.*` | 主菜单 |
+| `battle.*` | 战斗 |
+| `map.*` | 战区推进图 |
+| `shop.*` | 补给站 / 商店 |
+| `event.*` | 战场事件 |
+| `rest.*` | 战地医院 |
+| `reward.*` | 战利品结算 |
+| `victory.*` / `defeat.*` | 胜负结算 |
+| `ambient.*` | **通用兜底**（缺曲子时用它） |
+
+支持 `mp3 / m4a / wav / aac / aiff / ogg`。
+
+某个场景没放对应曲子会自动回退到 `ambient.*`；如果**一个场景名都没匹配上**
+（比如你的文件叫 `music1.ogg`），就自动进入上面的电台模式。
+
+### 设置界面里的音乐控制
+
+进入 **设置** 界面，有三块：
+
+| 控件 | 作用 |
+|---|---|
+| **音乐音量** | 0–100，实时生效，不用重启 |
+| **启用背景音乐** | 勾选框。取消勾选立刻静音；重新勾上会**接着原来的曲子**播，不会重头开始 |
+| **选 择 音 乐** | 列出 `music/` 里**全部**曲目，双击（或选中后点「播 放」）即切歌 |
+
+「选择音乐」面板还带：
+
+- `◀ 上一首` / `下一首 ▶` —— 在全部曲目里循环切换
+- `刷新列表` —— 刚往 `music/` 拖进新歌，点一下就能看到
+- `打开 music/ 目录` —— 直接在访达里打开，方便拖文件
+- 正在播的那首前面有 `♪` 标记，下方显示「当前：xxx.mp3」
+
+> 注意：手动选歌会**覆盖场景自动切换**，之后一直播你选的这首，直到你切换界面或再选别的。
+
+### 播放机制
+
+- **零第三方依赖**：macOS 用系统自带的 `afplay`；PyQt6 版也可走 `QtMultimedia`
+- **自动循环**：`afplay` 本身不支持循环，游戏会在曲子结束前 0.35 秒无缝重启，听不出接缝
+- **后台播放**：不占用游戏帧率
+- 退出时自动停止，不留残余进程
+
+### 控制台也可查看
+
+F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识别到的曲库：
+
+```
+> music              查看后端 / 音量 / 当前曲目 / 曲库
+> music off          关闭背景音乐
+> music on           打开背景音乐
+```
+
+---
+
+## 项目结构
+
+```
+whale-card-battle/
+├── main.py              # 启动器
+├── 启动游戏.command      # macOS 双击启动
+├── ARCHITECTURE.md      # 架构契约（冻结接口 / 附录 A / 附录 B）
+├── README.md
+├── core/                # 游戏逻辑（零 UI 依赖，可独立测试）
+│   ├── cards.py         # 134 张卡 + 效果函数 + 引用审计
+│   ├── relics.py        # 52 个勋章
+│   ├── enemies.py       # 53 种敌军 + 意图 AI
+│   ├── events.py        # 31 个事件 + 商店 + 宝箱
+│   ├── engine.py        # 战斗引擎（伤害管线 / buff / 召唤 / 胜负）
+│   └── run.py           # 地图 / 元进度 / 20 档难度 / 存档
+├── ui/                  # Tkinter 界面
+│   ├── theme.py         # 配色 / 字体 / 绘制工具
+│   ├── widgets.py       # 卡牌 / 血条 / 能量 / 按钮 等控件
+│   ├── art.py           # 程序化军事美术（坦克/碉堡/飞机/铁丝网…）
+│   ├── battle_view.py   # 战斗界面
+│   ├── map_view.py      # 战区推进图
+│   ├── screens.py       # 菜单 / 商店 / 图鉴 / 结算 等
+│   └── app.py           # 主窗口与界面路由
+├── qt/                  # PyQt6 高画质版（与 ui/ 并存，共享 core/）
+│   ├── main_qt.py       # 入口
+│   ├── qtheme.py        # Qt 配色 / QSS / QPainter 工具
+│   ├── qwidgets.py      # 卡牌 / 血条 / 单位立绘 等控件
+│   ├── qbattle.py       # 战斗界面（含动画）
+│   ├── qmap.py          # 战区推进图
+│   ├── qscreens.py      # 菜单 / 商店 / 图鉴 / 结算 等
+│   ├── qapp.py          # 主窗口与路由
+│   └── headless_tour.py # 无头遍历验收脚本
+├── tests/               # 175 个单元测试（纯 unittest）
+├── data/                # 存档（自动生成）
+└── selfcheck_coredata.py# 数据层完整性审计
+```
+
+---
+
+## 开发 / 验证
+
+```bash
+# 运行全部测试（426 个用例）
+python3 -m unittest discover -s tests -v
+
+# 引擎与数据层冒烟
+python3 main.py --selftest
+
+# 数据完整性审计（幽灵 id / 交叉引用 / 数值自洽）
+python3 selfcheck_coredata.py
+
+# 平衡性蒙特卡洛（2000 场自动对战）
+python3 tests/test_balance.py --full
+```
+
+### 当前状态
+
+- **175 / 175 测试通过**（2 个 skip）
+- 端到端：开局 → 战斗 → 存档读档 → 12 个界面切换，全部正常
+- 蒙特卡洛 2000 场：`act1 普通战胜率 100%`，通关率随难度单调下降
+  （难度 0 → 43%，难度 20 → 5%），0 超时 0 崩溃
+
+---
+
+<a id="english"></a>
+# English
+
+**Current version: 0.9 Beta**
+
+> Bilingual document. Chinese is above; English starts here.
+> [Back to top / 回到顶部](#钢铁战线-steel-frontline)
+
+**Steel Frontline** is a **deck-building roguelike** (Slay-the-Spire style) set in
+a WWII armored-warfare theme, turn-based.
+
+- **Solo campaign** — fight AI forces, climb the map, build decks, unlock achievements
+- **LAN 1v1** — battle a friend directly over the same WiFi ([tutorial](#lan-1v1-versus))
+
+> **Fully offline** (even multiplayer stays on your LAN — no servers involved).
+> Two editions:
+>
+> | Edition | Dependency | Look | Launch |
+> |---|---|---|---|
+> | **Hi-Fi (recommended)** | needs PyQt6 | Qt anti-aliasing / real gradients / smooth animation | double-click `启动游戏_高画质版.command` |
+> | Classic | zero dependencies (bundled Tkinter) | hand-drawn Tkinter | double-click `启动游戏.command` |
+>
+> Both share the same `core/` engine and the same save file.
+
+## Quick Start
+
+### Hi-Fi edition (PyQt6, recommended)
+
+```bash
+cd whale-card-battle
+python3 -m pip install --user PyQt6   # once, ~60 MB
+python3 qt/main_qt.py
+```
+
+On macOS you can just double-click **`启动游戏_高画质版.command`** (it detects and
+installs PyQt6 for you).
+
+### Classic edition (Tkinter, zero dependencies)
+
+```bash
+cd whale-card-battle
+python3 main.py
+```
+
+On macOS you can just double-click **`启动游戏.command`**.
+
+### Command-line flags (both editions)
+
+```bash
+python3 qt/main_qt.py --seed 42        # fixed seed
+python3 qt/main_qt.py --ascension 5    # campaign level
+python3 qt/main_qt.py --fullscreen     # fullscreen
+python3 qt/main_qt.py --selftest       # headless self-test
+```
+
+Other launch options:
+
+```bash
+python3 main.py --seed 12345   # same seed reproduces the same run
+python3 main.py --asc 5        # campaign level (0-20)
+python3 main.py --daily        # daily challenge (same seed for everyone, by date)
+python3 main.py --selftest     # no-window self-test: data layer + engine smoke
+```
+
+## What Kind of Game Is This
+
+You are an **armored commander** pushing into enemy territory. Each run starts with
+10 standard cards; along the way you collect **Attack / Tactics / Orders** cards and
+**Medals**, gradually building your own combat engine.
+
+- **Goal** — clear 3 acts and defeat the final fortress
+- **Run length** — 30-60 minutes
+- **Failure** — HQ HP hits zero (the run ends, meta progress is permanent)
+
+### The five archetypes
+
+| Archetype | Core mechanic | How it plays |
+|---|---|---|
+| **Assault** | Strength (+1 damage per stack), Vulnerable (+50% damage taken) | Stack Strength, burst one turn |
+| **Defense** | Block, Barbed Wire retaliation, Fortifications | Out-armor them and hit back |
+| **Incendiary** | Burn (damage over turns, decays), Weak (enemy damage -25%) | Apply damage-over-time, grind them down |
+| **Logistics** | Extra Energy, card draw, multi-hit, ammo stockpiles | Play a dozen cards per turn |
+| **Support** | Minions (act independently), Reinforce (Strength each turn) | Flood the board, snowball |
+
+## Why It Lasts
+
+Long-term replayability was the top design priority — 7 layers of it:
+
+1. **20 campaign levels** (`--asc 0..20`) — each stacks real difficulty: enemy
+   HP/damage up, starting curses, doubled elites, extra boss phases. Clearing one
+   unlocks the next.
+2. **Permanent meta progression** — even a failed run keeps your codex,
+   achievements, and level unlocks.
+3. **30 achievements** — from "First Descent" to "Steel Finale", covering extreme
+   playstyles (win with under 15 cards, speedrun in 20 minutes, win at 5 HP, win
+   with a pure Defense deck...).
+4. **Full codex** — all 134 cards / 52 medals / 53 enemies browsable.
+5. **Daily challenge** — one seed worldwide, a new map every day.
+6. **Custom seeds** — replay any situation by entering the same seed.
+7. **Local leaderboard + saves** — top-10 scores, quit and resume anytime.
+
+### Content
+
+| Content | Count |
+|---|---|
+| Cards | **134** (Attack 54 / Skill 46 / Power 22 / Status 6 / Curse 6) |
+| Medals (relics) | **52**, covering 11 trigger timings |
+| Enemies | **53** (including 3 multi-phase fortress bosses) |
+| Events | **31** battlefield choices |
+| Campaign levels | **20** |
+| Achievements | **30** |
+
+## Controls
+
+| Action | Effect |
+|---|---|
+| Hover a card | Enlarge + show full description |
+| Left-click a card | Select (targeted cards need a second click on an enemy) |
+| End Turn | Enemies act (animated one by one) |
+| `Esc` | Back / close |
+| Drag window edge | Resizable (minimum 1280x800) |
+
+## LAN 1v1 Versus
+
+**No internet, no server required.** Two computers on the same WiFi (or router):
+one hosts, the other joins.
+
+> Only the **Hi-Fi (PyQt6)** edition has multiplayer. The Classic edition is solo-only.
+
+### Full tutorial: hosting and joining
+
+#### Step 1 — Put both computers on the same LAN
+
+Make sure both are on the **same WiFi** (or the same router's ports).
+A phone hotspot works too — connect both laptops to your hotspot.
+
+#### Step 2 — The host opens a room
+
+1. Launch the game -> main menu -> **LAN VERSUS**
+2. Pick **Create Room** (selected by default)
+3. The screen shows your **local IP**, something like `192.168.1.7` or `10.42.100.2`
+4. Note it down and **read it aloud** to the other player (or screenshot it)
+5. Click **Start Waiting**; status becomes "Waiting for opponent..."
+
+> Default port is `45671`. If you see "port already in use", another program has
+> it — pick a different port in the UI.
+
+#### Step 3 — The other computer joins
+
+1. Launch the game -> main menu -> **LAN VERSUS**
+2. Pick **Join Room**
+3. Type the IP the host read out
+4. Click **Connect**
+
+Both sides then go to deck building.
+
+#### Step 4 — Build decks
+
+- **All 134 cards are unlocked** from the start
+- A deck needs **20-40 cards**
+- Max **2 copies** of the same card (`Rifle Volley` / `Build Cover` get 3)
+- In a hurry? Click **Random Deck** or pick a **Recommended Archetype**:
+
+| Archetype | Playstyle |
+|---|---|
+| **Assault** | High damage, fast, seizes tempo with multi-hits |
+| **Defense** | Stack Block and retaliate with Barbed Wire |
+| **Incendiary** | Burn and Vulnerable, make them bleed every turn |
+| **Logistics** | Draw and Energy engines, win on card advantage |
+| **Support** | Flood the board with minions |
+
+#### Step 5 — Fight
+
+- Both sides start at **75 HQ Integrity**, **3 Energy** per turn, draw 5 cards
+- Each turn has a **60-second** limit; it auto-ends on timeout
+- First HQ reduced to 0 loses
+
+**Turn-order fairness**: the second player gets **+2 Energy** on their first turn.
+(Measured over 1200 mirrored games, first-player win rate is 50.4% — essentially even.)
+
+### Known limitations
+
+Honest list, so you do not get surprised:
+
+| Limitation | Detail |
+|---|---|
+| **1v1 only** | No 3+ player support |
+| **No reconnect** | If one side drops, the match ends |
+| **LAN only** | Same WiFi/router. Cross-network needs manual port forwarding |
+| **Plaintext, no password** | Anyone on the same subnet could theoretically join (first come, first served) |
+| **Host is authoritative** | A cheating host cannot be stopped — but a cheating client **always gets caught** |
+| **macOS firewall** | If the other side cannot connect, allow incoming connections in System Settings -> Network -> Firewall |
+
+### Troubleshooting order
+
+1. **Same WiFi?** — the most common cause. A phone hotspot is the most reliable test
+2. **Right IP?** — the one shown on the host screen, not `127.0.0.1`
+3. **Firewall** — macOS asks "allow incoming connections?" on first host; click Allow
+4. **Different port** — try another if 45671 is taken
+5. **Turn off VPN** — some VPNs hijack LAN traffic, breaking same-subnet connections
+
+## On Cheating: Our Stance
+
+> **Cheating is shameful.**
+>
+> The console (F1) exists for **debugging and solo testing** — not for online play.
+>
+> **If you are not the host, you have no right to alter someone else's match.**
+>
+> **Play fair.**
+
+### The rules
+
+**Solo mode** — cheat all you want. It is your own experience; nobody cares.
+
+**Godslayer Mode** (campaign level maxed to 20):
+**all cheats are disabled.** It is the highest-difficulty honour challenge; cheat
+codes and debug commands are refused, and the settings screen shows a red
+"Godslayer Mode — Cheats Disabled" notice instead of the input box. Prove yourself
+the honest way.
+
+**Multiplayer**:
+
+- **Only the host** can use cheat codes, and only after **explicitly enabling the switch** (off by default)
+- **Clients have no cheat interface at all** — not hidden, simply absent
+- Any cheating packet from a client is **rejected outright**, and then:
+
+### What happens when you get caught
+
+The system detects cheating packets in real time. On a hit:
+
+1. **A huge red banner appears on the cheater's screen**:
+
+   > ## CHEATING IS SHAMEFUL
+
+2. **A red tag appears over the cheater's head on the opponent's screen**:
+
+   > ## CHEATER
+
+The opponent also sees the detection reason in the battle log (e.g. "the opponent
+attempted to cheat (forged a host-only message); rejected and flagged").
+
+> **Note**: the private full edition keeps a blunter wording. The public edition
+> and this repository use the civilised text above. The logic is identical; only
+> the message differs.
+
+### What counts as cheating
+
+| Behaviour | Why |
+|---|---|
+| Forging `state` / `snapshot` / `start` / `over` | Impersonating the host to change HP or declare victory |
+| Impersonating cheat commands (`cheat` / `redeem` / `god_mode` / `hp` / `win`...) | Clients have no such interface; these can only be hand-crafted packets |
+| Out-of-range card index (`999` / `-1` / a string / `true`) | The real UI only lets you click cards in hand |
+| Sending message types outside the protocol | A real client never invents protocol |
+
+### What does **not** count as cheating
+
+These are misclicks and only get a normal rejection, no tag:
+
+- Playing on the opponent's turn
+- Not enough Energy
+- Malformed target field
+
+> In short: **misclicks are forgiven, deliberate packets get you tagged.**
+
+## Console (F1) and Cheat Codes
+
+Press **F1** on any screen to open a bottom-drawer console, like a real PC game:
+
+| Key | Action |
+|---|---|
+| `F1` | Open / close console |
+| `Esc` | Close console (does not leave the screen) |
+| `Enter` | Run the current command |
+| `Tab` | Autocomplete a cheat code |
+| `Up` / `Down` | Command history |
+
+**Built-in commands**
+
+| Command | Effect |
+|---|---|
+| `help` | Show all commands |
+| `list` | List all cheat codes |
+| `status` | Show current campaign / battle state |
+| `seed` | Show the current seed |
+| `give <card_id>` | Add a card to your hand (in battle) |
+| `heal [n]` | Restore HQ Integrity (default 999) |
+| `hp <n>` / `maxhp <n>` | Set current / max Integrity |
+| `gold <n>` | Set gold |
+| `energy <n>` / `block <n>` | Set Energy / Block (in battle) |
+| `kill` / `win` | Destroy all enemies in the current battle |
+| `clear` | Clear console output |
+| `close` | Close console |
+
+You can also type **cheat codes** directly in the console (`manpower`, `god_mode`...),
+with the same effect as the settings input box.
+
+### Settings input box
+
+Prefer no hotkeys? The **Settings** screen has a "Cheat Code" input at the bottom.
+
+### Cheat code list
+
+| Code | Effect |
+|---|---|
+| `it` | Lightning Deployment — refill Energy, draw up to 7 |
+| `ic` | Instant Fortifications — 999 Block + 10 Barbed Wire |
+| `research all` | Full Research Unlock — unlock every card/medal, fill the codex |
+| `debug_nuke` | Strategic Bombing card — 9999 damage to all enemies |
+| `god_mode` | God Mode — take 0 damage this turn |
+| `annex all` | Total Annexation — kill all enemies, end the battle instantly |
+| `manpower` | Manpower — HQ +50 HP, +50 troops |
+
+## Music / BGM
+
+### How to add your own music (full tutorial)
+
+The game ships **without music** (copyright). Adding songs takes three steps:
+
+**Step 1 — Find the music folder**
+
+The game creates it automatically on first launch:
+
+```
+~/Documents/钢铁战线/music/          (Chinese edition folder)
+~/Documents/钢铁战线公开版/music/     (public edition folder)
+```
+
+> **In Finder**: menu bar "Go" -> "Home" -> `Documents` -> the game folder -> `music`
+> Or press `Cmd+Shift+G` and paste the full path.
+
+**Step 2 — Copy songs in, numbered**
+
+Filenames must be `music1`, `music2`, `music3`... (**with an extension**):
+
+```
+music1.ogg
+music2.ogg
+music3.ogg
+...
+```
+
+Supported formats: **`mp3` / `ogg` / `m4a` / `wav` / `aac` / `aiff` / `flac`**
+
+> **You can mix formats** — `music1.mp3` and `music2.ogg` coexist fine.
+> Note **`music10` sorts after `music2`** (numeric, not alphabetical), so up to 99 tracks are safe.
+
+**Step 3 — Restart the game**
+
+That is it. No configuration needed.
+
+### Playback rules
+
+1. **Always starts with `music1`** (every launch)
+2. When a track ends -> **random** next track
+3. When that ends -> random again -> **never stops**
+4. Recently played tracks are avoided, so you will not hear the same song twice in a row
+
+### FAQ
+
+| Problem | Cause / Fix |
+|---|---|
+| **No sound after adding files** | 1) Is the filename exactly `music1.mp3`? 2) Did you restart? 3) Is "Enable background music" on in Settings? |
+| **Replace one track** | Delete the old file, drop in the new one, keep the same name |
+| **Start over** | Empty the `music/` folder and re-add |
+| **Wrong order** | Check the numbers. Sorting is **numeric**: 1, 2, 3 ... 10, 11 |
+| **Cannot find the music folder** | Launch the game once (it creates it), or make it manually |
+| **Too loud / quiet** | Volume slider in Settings, or the system volume |
+
+### Scene-based naming (advanced)
+
+Besides the `music1`/`music2` radio mode, you can name by **scene** and the game
+prefers those:
+
+```
+menu.*        main menu
+battle.*      battle
+map.*         campaign map
+shop.*        supply depot / shop
+event.*       events
+rest.*        field hospital
+reward.*      rewards
+victory.*     victory
+defeat.*      defeat
+ambient.*     universal fallback (used when a scene has no track)
+```
+
+Examples:
+- One song looping forever -> a single `ambient.mp3` is enough
+- Different menu and battle music -> `menu.mp3` + `battle.mp3`
+
+> Both modes mix: scene tracks win when present, otherwise it falls back to the
+> `music1/2/3...` radio.
+
+### Radio mode (default)
+
+**The easiest way**: drop songs into `music/` named `music1.ogg`, `music2.ogg`...
+and change nothing.
+
+Use "◀ Previous / Next ▶" in Settings (or double-click a list entry) to skip
+tracks. Toggling background music off and on **resumes the same track**, it does
+not jump back to the first.
+
+## Project Structure
+
+```
+whale-card-battle/
+├── core/            engine + data (no UI dependency)
+│   ├── engine.py      battle engine
+│   ├── cards.py       134 cards
+│   ├── enemies.py     53 enemies
+│   ├── events.py      31 events
+│   ├── relics.py      52 medals
+│   ├── run.py         run state, meta progress, saves
+│   ├── versus.py      1v1 engine
+│   ├── deckbuild.py   deck builder
+│   ├── netplay.py     LAN networking (stdlib sockets only)
+│   ├── cheats.py      cheat codes
+│   ├── audio.py       music (radio mode)
+│   └── i18n.py        Chinese/English switching
+├── ui/              Classic edition (Tkinter)
+├── qt/              Hi-Fi edition (PyQt6)
+├── locales/         translation tables
+├── tests/           426 tests
+├── packaging/       build scripts for .app / .dmg
+└── releases/        prebuilt downloads
+```
+
+## Development / Verification
+
+```bash
+# all tests (426 cases)
+python3 -m unittest discover -s tests
+
+# engine + data smoke test
+python3 main.py --selftest
+
+# data integrity audit (phantom ids / cross-references / value sanity)
+python3 selfcheck_coredata.py
+
+# balance Monte Carlo (2000 auto-battles)
+python3 -m unittest tests.test_balance -v
+```
+
+### Current status
+
+| Item | Result |
+|---|---|
+| Tests | **426 passed** (3 skipped) |
+| Card reference audit | 0 phantom ids |
+| Headless UI tour | 17 screens, no stderr |
+| Balance | Act-1 normal win rate ~100% (greedy AI) |
+| Versus fairness | first player 50.6% over 500 mirrored games |
+| i18n coverage | **100%** (2000 / 2000 strings) |
+
+## About Assets
+
+- **All art is procedural** — no image files. Every tank, soldier, icon and
+  background is drawn with code (shapes, gradients, noise).
+- **No audio is bundled** — for copyright reasons. See the music section above.
+- **No third-party dependencies** for the Classic edition. The Hi-Fi edition
+  needs only PyQt6.
+
+## FAQ
+
+**Does it need internet?**
+No. Fully offline, including LAN multiplayer (which never leaves your network).
+
+**Does it need Python or Qt installed?**
+Not for the packaged `.dmg` — it bundles Python and Qt. Running from source needs
+Python 3.9+ (PyQt6 optional, for the Hi-Fi edition).
+
+**Where are my saves?**
+`~/Documents/钢铁战线/data/` (or the `data/` folder inside the project when
+running from source). Delete `save.json` to reset the current run, `meta.json`
+to wipe meta progress.
+
+**Why is the first launch blocked by Gatekeeper?**
+The package is unsigned (an Apple certificate costs $99/year). Right-click the
+app -> Open -> Open. Once only.
+
+**Can I add cards / change numbers?**
+Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies in
+`core/enemies.py`. No build step.
+
+**Is there a mobile version?**
+No. Desktop only (macOS tested; the code is portable Python and should run on
+Linux/Windows with a Python 3.9+ interpreter, though that is untested).
+
+---
+
+## 关于素材
+
+本项目**不含任何外部素材文件**：
+
+- 所有美术均为**程序化绘制**（Tkinter Canvas / QPainter 代码生成）——坦克、碉堡、
+  飞机、铁丝网、勋章、卡面质感等全部由代码绘制，无图片文件依赖
+- 无音频文件
+- 因此**没有任何版权问题**，也不会因为缺少素材文件而无法运行
+
+---
+
+## 常见问题
+
+**Q: 提示 `No module named tkinter`？**
+macOS 自带 Python 3 已包含 tkinter。若使用自定义 Python，请安装带 tk 支持的版本。
+
+**Q: 窗口显示异常 / 卡住？**
+本机 Python 3.9 自带 Tk 8.5 在 macOS 上较旧。若遇到渲染问题，可尝试
+`qt/` 目录下的 PyQt6 版本（需先 `pip install PyQt6`）。
+
+**Q: 存档在哪？**
+`data/save.json`（当前局）与 `data/meta.json`（永久进度）。
+删掉即可重置进度。
+
+**Q: 怎么玩得更好？**
+薄牌组通常强于厚牌组 —— 商店可以删卡。专注一个流派比什么都拿更强。

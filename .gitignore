@@ -1,0 +1,44 @@
+# ---- 构建产物 ----
+build/
+dist/
+build_dist_public/
+build_dist_full/
+dist_public/
+dist_full/
+*.spec
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---- 打包中间产物 ----
+packaging/dist/
+packaging/dmgstage*/
+packaging/_empty_music/
+packaging/icon.iconset/
+packaging/*.dmg
+packaging/icon.png
+
+# ---- 运行时数据（存档/偏好，不进仓库）----
+data/*.json
+data/crash.log
+data/launch.log
+prefs.json
+
+# ---- 音乐：版权原因不入库 ----
+# 用户自己放歌；仓库只保留说明文件
+music/*.ogg
+music/*.mp3
+music/*.m4a
+music/*.wav
+music/*.flac
+
+# ---- 系统 ----
+.DS_Store
+._*
+Thumbs.db
+
+# ---- 编辑器 ----
+.vscode/
+.idea/
+*.swp
+cheat_flavor.txt
