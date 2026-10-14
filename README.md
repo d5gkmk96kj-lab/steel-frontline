@@ -12,6 +12,21 @@
 打包版自带 Python 与 Qt，**不需要安装任何东西**。
 安装方法见 [下载说明](releases/README.md)。
 
+> ### 🐛 发现 Bug？请到 Wiki 提交
+>
+> **遇到问题、崩溃、数值不合理，或者想提建议，请到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交。**
+>
+> 提交时麻烦带上这几样，能快很多：
+>
+> | 要写的 | 从哪来 |
+> |---|---|
+> | **版本号** | 主菜单副标题，例如 `v0.9 测试版` |
+> | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
+> | **截图** | 有的话最好 |
+> | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
+>
+> 已知问题（修好前不用重复报）见 [Wiki 的 Known Issues 页](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki)。
+
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
 > | **0.9 测试版 · 公开版** | `SteelFrontline-Public-v0.9-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
@@ -1051,6 +1066,12 @@ app -> Open -> Open. Once only.
 Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies in
 `core/enemies.py`. No build step.
 
+**I found a bug — where do I report it?**
+Please file it on the [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki).
+Include the version string (shown under the main menu title, e.g. `0.9 Beta`),
+the exact steps to reproduce, and a screenshot if you have one. If the game
+crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
+
 **Is there a mobile version?**
 No. Desktop only (macOS tested; the code is portable Python and should run on
 Linux/Windows with a Python 3.9+ interpreter, though that is untested).
@@ -1080,6 +1101,10 @@ macOS 自带 Python 3 已包含 tkinter。若使用自定义 Python，请安装�
 **Q: 存档在哪？**
 `data/save.json`（当前局）与 `data/meta.json`（永久进度）。
 删掉即可重置进度。
+
+**Q: 遇到 Bug 怎么办？**
+到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交，
+带上版本号、复现步骤和截图。详细要求见 [下载区上方的说明](#-下载--download)。
 
 **Q: 怎么玩得更好？**
 薄牌组通常强于厚牌组 —— 商店可以删卡。专注一个流派比什么都拿更强。

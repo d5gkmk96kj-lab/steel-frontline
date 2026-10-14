@@ -110,6 +110,35 @@ class GameWindow(QMainWindow):
         self.screens: Dict[str, QWidget] = {}
         self._build_all_screens()
 
+        # --- 全局控制台（F1 呼出）---
+        self._build_console()
+
+        # 信号接线（必须在界面建好之后）
+        self._wire()
+        self.show_screen("menu")
+
+    def _build_console(self) -> None:
+        """构造/重建全局控制台（F1）。"""
+        old = getattr(self, "console", None)
+        if old is not None:
+            try:
+                old.setParent(None)
+                old.deleteLater()
+            except Exception:
+                pass
+        self.console = ConsoleOverlay(self)
+        self.console.setGeometry(0, self.height() - ConsoleOverlay.HEIGHT,
+                                 self.width(), ConsoleOverlay.HEIGHT)
+        self.console.raise_()
+        try:
+            from PyQt6.QtGui import QShortcut, QKeySequence
+            sc = QShortcut(QKeySequence(Qt.Key.Key_F1), self)
+            sc.setContext(Qt.ShortcutContext.ApplicationShortcut)
+            sc.activated.connect(self.toggle_console)
+            self._f1 = sc
+        except Exception:
+            self._f1 = None
+
     def _build_all_screens(self) -> None:
         """构造/重建全部界面。
 
@@ -164,29 +193,17 @@ class GameWindow(QMainWindow):
             pass
         try:
             self._build_all_screens()
+            self._build_console()
+            # 关键：新建的界面是**全新的对象**，旧对象上的信号连接已随
+            # 其销毁而失效。必须在重建后重新接线，否则所有按钮都会失灵
+            # （用户实际遇到：改完语言后点「开始战役」没反应）。
+            self._wire()
             self.show_screen(cur if cur in self.screens else "menu")
         except Exception:
             try:
                 self.show_screen("menu")
             except Exception:
                 pass
-
-        # --- 全局控制台（F1 呼出）---
-        self.console = ConsoleOverlay(self)
-        self.console.setGeometry(0, self.height() - ConsoleOverlay.HEIGHT,
-                                 self.width(), ConsoleOverlay.HEIGHT)
-        self.console.raise_()
-        try:
-            from PyQt6.QtGui import QShortcut, QKeySequence
-            sc = QShortcut(QKeySequence(Qt.Key.Key_F1), self)
-            sc.setContext(Qt.ShortcutContext.ApplicationShortcut)
-            sc.activated.connect(self.toggle_console)
-            self._f1 = sc
-        except Exception:
-            self._f1 = None
-
-        self._wire()
-        self.show_screen("menu")
 
     # =================================================================
     # BGM（music/ 目录由用户放置）
