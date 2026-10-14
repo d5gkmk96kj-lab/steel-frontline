@@ -29,6 +29,9 @@ if ls "$ROOT/music"/*.ogg >/dev/null 2>&1; then
 fi
 
 # 拖拽安装用
+# 提示文件放包外一份，用户可以直接编辑
+[ -f "$ROOT/tips.txt" ] && cp "$ROOT/tips.txt" "$STAGE/tips.txt"
+
 ln -s /Applications "$STAGE/Applications"
 
 # 完整教程（README）也放进 DMG，同学能直接看

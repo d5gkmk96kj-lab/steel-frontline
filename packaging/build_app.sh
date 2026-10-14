@@ -74,6 +74,7 @@ pyinstaller \
   --paths "$ROOT" \
   --add-data "$ROOT/music:music" \
   --add-data "$ROOT/locales:locales" \
+  --add-data "$ROOT/tips.txt:." \
   --add-data "$ROOT/cheat_flavor.txt:." \
   --hidden-import core.cards --hidden-import core.engine --hidden-import core.run \
   --hidden-import core.audio --hidden-import core.cheats --hidden-import core.events \

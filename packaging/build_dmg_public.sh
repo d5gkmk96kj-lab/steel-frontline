@@ -27,6 +27,9 @@ mkdir -p "$STAGE/music" "$STAGE/data"
   cp "$ROOT/packaging/_empty_music/README.txt" "$STAGE/music/README.txt"
 
 # 拖拽安装用
+# 提示文件放包外一份，用户可以直接编辑
+[ -f "$ROOT/tips.txt" ] && cp "$ROOT/tips.txt" "$STAGE/tips.txt"
+
 ln -s /Applications "$STAGE/Applications"
 
 # 完整教程（README）也放进 DMG，同学能直接看

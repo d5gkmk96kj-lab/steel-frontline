@@ -306,8 +306,16 @@ class MenuScreen(QWidget):
             f"background:transparent;")
         lv.addWidget(self.lbl_sub)
 
-        lv.addSpacing(26)
+        # 提示行（内容来自项目根的 tips.txt，每次进菜单随机一条）
+        self.lbl_tip = QLabel("", left)
+        self.lbl_tip.setWordWrap(True)
+        self.lbl_tip.setStyleSheet(
+            f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"
+            f"background:transparent;")
+        lv.addWidget(self.lbl_tip)
+        self._refresh_tip()
 
+        lv.addSpacing(26)
         self.btn_new = QPushButton("开 始 新 战 役", left)
         self.btn_new.setObjectName("Primary")
         self.btn_new.setMinimumHeight(52)
@@ -587,6 +595,15 @@ class MenuScreen(QWidget):
 # 2. 卡牌奖励
 # =====================================================================
 
+
+
+    def _refresh_tip(self, scene: str = "menu") -> None:
+        """刷新提示行。tips.txt 改了内容后重启即可生效。"""
+        try:
+            from core import tips as _tips
+            self.lbl_tip.setText("💡 " + _tips.random_tip(scene))
+        except Exception:
+            pass
 
 class RewardScreen(QWidget):
     """战后奖励：金币 + 卡牌三选一 + 勋章。"""
@@ -1423,6 +1440,21 @@ class GameOverScreen(QWidget):
         root.addWidget(self.ach_box, 0, Qt.AlignmentFlag.AlignHCenter)
         self.ach_box.hide()
 
+        # 提示行（内容来自项目根的 tips.txt，胜负各看各的）
+        self.lbl_tip = QLabel("", self)
+        self.lbl_tip.setWordWrap(True)
+        self.lbl_tip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_tip.setMaximumWidth(780)
+        self.lbl_tip.setStyleSheet(
+            f"color:{T.TEXT_MUTED};font-size:{T.FONT_SMALL}px;"
+            f"background:transparent;")
+        # 给提示行留够高度，否则会被上下挤压成重叠的一团
+        self.lbl_tip.setMinimumHeight(34)
+        root.addSpacing(6)
+        root.addWidget(self.lbl_tip, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        root.addStretch(1)
+
         bar = QHBoxLayout()
         bar.addStretch(1)
         self.btn_again = QPushButton("再 战 一 局", self)
@@ -1485,13 +1517,20 @@ class GameOverScreen(QWidget):
         self.lbl_big.setStyleSheet(
             f"color:{accent}; font-size:{T.FONT_TITLE + 16}px; font-weight:800;"
             f"background:transparent; ")
-        self.lbl_sub.setText(
-            "钢铁与意志的胜利。战线已全面推进。" if won
-            else "总部被摧毁了……但钢铁的意志不会熄灭。")
+        if won:
+            diff = int(getattr(run, "ascension", 0) or 0)
+            self.lbl_sub.setText(
+                "钢铁与意志的胜利。敌要塞陷落，全线突破。"
+                + ("（战役难度 %d）" % diff if diff else ""))
+        else:
+            self.lbl_sub.setText("总部被摧毁了……但钢铁的意志不会熄灭。")
         st = getattr(run, "stats", {}) or {}
+        # 通关时 advance_act() 会把 act 变成 4，显示「第 4 幕」很怪。
+        act_txt = ("全 3 幕 · 已通关" if won
+                   else "第 %d 幕" % max(1, int(getattr(run, "act", 1) or 1)))
         rows = [
             ("最终得分", str(score), T.GOLD),
-            ("抵达幕次", f"第 {run.act} 幕", T.TEXT),
+            ("抵达幕次", act_txt, T.GOLD if won else T.TEXT),
             ("推进层数", f"{run.floor} 层", T.TEXT),
             ("总部耐久", f"{run.hp} / {run.max_hp}", T.TEXT),
             ("战役难度", str(run.ascension), T.TEXT),
@@ -1525,6 +1564,14 @@ class GameOverScreen(QWidget):
             self.ach_box.show()
         else:
             self.ach_box.hide()
+
+        # 胜负各显示对应场景的提示
+        try:
+            from core import tips as _tips
+            self.lbl_tip.setText(
+                "💡 " + _tips.random_tip("win" if won else "lose"))
+        except Exception:
+            pass
 
 
 # =====================================================================
