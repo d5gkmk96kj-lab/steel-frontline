@@ -1,3 +1,27 @@
+<div align="center">
+
+# ⚠️ 此游戏全部由 AI 生成 ⚠️
+
+<h2>🤖 <span style="color:#D32F2F">本项目 100% 由 AI（DeepSeek-V4.1-Flash）生成</span> 🤖</h2>
+
+**代码、卡牌、数值、美术、文案、翻译、测试、打包脚本 —— 一行一行，全部来自 AI。**
+
+人类只做了三件事：**提需求、点运行、报 Bug。**
+
+</div>
+
+---
+
+> ## 🔴 请注意
+>
+> - **这是 AI 作品。** 它没有经过专业团队打磨，平衡性、代码质量、文案水准都可能有明显问题。
+> - **很可能存在我没测出来的 Bug。** 遇到问题请到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交，我会继续让 AI 修。
+> - **素材版权**：美术全部由**代码程序化生成**（没有一张图片文件），音乐**不附带**（避免版权问题，请自行添加）。
+> - **没有苹果签名**，macOS 首次打开会被拦一次，[点这里看怎么放行](#macos-首次运行通过审核隐私与安全性)。
+> - **不接受"AI 做的东西也配叫游戏"这类争论** —— 这本来就是个实验：看看现在 AI 能独立做出什么。
+
+---
+
 # 钢铁战线 Steel Frontline
 
 **当前版本：v0.9 测试版** · *Current version: 0.9 Beta*
@@ -517,6 +541,79 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 
 ---
 
+## 更新软件
+
+### 需要联网
+
+**游戏本身完全离线**，只有**检查更新**这一步需要联网（几 KB 的请求）。
+
+- 启动游戏后会自动在后台检查一次（不阻塞、不影响玩）
+- 也可以手动检查：**设置 → 检查更新**
+- 离线时检查会静默失败，不影响任何功能
+
+如果发现新版本，会弹出提示，列出这次**修复了什么 Bug、新增了什么功能**，
+点「前往下载」会打开浏览器到 GitHub 下载页。
+
+### 怎么更新（三步）
+
+1. 下载新的 `.dmg`
+2. 打开它，把新的 App **拖进「应用程序」文件夹**（提示覆盖时选「替换」）
+3. 完成 —— **存档、音乐、成就全部保留**
+
+> **存档不会被覆盖**：存档在 `~/Documents/钢铁战线/data/`，
+> 不在 App 内部。换 App 不影响进度。
+
+### 清理旧版本
+
+更新完成后，可以在 **设置 → 清理旧版本** 里删掉旧的 App 和旧的安装包。
+
+- 会**逐项列出**要删什么、多大
+- **存档绝不会被删除**（代码里有硬性保护）
+- 当前正在用的版本也会自动跳过
+
+---
+
+## macOS 首次运行：通过审核（隐私与安全性）
+
+这个包**没有苹果开发者签名**（签名要 $99/年），所以 macOS 第一次会拦一下。
+按下面做一次即可，之后双击就能正常打开。
+
+### 方法一：右键打开（最快）
+
+1. 打开「应用程序」文件夹
+2. **右键**（或按住 Control 点）「钢铁战线」
+3. 选「**打开**」
+4. 弹窗里再点一次「**打开**」
+
+### 方法二：隐私与安全性里放行
+
+如果右键打开也看不到「打开」按钮：
+
+1. 双击 App，会弹出「无法打开，因为 Apple 无法检查其是否包含恶意软件」
+2. 点「**完成**」（或「好」）
+3. 打开 **系统设置** → **隐私与安全性**
+4. 往下拉到「**安全性**」区域
+5. 会看到一行：
+   > **"钢铁战线" 已被阻止，因为它来自身份不明的开发者**
+6. 点旁边的「**仍要打开**」
+7. 输入你的开机密码 / 用 Touch ID 确认
+8. 再双击 App，弹窗里点「**打开**」
+
+### 方法三：命令行（前两种都不行时）
+
+```bash
+xattr -dr com.apple.quarantine /Applications/钢铁战线.app
+```
+
+执行后再双击即可。
+
+> **为什么会有这个提示？**
+> 苹果要求所有 App 都购买开发者证书（$99/年）并做公证，否则一律拦截。
+> 这是开源小项目的普遍情况，**不代表软件有问题** —— 全部源码都在这个仓库里，
+> 你可以自己审阅、自己打包。
+
+---
+
 ## 存档管理
 
 主菜单 → **存档管理**。可以同时保留多个存档，每个都是独立文件。
@@ -615,6 +712,33 @@ python3 tests/test_balance.py --full
 
 <a id="english"></a>
 # English
+
+<div align="center">
+
+## ⚠️ This game is entirely AI-generated ⚠️
+
+### 🤖 100% built by AI (DeepSeek-V4.1-Flash) 🤖
+
+**Code, cards, balance numbers, art, text, translations, tests, build scripts —
+every single line came from AI.**
+
+The human did exactly three things: **asked for it, ran it, reported bugs.**
+
+</div>
+
+> ### 🔴 Please note
+>
+> - **This is an AI project.** It has not been polished by a professional team;
+>   balance, code quality and writing may all have rough edges.
+> - **There are probably bugs I have not found.** Report them on the
+>   [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) and I will have
+>   the AI fix them.
+> - **Assets**: all art is **procedurally generated in code** (not a single image
+>   file), and **no music is bundled** (to avoid copyright issues — add your own).
+> - **No Apple signature**, so macOS blocks the first launch once.
+>   [Here is how to allow it](#option-1-right-click-to-open-fastest).
+> - **Arguments of the form "AI-made things are not real games" are not welcome
+>   here.** This is an experiment: let us see what AI can build on its own today.
 
 **Current version: 0.9 Beta**
 
@@ -1015,6 +1139,83 @@ and change nothing.
 Use "◀ Previous / Next ▶" in Settings (or double-click a list entry) to skip
 tracks. Toggling background music off and on **resumes the same track**, it does
 not jump back to the first.
+
+## Updating the Game
+
+### It needs internet — but only for this
+
+**The game itself is fully offline.** The only network request is the update
+check (a few KB).
+
+- The game checks once in the background after launch (non-blocking)
+- Or check manually: **Settings -> Check for Updates**
+- Offline? The check silently fails and nothing breaks
+
+When a newer version exists, a dialog shows what was **fixed** and what was
+**added**, with a button that opens the GitHub download page in your browser.
+
+### How to update (three steps)
+
+1. Download the new `.dmg`
+2. Open it and drag the new app into **Applications** (choose Replace)
+3. Done — **saves, music and achievements are all kept**
+
+> **Your saves are not touched**: they live in `~/Documents/钢铁战线/data/`,
+> outside the app bundle. Swapping the app does not affect progress.
+
+### Cleaning up old versions
+
+After updating, use **Settings -> Clean Up Old Versions** to remove the old app
+and old installers.
+
+- It **lists every item** with its size before deleting
+- **Saves can never be deleted** (hard-coded protection)
+- The version you are currently running is skipped automatically
+
+---
+
+## macOS First Launch: Getting Past Gatekeeper
+
+This package is **not signed with an Apple developer certificate** (that costs
+$99/year), so macOS blocks it once. Do this once and double-click works forever
+after.
+
+### Option 1: Right-click to open (fastest)
+
+1. Open your Applications folder
+2. **Right-click** (or Control-click) the app
+3. Choose **Open**
+4. Click **Open** again in the dialog
+
+### Option 2: Allow it in Privacy & Security
+
+If right-clicking does not offer Open:
+
+1. Double-click the app. You will see "Apple could not verify ... is free of malware"
+2. Click **Done**
+3. Open **System Settings** -> **Privacy & Security**
+4. Scroll down to the **Security** section
+5. You will see a line like:
+   > **"钢铁战线" was blocked because it is from an unidentified developer**
+6. Click **Open Anyway** next to it
+7. Enter your password / confirm with Touch ID
+8. Double-click the app again and click **Open** in the dialog
+
+### Option 3: Command line (if the above fail)
+
+```bash
+xattr -dr com.apple.quarantine /Applications/钢铁战线.app
+```
+
+Then double-click as usual.
+
+> **Why does this happen?**
+> Apple requires every app to be signed with a paid developer certificate
+> ($99/year) and notarised; unsigned apps are blocked by default. This is normal
+> for small open-source projects and **does not mean anything is wrong** — the
+> full source is in this repository, so you can read it and build it yourself.
+
+---
 
 ## Save Management
 

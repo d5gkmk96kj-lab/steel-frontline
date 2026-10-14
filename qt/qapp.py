@@ -44,7 +44,7 @@ from core import run as run_mod      # noqa: E402
 
 from . import qtheme as T            # noqa: E402
 from . import qbattle, qmap, qscreens  # noqa: E402
-from . import qdeckbuild, qlobby, qsave, qversus  # noqa: E402
+from . import qdeckbuild, qlobby, qsave, qupdate, qversus  # noqa: E402
 from .qconsole import ConsoleOverlay  # noqa: E402
 
 
@@ -118,6 +118,61 @@ class GameWindow(QMainWindow):
         self._wire()
         self._install_cheat_hook()
         self.show_screen("menu")
+        self._start_update_check()
+
+    # ------------------------------------------------------- 更新检查 -- #
+    def _start_update_check(self) -> None:
+        """启动后延迟几秒在后台检查更新（不阻塞、离线静默失败）。"""
+        try:
+            from PyQt6.QtCore import QTimer
+            # 等界面稳定再查，避免和启动动画抢资源
+            QTimer.singleShot(2500, self.check_updates)
+        except Exception:
+            pass
+
+    def check_updates(self, silent: bool = True) -> None:
+        """检查新版本。silent=True 时没有更新就不打扰用户。"""
+        if getattr(self, "_update_checking", False):
+            return
+        self._update_checking = True
+        try:
+            from core import updater as _up
+        except Exception:
+            self._update_checking = False
+            return
+
+        def on_result(info, err):
+            # 回到 UI 线程处理（Qt 里跨线程碰控件会崩）
+            try:
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(0, lambda: self._on_update_checked(
+                    info, err, silent))
+            except Exception:
+                pass
+
+        try:
+            _up.check_async(on_result)
+        except Exception:
+            self._update_checking = False
+
+    def _on_update_checked(self, info, err, silent: bool) -> None:
+        self._update_checking = False
+        if info is None:
+            if not silent:
+                try:
+                    from core import version as _V
+                    label = _V.VERSION_LABEL
+                except Exception:
+                    label = "?"
+                QMessageBox.information(
+                    self, "检查更新",
+                    "当前已是最新版本（v%s）。\n\n"
+                    "（如果刚发布不久，可能还没同步到，稍后再试。）" % label)
+            return
+        try:
+            qupdate.show_update_dialog(info, self)
+        except Exception as exc:
+            print(f"[qt.app] update dialog failed: {exc!r}", flush=True)
 
     def _install_cheat_hook(self) -> None:
         """让兑换码结束战斗后能通知界面（否则画面会卡在战斗里）。"""

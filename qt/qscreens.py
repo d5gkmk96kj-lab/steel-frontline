@@ -299,7 +299,8 @@ class MenuScreen(QWidget):
         except Exception:
             pass
         self.lbl_sub = QLabel(
-            "STEEL FRONTLINE  ·  装甲战争 · 卡牌构筑" + _ver, left)
+            "STEEL FRONTLINE  ·  装甲战争 · 卡牌构筑  ·  🤖 全部由 AI 生成" + _ver,
+            left)
         self.lbl_sub.setStyleSheet(
             f"color:{T.TEXT_DIM}; font-size:{T.FONT_H2-3}px; "
             f"background:transparent;")
@@ -2151,6 +2152,30 @@ class SettingsScreen(QWidget):
         root.addLayout(body, 1)
 
         bar = QHBoxLayout()
+        # 手动检查更新（启动时也会自动查一次）
+        self.btn_update = QPushButton("检 查 更 新", self)
+        self.btn_update.setObjectName("Ghost")
+        self.btn_update.setFixedWidth(150)
+        self.btn_update.clicked.connect(self._check_update)
+        bar.addWidget(self.btn_update)
+
+        # 清理旧版本（不动存档）
+        self.btn_clean = QPushButton("清理旧版本", self)
+        self.btn_clean.setObjectName("Ghost")
+        self.btn_clean.setFixedWidth(130)
+        self.btn_clean.clicked.connect(self._cleanup_old)
+        bar.addWidget(self.btn_clean)
+
+        try:
+            from core import version as _V
+            ver = QLabel("v" + _V.VERSION_LABEL, self)
+            ver.setStyleSheet(
+                f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"
+                f"background:transparent;padding-left:6px;")
+            bar.addWidget(ver)
+        except Exception:
+            pass
+
         bar.addStretch(1)
         b = QPushButton("保 存 并 关 闭", self)
         b.setObjectName("Primary")
@@ -2175,6 +2200,28 @@ class SettingsScreen(QWidget):
             "confirm_end_turn": self.cb_confirm.isChecked(),
             "battle_step_ms": int(self.spin_speed.value()),
         }
+
+    def _cleanup_old(self) -> None:
+        """打开「清理旧版本」对话框（不会删除存档）。"""
+        try:
+            from . import qcleanup
+            qcleanup.show_cleanup_dialog(self)
+        except Exception:
+            pass
+
+    def _check_update(self) -> None:
+        """手动检查更新（会给出「已是最新」的反馈）。"""
+        try:
+            win = self.window()
+            fn = getattr(win, "check_updates", None)
+            if callable(fn):
+                fn(silent=False)
+                self.btn_update.setText("检查中…")
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(4000,
+                                  lambda: self.btn_update.setText("检 查 更 新"))
+        except Exception:
+            pass
 
     def _save_close(self) -> None:
         self.cfg.update(self.values())

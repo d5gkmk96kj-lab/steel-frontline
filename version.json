@@ -1,0 +1,22 @@
+{
+  "version": "0.9",
+  "label": "0.9 测试版",
+  "label_en": "0.9 Beta",
+  "released": "2026-10-14",
+  "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
+  "mandatory": false,
+  "notes": [
+    "首次公开测试版",
+    "单人战役：134 张卡 / 53 种敌人 / 31 个事件 / 52 个勋章",
+    "局域网 1v1 对战",
+    "中英双语，设置界面可切换",
+    "多存档管理，支持导入导出分享"
+  ],
+  "notes_en": [
+    "First public beta",
+    "Solo campaign: 134 cards / 53 enemies / 31 events / 52 medals",
+    "LAN 1v1 versus mode",
+    "Chinese and English, switchable in Settings",
+    "Multi-slot saves with import/export for sharing"
+  ]
+}

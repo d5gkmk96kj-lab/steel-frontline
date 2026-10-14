@@ -225,15 +225,40 @@ class SaveScreen(QWidget):
         self.load_run.emit(slot_id)
 
     def _do_delete(self, slot_id: str) -> None:
+        """删除存档 —— **两步确认**，避免手滑删掉进度。"""
         info = _saves.get(slot_id) if _saves else None
         name = info.title() if info else slot_id
-        r = QMessageBox.question(
-            self, "删除存档",
-            "确定删除「%s」吗？\n\n删除后无法恢复。" % name,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No)
-        if r != QMessageBox.StandardButton.Yes:
+        summary = info.summary() if info else ""
+
+        # 第一步：说清楚删的是什么
+        box = QMessageBox(self)
+        box.setWindowTitle("删除存档（第 1/2 步）")
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setText("要删除存档「%s」吗？" % name)
+        box.setInformativeText(
+            "%s\n\n删除后无法恢复。\n"
+            "（如果只是想清理旧版本，不需要删存档 —— 存档不在 App 里。）"
+            % summary)
+        box.setStandardButtons(QMessageBox.StandardButton.Yes
+                               | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() != QMessageBox.StandardButton.Yes:
             return
+
+        # 第二步：真的确认一次
+        box2 = QMessageBox(self)
+        box2.setWindowTitle("最后确认（第 2/2 步）")
+        box2.setIcon(QMessageBox.Icon.Critical)
+        box2.setText("真的要永久删除吗？")
+        box2.setInformativeText("「%s」将被彻底删除，此操作不可撤销。" % name)
+        yes = box2.addButton("永久删除", QMessageBox.ButtonRole.DestructiveRole)
+        box2.addButton("取消", QMessageBox.ButtonRole.RejectRole)
+        box2.setDefaultButton(box2.buttons()[-1])
+        box2.exec()
+        if box2.clickedButton() is not yes:
+            self._say("已取消删除。")
+            return
+
         ok = _saves.delete(slot_id) if _saves else False
         self._say("已删除。" if ok else "删除失败。")
         self.refresh()

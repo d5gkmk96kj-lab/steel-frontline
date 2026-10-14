@@ -412,7 +412,7 @@ class MenuView(View):
         except Exception:
             pass
         self.app.text_shadow(cx, h - 22,
-                             "纯 Python + Tkinter · 零依赖 · 程序化美术" + _ver,
+                             "纯 Python + Tkinter · 零依赖 · 🤖 全部由 AI 生成" + _ver,
                              font=T.FONT_TINY, fill=TEXT_FAINT)
 
         # 按钮

@@ -33,6 +33,11 @@ ln -s /Applications "$STAGE/Applications"
 [ -f "$ROOT/README.md" ] && cp "$ROOT/README.md" "$STAGE/游戏教程.md"
 
 cat > "$STAGE/使用说明.txt" <<'TXT'
+⚠️ 本游戏全部由 AI（DeepSeek-V4.1-Flash）生成 ⚠️
+   代码、卡牌、美术、文案、翻译、测试全部由 AI 完成。
+   未经专业团队打磨，可能存在 Bug。反馈请到项目 Wiki。
+   ————————————————————————————————————————
+
 钢铁战线 Steel Frontline
 ========================
 
