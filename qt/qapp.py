@@ -44,7 +44,7 @@ from core import run as run_mod      # noqa: E402
 
 from . import qtheme as T            # noqa: E402
 from . import qbattle, qmap, qscreens  # noqa: E402
-from . import qdeckbuild, qlobby, qversus  # noqa: E402
+from . import qdeckbuild, qlobby, qsave, qversus  # noqa: E402
 from .qconsole import ConsoleOverlay  # noqa: E402
 
 
@@ -54,7 +54,7 @@ from .qconsole import ConsoleOverlay  # noqa: E402
 
 SCREENS = ("menu", "map", "battle", "reward", "shop", "rest", "event",
            "deck", "gameover", "codex", "achievements", "settings",
-           "stats", "pile", "lobby", "deckbuild", "versus")
+           "stats", "pile", "lobby", "deckbuild", "versus", "saves")
 
 DEFAULT_CFG: Dict = {
     "fullscreen": False,
@@ -79,6 +79,7 @@ class GameWindow(QMainWindow):
         self.battle = None            # BattleState
         self.meta = run_mod.MetaProgress.load()
         self.cfg: Dict = dict(DEFAULT_CFG)
+        self._load_cfg()
         self._pending: Dict = {}      # move_to 返回的遭遇描述
         self._gold_gain = 0
         self._history: List[str] = ["menu"]
@@ -167,6 +168,7 @@ class GameWindow(QMainWindow):
         self.screens["achievements"] = qscreens.AchievementScreen(self)
         self.screens["settings"] = qscreens.SettingsScreen(self, self.cfg)
         self.screens["stats"] = qscreens.StatsScreen(self)
+        self.screens["saves"] = qsave.SaveScreen(self)
         self.screens["pile"] = qscreens.PileScreen(self)
         # --- 联机 1v1：大厅 → 卡组构筑 → 对战 ---
         self.screens["lobby"] = qlobby.LobbyScreen(self)
@@ -208,6 +210,42 @@ class GameWindow(QMainWindow):
     # =================================================================
     # BGM（music/ 目录由用户放置）
     # =================================================================
+    def _save_cfg(self) -> None:
+        """把界面设置写进 prefs.json（下次启动沿用）。"""
+        try:
+            import json as _json
+            import os as _os
+            d = getattr(run_mod, "DATA_DIR", None) or "."
+            p = _os.path.join(d, "prefs.json")
+            cur = {}
+            try:
+                cur = _json.load(open(p, encoding="utf-8"))
+                if not isinstance(cur, dict):
+                    cur = {}
+            except Exception:
+                cur = {}
+            cur["cfg"] = dict(self.cfg)
+            _os.makedirs(_os.path.dirname(p), exist_ok=True)
+            with open(p, "w", encoding="utf-8") as f:
+                _json.dump(cur, f, ensure_ascii=False, indent=1)
+        except Exception:
+            pass
+
+    def _load_cfg(self) -> None:
+        """启动时恢复界面设置。"""
+        try:
+            import json as _json
+            import os as _os
+            d = getattr(run_mod, "DATA_DIR", None) or "."
+            p = _os.path.join(d, "prefs.json")
+            cur = _json.load(open(p, encoding="utf-8"))
+            saved = cur.get("cfg") if isinstance(cur, dict) else None
+            if isinstance(saved, dict):
+                self.cfg.update({k: v for k, v in saved.items()
+                                 if k in DEFAULT_CFG})
+        except Exception:
+            pass
+
     def _music_for(self, screen: str) -> None:
         try:
             from core import audio
@@ -283,6 +321,7 @@ class GameWindow(QMainWindow):
         m.open_settings.connect(lambda: self.show_screen("settings"))
         m.open_stats.connect(lambda: self.show_screen("stats"))
         m.open_versus.connect(self.open_lobby)
+        m.open_saves.connect(self.open_saves)
 
         # --- 联机 1v1 链路 ---
         lb = self.screens["lobby"]
@@ -329,6 +368,8 @@ class GameWindow(QMainWindow):
         self.screens["codex"].closed.connect(self._back_to)
         self.screens["achievements"].closed.connect(self._back_to)
         self.screens["stats"].closed.connect(self._back_to)
+        self.screens["saves"].closed.connect(self._back_to)
+        self.screens["saves"].load_run.connect(self._load_slot)
         self.screens["settings"].closed.connect(self.on_settings_closed)
         self.screens["settings"].wipe_meta.connect(self.on_wipe_meta)
         self.screens["settings"].wipe_save.connect(self.on_wipe_save)
@@ -520,6 +561,7 @@ class GameWindow(QMainWindow):
     # 开局 / 续玩
     # =================================================================
     def start_new_run(self, ascension: int = 0, seed=None) -> None:
+        self._slot_id = None          # 新开局：下次保存时建新槽位
         self.run = run_mod.RunState()
         try:
             self.run.new_run(seed=seed, ascension=int(ascension))
@@ -543,11 +585,36 @@ class GameWindow(QMainWindow):
         self.show_screen("map")
 
     def save_and_quit(self) -> None:
+        self._persist_run()
+        self.show_screen("menu")
+
+    def _persist_run(self) -> None:
+        """把当前战役写进**存档槽**（同时保持老路径可用）。
+
+        存档列表读的是 data/saves/，所以这里必须往槽里写，否则
+        「保存并退出」后在存档管理里看不到（用户实际遇到）。
+        """
+        if self.run is None:
+            return
         try:
+            from core import saves as _sv
+            sid = getattr(self, "_slot_id", None)
+            if sid and _sv.get(sid) is not None:
+                _sv.save_to(sid, self.run)
+            else:
+                # 新的一局：第一次保存时创建槽位
+                name = "第 %d 幕 · 第 %d 层" % (
+                    int(getattr(self.run, "act", 0) or 0) + 1,
+                    int(getattr(self.run, "floor", 0) or 0))
+                self._slot_id = _sv.save_new(self.run, name)
+            # 老路径也写一份，保证「继续上次战役」照常可用
             run_mod.save_run(self.run)
         except Exception as exc:
             print(f"[qt.app] save failed: {exc!r}", flush=True)
-        self.show_screen("menu")
+            try:
+                run_mod.save_run(self.run)
+            except Exception:
+                pass
 
     # =================================================================
     # 地图推进
@@ -812,11 +879,11 @@ class GameWindow(QMainWindow):
     # 事件 / 商店 / 医院
     # =================================================================
     def on_event_done(self) -> None:
-        run_mod.save_run(self.run)
+        self._persist_run()
         self.show_screen("map")
 
     def on_shop_done(self) -> None:
-        run_mod.save_run(self.run)
+        self._persist_run()
         self.show_screen("map")
 
     def on_buy_card(self, idx: int, price: int) -> None:
@@ -927,8 +994,36 @@ class GameWindow(QMainWindow):
         self.screens["shop"].setup(self.run, inv)
         self.show_screen("shop")
 
+    def open_saves(self) -> None:
+        """打开存档管理。"""
+        try:
+            self.screens["saves"].refresh()
+        except Exception as exc:
+            print(f"[qt.app] saves refresh failed: {exc!r}", flush=True)
+        self.show_screen("saves")
+
+    def _load_slot(self, slot_id: str) -> None:
+        """从存档管理里读一个存档并进入游戏。"""
+        try:
+            from core import saves as _sv
+            r = _sv.load(slot_id)
+        except Exception as exc:
+            print(f"[qt.app] load slot failed: {exc!r}", flush=True)
+            r = None
+        if r is None:
+            try:
+                self.screens["saves"]._say("读取失败：存档已损坏或被删除。")
+            except Exception:
+                pass
+            return
+        self.run = r
+        self.battle = None
+        self._pending = {}
+        self._slot_id = slot_id        # 之后保存会写回这个槽
+        self.show_screen("map")
+
     def on_rest_done(self) -> None:
-        run_mod.save_run(self.run)
+        self._persist_run()
         self.show_screen("map")
 
     def on_rest_heal(self) -> None:
@@ -977,6 +1072,11 @@ class GameWindow(QMainWindow):
             self.cfg.update(self.screens["settings"].values())
         except Exception:
             pass
+        # 用户点的是「保存并关闭」—— 必须**真的保存当前战役**。
+        # 旧实现只存了界面设置，战役进度被丢掉（用户实际遇到）。
+        if self.run is not None:
+            self._persist_run()
+        self._save_cfg()
         if self.cfg.get("fullscreen"):
             self.showFullScreen()
         else:

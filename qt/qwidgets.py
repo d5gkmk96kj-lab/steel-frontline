@@ -2334,6 +2334,13 @@ class SectionTitle(QWidget):
         self.title = title
         self.color = color or T.Q_GOLD
         self.setFixedHeight(30)
+        # 光有高度没有宽度时，放进 QHBoxLayout 会被压成 0 宽 → 什么都画不出来。
+        # 给一个基于文字长度的最小宽度，保证标题总是可见。
+        try:
+            fm = QFontMetricsF(T.font(T.FONT_H1, True))
+            self.setMinimumWidth(int(fm.horizontalAdvance(str(title))) + 46)
+        except Exception:
+            self.setMinimumWidth(max(160, len(str(title)) * 22))
 
     def paintEvent(self, ev):  # noqa: N802
         p = QPainter(self)

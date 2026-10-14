@@ -130,3 +130,112 @@ class TestMainWindowWiring(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+@unittest.skipUnless(_qt_ok(), "PyQt6 不可用")
+class TestSaveScreenWiring(unittest.TestCase):
+    """存档界面接线：卡片按钮必须真的能触发。"""
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+        import qt.qtheme as T
+        T.install_i18n_patch()
+
+    def setUp(self):
+        import tempfile
+        import shutil
+        from core import run as run_mod
+        self.tmp = tempfile.mkdtemp(prefix="sf_qsave_")
+        self._old = (run_mod.DATA_DIR, run_mod.SAVE_PATH)
+        run_mod.DATA_DIR = self.tmp
+        run_mod.SAVE_PATH = os.path.join(self.tmp, "save.json")
+
+    def tearDown(self):
+        import shutil
+        from core import run as run_mod
+        run_mod.DATA_DIR, run_mod.SAVE_PATH = self._old
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _pump(self, ms=200):
+        from PyQt6.QtCore import QEventLoop, QTimer
+        l = QEventLoop()
+        QTimer.singleShot(ms, l.quit)
+        l.exec()
+
+    def test_screen_exists_and_lists_saves(self):
+        from core import run as run_mod, saves as sv
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        r = run_mod.RunState()
+        r.new_run(seed=5)
+        r.hp = 42
+        sv.save_new(r, "测试存档")
+
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.show_screen("saves")
+        w.screens["saves"].refresh()
+        self._pump(300)
+        cards = [c for c in w.screens["saves"]._cards
+                 if hasattr(c, "slot_id")]
+        self.assertEqual(len(cards), 1)
+        w.close()
+
+    def test_load_button_enters_game(self):
+        """点卡片上的「读取」应进入地图（回归：曾把信号当函数调用）。"""
+        from PyQt6.QtWidgets import QPushButton
+        from core import run as run_mod, saves as sv
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        r = run_mod.RunState()
+        r.new_run(seed=6)
+        r.hp = 39
+        sv.save_new(r, "要读的")
+
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.show_screen("saves")
+        w.screens["saves"].refresh()
+        self._pump(300)
+        card = [c for c in w.screens["saves"]._cards
+                if hasattr(c, "slot_id")][0]
+        for b in card.findChildren(QPushButton):
+            if b.text() == "读取":
+                b.click()
+                break
+        self._pump(500)
+        self.assertNotEqual(w.stack.currentWidget().__class__.__name__,
+                            "SaveScreen", "点读取后没有离开存档界面")
+        self.assertIsNotNone(w.run)
+        self.assertEqual(w.run.hp, 39)
+        w.close()
+
+    def test_settings_save_persists_run(self):
+        """「保存并关闭」必须真的保存战役（用户报告的 bug）。"""
+        import json
+        from PyQt6.QtWidgets import QPushButton
+        from core import run as run_mod
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(300)
+        w.start_new_run(0, None)
+        self._pump(300)
+        w.run.hp = 77
+        w.show_screen("settings")
+        self._pump(300)
+        for b in w.screens["settings"].findChildren(QPushButton):
+            if "保存并关闭" in b.text().replace(" ", ""):
+                b.click()
+                break
+        self._pump(500)
+        with open(run_mod.SAVE_PATH, encoding="utf-8") as f:
+            saved = json.load(f)
+        self.assertEqual(saved.get("hp"), 77,
+                         "设置界面没有保存战役进度")
+        w.close()

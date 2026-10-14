@@ -517,6 +517,38 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 
 ---
 
+## 存档管理
+
+主菜单 → **存档管理**。可以同时保留多个存档，每个都是独立文件。
+
+| 操作 | 说明 |
+|---|---|
+| **读取** | 载入这个存档继续玩 |
+| **改名** | 给存档起个名字（默认是「第 N 幕 · 第 M 层」） |
+| **导出** | 存成 `.json` 文件，**可以发给别人** |
+| **删除** | 删掉（会二次确认） |
+| **导入存档** | 选一个别人给你的 `.json` 文件加进来 |
+| **打开存档目录** | 在 Finder 里打开，方便手动管理 |
+
+存档位置：
+
+```
+~/Documents/钢铁战线/data/saves/
+```
+
+每局战役在**首次保存时**自动创建一个存档槽，之后保存会更新同一个槽
+（不会越存越多）。战斗、商店、事件、休息、设置里点保存都会写入。
+
+### 把存档发给别人
+
+1. 你这边：存档管理 → 找到那个存档 → 点**导出** → 存到桌面
+2. 发给对方（微信/QQ/邮件都行，文件很小，约 18 KB）
+3. 对方：存档管理 → 点**导入存档** → 选中这个文件
+
+导入时会校验文件格式，损坏或不是存档的文件会被拒绝，不会污染对方的存档列表。
+
+---
+
 ## 项目结构
 
 ```
@@ -984,6 +1016,41 @@ Use "◀ Previous / Next ▶" in Settings (or double-click a list entry) to skip
 tracks. Toggling background music off and on **resumes the same track**, it does
 not jump back to the first.
 
+## Save Management
+
+Main menu -> **Save Management**. Keep as many saves as you like; each is a
+separate file.
+
+| Action | Effect |
+|---|---|
+| **Load** | Continue that save |
+| **Rename** | Give it a name (defaults to "Act N · Floor M") |
+| **Export** | Write it to a `.json` file — **you can send this to a friend** |
+| **Delete** | Remove it (with confirmation) |
+| **Import Save** | Pick a `.json` someone sent you |
+| **Open Save Folder** | Reveal the folder in Finder |
+
+Saves live in:
+
+```
+~/Documents/钢铁战线/data/saves/
+```
+
+A run creates its slot on **first save**; later saves update the same slot
+(no endless duplicates). Saving from the map, shop, events, rest or settings all
+write through.
+
+### Sending a save to someone
+
+1. You: Save Management -> **Export** -> save it to your Desktop
+2. Send the file (it is tiny, about 18 KB)
+3. They: Save Management -> **Import Save** -> pick the file
+
+Imports are validated: corrupt files or non-save JSON are rejected, so a bad
+file cannot pollute your save list.
+
+---
+
 ## Project Structure
 
 ```
@@ -995,6 +1062,7 @@ whale-card-battle/
 │   ├── events.py      31 events
 │   ├── relics.py      52 medals
 │   ├── run.py         run state, meta progress, saves
+│   ├── saves.py       multi-slot save manager + import/export
 │   ├── versus.py      1v1 engine
 │   ├── deckbuild.py   deck builder
 │   ├── netplay.py     LAN networking (stdlib sockets only)

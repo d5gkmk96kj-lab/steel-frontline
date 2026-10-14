@@ -714,7 +714,11 @@ class MetaProgress:
 # --------------------------------------------------------------------------
 # 存档辅助
 # --------------------------------------------------------------------------
-def save_run(run: Optional[RunState], path: str = SAVE_PATH) -> bool:
+def save_run(run: Optional[RunState], path: Optional[str] = None) -> bool:
+    # 注意：path 不能写成默认参数 SAVE_PATH —— 那会在 import 时定死，
+    # 之后改 run.SAVE_PATH（测试/打包会改）就失效了。
+    if path is None:
+        path = SAVE_PATH
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         if run is None:
@@ -728,7 +732,9 @@ def save_run(run: Optional[RunState], path: str = SAVE_PATH) -> bool:
         return False
 
 
-def load_run(path: str = SAVE_PATH) -> Optional[RunState]:
+def load_run(path: Optional[str] = None) -> Optional[RunState]:
+    if path is None:
+        path = SAVE_PATH
     try:
         with open(path, "r", encoding="utf-8") as f:
             d = json.load(f)
@@ -737,7 +743,9 @@ def load_run(path: str = SAVE_PATH) -> Optional[RunState]:
         return None
 
 
-def has_save(path: str = SAVE_PATH) -> bool:
+def has_save(path: Optional[str] = None) -> bool:
+    if path is None:
+        path = SAVE_PATH
     return os.path.exists(path)
 
 
