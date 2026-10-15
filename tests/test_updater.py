@@ -140,13 +140,73 @@ class TestManifest(unittest.TestCase):
         self.assertEqual(info.notes, ["只有一条"])
 
     def test_offline_fetch_returns_none_not_raise(self):
-        """离线/超时时必须返回 None，不能抛异常。"""
-        old = U.MANIFEST_URL
+        """离线/超时时必须返回 None，不能抛异常。
+
+        注意：不要真的去连一个端口 —— 在 Windows 上防火墙可能让
+        连接静默丢包，测试会变慢甚至偶发失败。直接让 urllib 抛
+        URLError，既确定又快。
+        """
+        import urllib.request as _u
+
+        old_url = U.MANIFEST_URL
+        old_open = _u.urlopen
+
+        def _boom(*a, **kw):
+            raise _u.URLError("simulated offline")
+
         try:
-            U.MANIFEST_URL = "http://127.0.0.1:9/definitely-not-listening"
+            U.MANIFEST_URL = "http://example.invalid/version.json"
+            _u.urlopen = _boom
+            self.assertIsNone(U.fetch_manifest(timeout=1),
+                              "离线时应该返回 None，而不是抛异常")
+        finally:
+            _u.urlopen = old_open
+            U.MANIFEST_URL = old_url
+
+    def test_fetch_handles_timeout(self):
+        """超时同理：必须返回 None。"""
+        import socket as _s
+        import urllib.request as _u
+
+        old_url = U.MANIFEST_URL
+        old_open = _u.urlopen
+
+        def _timeout(*a, **kw):
+            raise _s.timeout("simulated timeout")
+
+        try:
+            U.MANIFEST_URL = "http://example.invalid/version.json"
+            _u.urlopen = _timeout
             self.assertIsNone(U.fetch_manifest(timeout=1))
         finally:
-            U.MANIFEST_URL = old
+            _u.urlopen = old_open
+            U.MANIFEST_URL = old_url
+
+    def test_fetch_handles_bad_json(self):
+        """返回的不是 JSON 也要安全地返回 None。"""
+        import io
+        import urllib.request as _u
+
+        old_url = U.MANIFEST_URL
+        old_open = _u.urlopen
+
+        class _Resp:
+            def read(self, n=-1):
+                return b"this is not json at all {{{"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        try:
+            U.MANIFEST_URL = "http://example.invalid/version.json"
+            _u.urlopen = lambda *a, **kw: _Resp()
+            self.assertIsNone(U.fetch_manifest(timeout=1))
+        finally:
+            _u.urlopen = old_open
+            U.MANIFEST_URL = old_url
 
     def test_local_manifest_file_is_valid(self):
         """仓库里的 version.json 必须格式正确，且与 core/version.py 一致。"""
