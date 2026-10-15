@@ -1,4 +1,4 @@
-name: Build Windows Rework
+、name: Build Windows Rework
 
 on:
   push:
