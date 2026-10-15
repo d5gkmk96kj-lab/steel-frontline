@@ -1,20 +1,24 @@
 {
-  "version": "0.9.18",
-  "label": "0.9.18 测试版",
-  "label_en": "0.9.18 Beta",
+  "version": "0.9.19",
+  "label": "0.9.19 测试版",
+  "label_en": "0.9.19 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：核爆终结技 9 张（构筑工事/稳步推进/战前准备/要塞破坏者/决定性一击/歼灭令/最后总攻/战略核打击/二次打击）",
-    "新增：核弹伤害 = 30 + 火力×3，全套连招可打出 500+ 伤害",
-    "平衡：后手补偿 2 → 5 指挥点（新卡让 0 费牌翻倍，先手优势一度到 62%）",
-    "平衡：先手胜率实测 49.4%（此前 62.2%）"
+    "新增：人机 1v1 对战（core/ai.py，三档难度：新手/老兵/王牌）",
+    "新增：主菜单「人机对战」入口 + 难度下拉框",
+    "新增：11 张总部卡 —— 叠血量上限 5 张 + 回血 6 张",
+    "平衡：核弹大幅削弱（378 → 门槛内约 60），火力不足时只有一半伤害",
+    "平衡：歼灭令/最后总攻/决定性一击/要塞破坏者/原型兵器/弹药过载 全线下调",
+    "修复：i18n 分片 key 重复、UI 测试污染全局音频状态"
   ],
   "notes_en": [
-    "New: 9 nuke finisher cards (Dig In / Steady Advance / Prepare Offensive / Bunker Buster / Decisive Strike / Annihilation Order / Final Offensive / Strategic Nuclear Strike / Second Strike)",
-    "New: nuke deals 30 + Strength x 3; a full setup combo can reach 500+ damage",
-    "Balance: second-player compensation 2 -> 5 Command Points (new cards doubled the 0-cost pool; first-player win rate had spiked to 62%)",
-    "Balance: first-player win rate now measured at 49.4%"
+    "New: 1v1 vs. computer (core/ai.py, three difficulties: Rookie / Veteran / Ace)",
+    "New: 'Vs. Computer' menu entry with a difficulty dropdown",
+    "New: 11 HQ cards -- 5 that raise max HP and 6 that heal",
+    "Balance: nuke heavily nerfed (378 -> ~60 at threshold); half damage below the Strength requirement",
+    "Balance: Annihilation Order / Final Offensive / Decisive Strike / Bunker Buster / Prototype Weapon / Arsenal Overload all tuned down",
+    "Fix: duplicate i18n shard keys; UI tests leaking global audio state"
   ]
 }

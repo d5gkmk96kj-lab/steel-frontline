@@ -23,7 +23,6 @@ from PyQt6.QtGui import (
     QPolygonF, QRadialGradient,
 )
 from PyQt6.QtWidgets import (
-    QComboBox,
     QCheckBox, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QTabWidget,
     QVBoxLayout, QWidget,
@@ -270,6 +269,7 @@ class MenuScreen(QWidget):
     open_stats = pyqtSignal()
     open_saves = pyqtSignal()
     open_versus = pyqtSignal()          # 联机对战（局域网 1v1）
+    open_ai_versus = pyqtSignal(str)    # 人机 1v1（难度：easy/normal/hard）
 
     def __init__(self, parent=None, meta=None):
         super().__init__(parent)
@@ -344,6 +344,27 @@ class MenuScreen(QWidget):
         self.btn_versus.setToolTip("与同一个 WiFi 下的同学 1v1 对战")
         self.btn_versus.clicked.connect(self.open_versus.emit)
         lv.addWidget(self.btn_versus)
+
+        # 人机 1v1：不用联网，随时能打。右侧下拉框选难度。
+        ai_row = QHBoxLayout()
+        ai_row.setContentsMargins(0, 0, 0, 0)
+        ai_row.setSpacing(8)
+        self.btn_ai = QPushButton("人 机 对 战  (1v1)", left)
+        self.btn_ai.setObjectName("Primary")
+        self.btn_ai.setMinimumHeight(46)
+        self.btn_ai.setFixedWidth(240)
+        self.btn_ai.setToolTip("和电脑打一局 1v1，不需要联网")
+        self.cb_ai = QComboBox(left)
+        self.cb_ai.setMinimumHeight(46)
+        self.cb_ai.setFixedWidth(92)
+        for _label, _key in (("新手", "easy"), ("老兵", "normal"),
+                             ("王牌", "hard")):
+            self.cb_ai.addItem(_label, _key)
+        self.cb_ai.setCurrentIndex(1)          # 默认「老兵」
+        self.btn_ai.clicked.connect(self._emit_ai_versus)
+        ai_row.addWidget(self.btn_ai)
+        ai_row.addWidget(self.cb_ai)
+        lv.addLayout(ai_row)
 
         # 次级入口：2x3 等宽网格，左对齐标题，避免流式换行导致的散乱
         grid = QGridLayout()
@@ -589,6 +610,14 @@ class MenuScreen(QWidget):
 
     def _emit_new(self) -> None:
         self.new_run.emit(int(self.spin_asc.value()), self._seed_or_none())
+
+    def _emit_ai_versus(self) -> None:
+        """读下拉框难度并发出信号（拿不到就退回 normal）。"""
+        try:
+            key = self.cb_ai.currentData()
+        except Exception:
+            key = None
+        self.open_ai_versus.emit(str(key or "normal"))
 
     def _emit_daily(self) -> None:
         try:

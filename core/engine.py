@@ -270,6 +270,20 @@ class CardContext:
     def heal(self, n) -> None:
         self.battle.heal(self.source, int(n))
 
+    def gain_max_hp(self, n) -> None:
+        """提高总部血量上限（并同步回血）。
+
+        用户要求「可以叠总部血量上限」。上限提升时**同时回等量的血**，
+        否则上限涨了但当前血量没动，玩家感觉不到收益。
+        """
+        fn = getattr(self.battle, "gain_max_hp", None)
+        if fn is None:
+            return
+        try:
+            fn(self.source, int(n))
+        except Exception:
+            pass
+
     def lose_hp(self, n) -> None:
         self.battle.lose_hp(self.source, int(n))
 
@@ -479,6 +493,18 @@ class BattleState:
         if not target.alive():
             self._on_death(target)
         self._check_end()
+
+    def gain_max_hp(self, target: Combatant, n: int) -> None:
+        """提高血量上限，并同时回复等量的血量。"""
+        n = int(n)
+        if n <= 0:
+            return
+        target.max_hp = int(target.max_hp) + n
+        target.hp = min(target.max_hp, int(target.hp) + n)
+        try:
+            self.log_msg("%s 的总部上限 +%d" % (target.name, n))
+        except Exception:
+            pass
 
     def heal(self, target: Combatant, n: int) -> None:
         if target is None or n <= 0 or not target.alive():

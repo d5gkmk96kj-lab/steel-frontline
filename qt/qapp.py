@@ -430,6 +430,7 @@ class GameWindow(QMainWindow):
         m.open_settings.connect(lambda: self.show_screen("settings"))
         m.open_stats.connect(lambda: self.show_screen("stats"))
         m.open_versus.connect(self.open_lobby)
+        m.open_ai_versus.connect(self.open_ai_versus)
         m.open_saves.connect(self.open_saves)
 
         # --- 联机 1v1 链路 ---
@@ -439,6 +440,7 @@ class GameWindow(QMainWindow):
 
         db = self.screens["deckbuild"]
         db.deck_confirmed.connect(self.on_deck_confirmed)
+        db.ai_confirmed.connect(self.on_ai_deck_confirmed)
         db.closed.connect(self.on_deckbuild_closed)
 
         vs = self.screens["versus"]
@@ -639,8 +641,12 @@ class GameWindow(QMainWindow):
             print(f"[qt.app] start_net failed: {exc!r}", flush=True)
         self.show_screen("versus")
 
-    def _start_local_versus(self, ids) -> None:
-        """单机试玩：用对手随机卡组本地开一局（不需要网络）。"""
+    def _start_local_versus(self, ids, ai_difficulty=None) -> None:
+        """单机对人机：对手是电脑（core/ai.py），不需要网络。
+
+        ai_difficulty 为 None 表示"本地热座"（双方都由真人操作）；
+        传 "easy"/"normal"/"hard" 则电脑接管对手方。
+        """
         try:
             import random as _r
             from core import deckbuild as _DB
@@ -649,10 +655,35 @@ class GameWindow(QMainWindow):
             foe = _DB.random_deck(_r.Random(), len(ids) or 30)
             battle = VersusBattle(list(ids), list(foe), rng=rng)
             vs = self.screens["versus"]
-            vs.start_local(battle, my_side=0, names=["我方", "对手"])
+            names = (["我方", "电脑"] if ai_difficulty
+                     else ["我方", "对手"])
+            vs.start_local(battle, my_side=0, names=names,
+                           ai_difficulty=ai_difficulty)
             self.show_screen("versus")
         except Exception as exc:
             print(f"[qt.app] local versus failed: {exc!r}", flush=True)
+
+    def start_ai_versus(self, deck_ids, difficulty="normal") -> None:
+        """公开入口：开始一局人机 1v1。"""
+        self._start_local_versus(list(deck_ids or []),
+                                 ai_difficulty=difficulty)
+
+    def on_ai_deck_confirmed(self, card_ids, difficulty) -> None:
+        """卡组界面在人机模式下确认 -> 开一局 1v1 人机对战。"""
+        self._start_local_versus(list(card_ids or []),
+                                 ai_difficulty=difficulty or "normal")
+
+    def open_ai_versus(self, difficulty="normal") -> None:
+        """进入选卡界面，准备人机对战（AI_DIFFICULTY 见 core/ai.py）。"""
+        db = self.screens["deckbuild"]
+        label = {"easy": "新手", "normal": "老兵", "hard": "王牌"}.get(
+            difficulty, difficulty)
+        try:
+            db.set_context("ai", "人机对战 · 电脑（%s）" % label,
+                           ai_difficulty=difficulty)
+        except Exception:
+            pass
+        self.show_screen("deckbuild")
 
     def on_versus_over(self, result: str) -> None:
         """对战结束：不自动退出，让玩家看到结算横幅。"""

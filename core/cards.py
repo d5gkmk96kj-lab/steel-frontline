@@ -47,6 +47,10 @@ BUFF_PLATED_ARMOR = "plated_armor"
 BUFF_REGENERATE = "regenerate"
 BUFF_INTANGIBLE = "intangible"
 BUFF_STRENGTH_DOWN = "strength_down"
+
+# 核弹引爆所需的最低火力：低于这个值只有一半伤害。
+# 拉高触发门槛，避免"随手一张核弹就清场"。
+NUKE_MIN_STRENGTH = 8
 BUFF_BARRIER = "barrier"
 BUFF_CHAIN = "chain"
 BUFF_ENVENOM = "envenom"
@@ -1158,6 +1162,81 @@ def fx_curse_of_the_deep(ctx) -> None:
 # 卡表定义
 # --------------------------------------------------------------------------
 
+# ==== 新增：总部上限 / 回血 ====
+def fx_field_hospital(ctx) -> None:
+    """野战医院：提高上限 + 回血。"""
+    ctx.gain_max_hp(6)
+    ctx.heal(3)
+
+
+def fx_fortify_hq(ctx) -> None:
+    """加固总部：提高上限，纯上限向。"""
+    ctx.gain_max_hp(8)
+
+
+def fx_mass_conscription(ctx) -> None:
+    """大规模征兵：提高上限，但本回合要放弃一点输出。"""
+    ctx.gain_max_hp(5)
+    ctx.gain_block(5)
+
+
+def fx_war_economy(ctx) -> None:
+    """战时经济：提高上限 + 抽牌（成长型）。"""
+    ctx.gain_max_hp(4)
+    ctx.draw(1)
+
+
+def fx_iron_will(ctx) -> None:
+    """钢铁意志：**上限越低时加成越高**（残血时救命）。"""
+    mx = max(1, int(getattr(ctx.source, "max_hp", 1) or 1))
+    hp = int(getattr(ctx.source, "hp", 1) or 1)
+    missing_pct = (mx - hp) / float(mx)
+    gain = 4 + int(missing_pct * 10)
+    ctx.gain_max_hp(gain)
+    ctx.gain_block(4)
+
+
+# --------------------------------------------------------------------------
+# B 组 · 总部回血
+# --------------------------------------------------------------------------
+def fx_emergency_repair(ctx) -> None:
+    """紧急抢修：直接回血。"""
+    ctx.heal(8)
+
+
+def fx_supply_lines(ctx) -> None:
+    """补给线：回血 + 抽牌。"""
+    ctx.heal(6)
+    ctx.draw(1)
+
+
+def fx_medical_corps(ctx) -> None:
+    """医疗队：回血较多，但费用高。"""
+    ctx.heal(14)
+
+
+def fx_rally_point(ctx) -> None:
+    """集结点：**血量越低回得越多**（残血翻盘）。"""
+    hp = int(getattr(ctx.source, "hp", 1) or 1)
+    mx = max(1, int(getattr(ctx.source, "max_hp", 1) or 1))
+    low = hp * 2 <= mx
+    ctx.heal(16 if low else 6)
+
+
+def fx_triage(ctx) -> None:
+    """战地分诊：回血 + 提高上限（两者兼顾）。"""
+    ctx.heal(5)
+    ctx.gain_max_hp(3)
+
+
+def fx_fortified_medic(ctx) -> None:
+    """随军医师：每回合持续回血（能力牌）。"""
+    ctx.heal(4)
+    ctx.gain_block(6)
+
+
+
+
 # ==== 新增：核爆终结技 ====
 def fx_dig_in(ctx) -> None:
     """构筑工事：0 费，攻击牌越多越强的起手铺垫。"""
@@ -1194,7 +1273,7 @@ def fx_bunker_buster(ctx) -> None:
         v = int(ctx.target.buffs.get(BUFF_VULNERABLE, 0) or 0)
     except Exception:
         v = 0
-    ctx.deal_damage(12 + v * 3, ctx.target)
+    ctx.deal_damage(11 + v * 2, ctx.target)
 
 
 def fx_decisive_strike(ctx) -> None:
@@ -1204,7 +1283,7 @@ def fx_decisive_strike(ctx) -> None:
         s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
     except Exception:
         s = 0
-    ctx.deal_damage(8 + s * 2, ctx.target)
+    ctx.deal_damage(7 + s, ctx.target)
 
 
 def fx_annihilation(ctx) -> None:
@@ -1216,7 +1295,7 @@ def fx_annihilation(ctx) -> None:
             n = int(fn())
         except Exception:
             n = 0
-    ctx.deal_damage_all(10 + n * 2)
+    ctx.deal_damage_all(8 + n)
 
 
 def fx_final_offensive(ctx) -> None:
@@ -1226,33 +1305,46 @@ def fx_final_offensive(ctx) -> None:
         s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
     except Exception:
         s = 0
-    ctx.deal_damage_all(6 + s)
+    ctx.deal_damage_all(4 + s // 2)
 
 
 # --------------------------------------------------------------------------
 # 核弹
 # --------------------------------------------------------------------------
 def fx_nuke(ctx) -> None:
-    """战略核打击：**对全体敌人造成巨额伤害**，代价是你这局不能再打它。
+    """战略核打击：全体巨额伤害，但**需要足够火力才能引爆**。
 
-    真正的"核弹"——打出即终结。伤害 = 30 + 火力 × 3。
+    平衡说明（用户反馈"378 玩你妈"）：
+      第一版是 30 + 火力×3，配合当时的火力叠加能打出 378，
+      完全破坏游戏。现在：
+        * 基础 30 -> 18
+        * 火力系数 ×3 -> ×1（不再是"火力放大器"）
+        * **火力 < 8 时打不出效果**（只有 18 点，等于白费 3 费）
+      这样核弹需要前期铺垫，而不是随手一张就清场。
     """
     s = 0
     try:
         s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
     except Exception:
         s = 0
-    ctx.deal_damage_all(30 + s * 3)
+    if s < NUKE_MIN_STRENGTH:
+        # 火力不足：威力大打折扣，只有基础伤害的一半
+        ctx.deal_damage_all(9)
+        return
+    ctx.deal_damage_all(18 + s)
 
 
 def fx_second_strike(ctx) -> None:
-    """二次打击：核弹之后还有一发（配合核弹使用）。"""
+    """二次打击：核弹之后补刀，同样要求火力达标。"""
     s = 0
     try:
         s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
     except Exception:
         s = 0
-    ctx.deal_damage_all(12 + s * 2)
+    if s < NUKE_MIN_STRENGTH:
+        ctx.deal_damage_all(6)
+        return
+    ctx.deal_damage_all(10 + s)
 
 
 
@@ -1394,7 +1486,7 @@ def fx_research_breakthrough(ctx) -> None:
 
 def fx_prototype_weapon(ctx) -> None:
     """原型兵器：超模范围攻击 —— 对全体造成大量伤害，消耗。"""
-    ctx.deal_damage_all(22)
+    ctx.deal_damage_all(16)
     ctx.apply_buff_all(BUFF_VULNERABLE, 3)
 
 
@@ -1487,7 +1579,7 @@ def fx_last_stand(ctx) -> None:
 
 def fx_arsenal_overload(ctx) -> None:
     """弹药过载：火力大提升，但立即失去少量耐久。"""
-    _apply(ctx, BUFF_STRENGTH, 5, ctx.source)
+    _apply(ctx, BUFF_STRENGTH, 4, ctx.source)
     try:
         ctx.source.hp = max(1, int(ctx.source.hp) - 4)
     except Exception:
@@ -2315,33 +2407,75 @@ CARD_LIST: List[CardDef] = [
     # ---- 爆 ----
     CardDef("bunker_buster", "要塞破坏者", 2, "attack", RARITY_UNCOMMON,
             ARCH_ATTACK,
-            "造成 12 点伤害；**目标每有 1 层破甲再 +3**。", "enemy",
-            fx_bunker_buster, upgrade={"damage": 16}, damage=12,
+            "造成 11 点伤害；**目标每有 1 层破甲再 +2**。", "enemy",
+            fx_bunker_buster, upgrade={"damage": 15}, damage=11,
             keywords=("火力", "破甲", "终结")),
     CardDef("decisive_strike", "决定性一击", 2, "attack", RARITY_RARE,
             ARCH_ATTACK,
-            "造成 8 点伤害；**每点火力再 +2**（吃满火力加成）。", "enemy",
-            fx_decisive_strike, upgrade={"cost": 1}, damage=8,
+            "造成 7 点伤害；**每点火力再 +1**。", "enemy",
+            fx_decisive_strike, upgrade={"cost": 1}, damage=7,
             keywords=("火力", "终结")),
     CardDef("annihilation", "歼灭令", 2, "attack", RARITY_RARE, ARCH_ATTACK,
-            "对**全体**敌人造成 10 点伤害；**本回合每打出一张牌再 +2**。",
+            "对**全体**敌人造成 8 点伤害；**本回合每打出一张牌再 +1**。",
             "all_enemies", fx_annihilation, upgrade={"cost": 1},
             keywords=("群体", "终结")),
     CardDef("final_offensive", "最后总攻", 2, "attack", RARITY_RARE, ARCH_ATTACK,
-            "对**全体**敌人造成 6 + **当前火力**点伤害。", "all_enemies",
+            "对**全体**敌人造成 4 + **火力的一半**点伤害。", "all_enemies",
             fx_final_offensive, upgrade={"cost": 1},
             keywords=("群体", "火力", "终结")),
 
     # ---- 核弹 ----
     CardDef("nuke", "战略核打击", 3, "attack", RARITY_RARE, ARCH_ATTACK,
-            "【核弹】对**全体**敌人造成 30 + **火力 × 3** 点伤害。消耗。",
+            "【核弹】对**全体**敌人造成 18 + **火力**点伤害。\n**火力不足 8 点时只有 9 点**。消耗。",
             "all_enemies", fx_nuke, exhaust=True,
             keywords=("核弹", "群体", "终结", "消耗")),
     CardDef("second_strike", "二次打击", 2, "attack", RARITY_UNCOMMON,
             ARCH_ATTACK,
-            "对**全体**敌人造成 12 + **火力 × 2** 点伤害。（核打击之后补刀）",
+            "对**全体**敌人造成 10 + **火力**点伤害。（火力不足 8 点时只有 6 点）",
             "all_enemies", fx_second_strike, upgrade={"cost": 1},
             keywords=("核弹", "群体", "终结")),
+
+    # ---- 加上限 ----
+    CardDef("field_hospital", "野战医院", 2, "power", RARITY_UNCOMMON,
+            ARCH_BLOCK,
+            "总部血量上限 **+6**，并回复 3 点耐久。", "self", fx_field_hospital,
+            upgrade={"magic": 8}, magic=6, keywords=("总部", "上限", "回血")),
+    CardDef("fortify_hq", "加固总部", 2, "power", RARITY_UNCOMMON, ARCH_BLOCK,
+            "总部血量上限 **+8**。", "self", fx_fortify_hq,
+            upgrade={"magic": 11}, magic=8, keywords=("总部", "上限")),
+    CardDef("mass_conscription", "大规模征兵", 1, "skill", RARITY_COMMON,
+            ARCH_BLOCK,
+            "总部血量上限 **+5**，获得 5 点掩体。", "self", fx_mass_conscription,
+            upgrade={"magic": 7}, magic=5, block=5, keywords=("总部", "上限")),
+    CardDef("war_economy", "战时经济", 1, "skill", RARITY_COMMON, ARCH_ENERGY,
+            "总部血量上限 **+4**，抽 1 张牌。", "self", fx_war_economy,
+            upgrade={"magic": 6}, magic=4, keywords=("总部", "上限", "抽牌")),
+    CardDef("iron_will", "钢铁意志", 1, "skill", RARITY_RARE, ARCH_BLOCK,
+            "总部上限 **+4**；**耐久越低加成越高**（最多 +14），并获得 4 掩体。",
+            "self", fx_iron_will, upgrade={"cost": 0}, magic=4,
+            keywords=("总部", "上限", "残血")),
+
+    # ---- 回血 ----
+    CardDef("emergency_repair", "紧急抢修", 1, "skill", RARITY_COMMON, ARCH_BLOCK,
+            "回复 **8 点**总部耐久。", "self", fx_emergency_repair,
+            upgrade={"magic": 11}, magic=8, keywords=("总部", "回血")),
+    CardDef("supply_lines", "补给线", 1, "skill", RARITY_COMMON, ARCH_ENERGY,
+            "回复 **6 点**总部耐久，抽 1 张牌。", "self", fx_supply_lines,
+            upgrade={"magic": 9}, magic=6, keywords=("总部", "回血", "抽牌")),
+    CardDef("medical_corps", "医疗队", 2, "skill", RARITY_UNCOMMON, ARCH_BLOCK,
+            "回复 **14 点**总部耐久。", "self", fx_medical_corps,
+            upgrade={"magic": 19}, magic=14, keywords=("总部", "回血")),
+    CardDef("rally_point", "集结点", 1, "skill", RARITY_UNCOMMON, ARCH_BLOCK,
+            "回复 6 点耐久；**耐久低于一半时改为回复 16 点**。", "self",
+            fx_rally_point, upgrade={"cost": 0}, keywords=("总部", "回血", "残血")),
+    CardDef("triage", "战地分诊", 0, "skill", RARITY_COMMON, ARCH_BLOCK,
+            "回复 5 点耐久，总部上限 **+3**。", "self", fx_triage,
+            upgrade={"magic": 7}, magic=5, keywords=("总部", "回血", "上限")),
+    CardDef("fortified_medic", "随军医师", 1, "skill", RARITY_UNCOMMON,
+            ARCH_BLOCK,
+            "回复 4 点耐久，获得 6 点掩体。", "self", fx_fortified_medic,
+            upgrade={"magic": 7}, magic=4, block=6,
+            keywords=("总部", "回血", "掩体")),
 ]
 
 

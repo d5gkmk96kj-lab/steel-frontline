@@ -517,6 +517,8 @@ class DeckBuildScreen(QWidget):
     """
 
     deck_confirmed = pyqtSignal(list)
+    #: 人机对战：确认卡组时额外带上难度（"easy"/"normal"/"hard"）
+    ai_confirmed = pyqtSignal(list, str)
     closed = pyqtSignal()
 
     #: 网格里每张卡的显示比例
@@ -699,10 +701,16 @@ class DeckBuildScreen(QWidget):
         self.cb_reco.clear()
         self.cb_reco.addItems(list(recs.keys()) or ["（无推荐）"])
 
-    def set_context(self, mode: str = "local", subtitle: str = "") -> None:
-        """由路由注入上下文（联机 / 单机试玩）。"""
+    def set_context(self, mode: str = "local", subtitle: str = "",
+                    ai_difficulty: str = "") -> None:
+        """由路由注入上下文（联机 / 人机 / 单机试玩）。
+
+        ai_difficulty 非空表示这一局是**人机对战**，确认卡组后会交给
+        core/ai.py 的电脑对手。
+        """
         self._mode = mode or "local"
         self._subtitle = subtitle or ""
+        self._ai_difficulty = ai_difficulty or ""
         self.tb.subtitle = self._subtitle or "点卡加入 · 再点移除"
 
     # =================================================================
@@ -938,6 +946,14 @@ class DeckBuildScreen(QWidget):
         if not ok:
             self._flash_hint(why)
             return
+        diff = getattr(self, "_ai_difficulty", "") or ""
+        if diff:
+            # 人机对战：走单独的信号，由路由交给电脑对手
+            try:
+                self.ai_confirmed.emit(list(self.picked), diff)
+                return
+            except Exception:
+                pass
         self.deck_confirmed.emit(list(self.picked))
 
     # =================================================================

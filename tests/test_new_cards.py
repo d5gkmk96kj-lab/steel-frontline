@@ -728,3 +728,189 @@ class TestVersusSymmetry(unittest.TestCase):
         from core import versus as V
         self.assertGreaterEqual(V.FIRST_TURN_BONUS_SUPPLY, 0)
         self.assertLessEqual(V.FIRST_TURN_BONUS_SUPPLY, 10)
+
+
+# ==========================================================================
+# 第五批：总部血量上限 + 总部回血
+# ==========================================================================
+
+HP_CARD_IDS = [
+    "field_hospital", "fortify_hq", "mass_conscription", "war_economy",
+    "iron_will", "emergency_repair", "supply_lines", "medical_corps",
+    "rally_point", "triage", "fortified_medic",
+]
+
+
+class TestHpCardsExist(unittest.TestCase):
+
+    def test_all_present(self):
+        for cid in HP_CARD_IDS:
+            with self.subTest(card=cid):
+                self.assertIn(cid, C.CARD_DB)
+
+    def test_all_playable(self):
+        for cid in HP_CARD_IDS:
+            with self.subTest(card=cid):
+                b, _ = _battle()
+                b.player.energy = 20
+                b.player.hand.clear()
+                b.add_card_to_hand(cid, n=1)
+                self.assertTrue(b.play_card(b.player.hand[-1],
+                                            first_enemy(b)))
+
+
+class TestMaxHp(unittest.TestCase):
+    """叠总部血量上限。"""
+
+    def test_raises_max_hp(self):
+        for cid in ("field_hospital", "fortify_hq", "mass_conscription",
+                    "war_economy", "iron_will"):
+            with self.subTest(card=cid):
+                b, _ = _battle()
+                before = b.player.max_hp
+                _play(b, cid)
+                self.assertGreater(b.player.max_hp, before,
+                                   "%s 没有提高上限" % cid)
+
+    def test_max_hp_also_heals(self):
+        """提高上限时必须同步回血，否则玩家感觉不到收益。"""
+        b, _ = _battle()
+        b.player.hp = 20
+        before_hp = b.player.hp
+        _play(b, "fortify_hq")
+        self.assertGreater(b.player.hp, before_hp,
+                           "提高上限时没有同步回血")
+
+    def test_max_hp_can_stack(self):
+        """上限可以反复叠加（这是用户明确要的）。"""
+        b, _ = _battle()
+        before = b.player.max_hp
+        for _ in range(3):
+            _play(b, "fortify_hq")
+        self.assertGreaterEqual(b.player.max_hp, before + 20,
+                                "上限没有叠加起来")
+
+    def test_hp_never_exceeds_max(self):
+        b, _ = _battle()
+        for _ in range(3):
+            _play(b, "field_hospital")
+        self.assertLessEqual(b.player.hp, b.player.max_hp,
+                             "血量超过了上限")
+
+    def test_iron_will_scales_with_missing_hp(self):
+        b_full, _ = _battle()
+        _play(b_full, "iron_will")
+        full_gain = b_full.player.max_hp
+
+        b_low, _ = _battle()
+        b_low.player.hp = 1
+        _play(b_low, "iron_will")
+        low_gain = b_low.player.max_hp
+        self.assertGreater(low_gain, full_gain,
+                           "钢铁意志在残血时没有更高加成")
+
+
+class TestHeal(unittest.TestCase):
+    """总部回血（不是掩体）。"""
+
+    def test_heals_hp(self):
+        for cid in ("emergency_repair", "supply_lines", "medical_corps",
+                    "rally_point", "triage", "fortified_medic"):
+            with self.subTest(card=cid):
+                b, _ = _battle()
+                b.player.hp = 10
+                before = b.player.hp
+                _play(b, cid)
+                self.assertGreater(b.player.hp, before,
+                                   "%s 没有回血" % cid)
+
+    def test_heal_respects_max(self):
+        """回血不能超过上限。"""
+        b, _ = _battle()
+        b.player.hp = b.player.max_hp
+        _play(b, "medical_corps")
+        self.assertLessEqual(b.player.hp, b.player.max_hp,
+                             "回血超过了上限")
+
+    def test_heal_is_not_block(self):
+        """回血和掩体是两回事 —— 掩体回合末清零，回血不会。"""
+        b, _ = _battle()
+        b.player.hp = 20
+        b.player.block = 0
+        _play(b, "emergency_repair")
+        self.assertGreater(b.player.hp, 20, "没有真的回血")
+
+    def test_rally_point_scales_when_low(self):
+        b_hi, _ = _battle()
+        b_hi.player.hp = b_hi.player.max_hp - 30
+        before_hi = b_hi.player.hp
+        _play(b_hi, "rally_point")
+        hi = b_hi.player.hp - before_hi
+
+        b_lo, _ = _battle()
+        b_lo.player.hp = max(1, b_lo.player.max_hp // 4)
+        before_lo = b_lo.player.hp
+        _play(b_lo, "rally_point")
+        lo = b_lo.player.hp - before_lo
+        self.assertGreater(lo, hi, "集结点在残血时没有回更多")
+
+
+class TestNukeBalance(unittest.TestCase):
+    """核弹削弱 + 触发门槛（用户反馈"378 玩你妈"）。"""
+
+    def test_nuke_min_strength_threshold_exists(self):
+        self.assertTrue(hasattr(C, "NUKE_MIN_STRENGTH"),
+                        "缺少核弹触发门槛常量")
+        self.assertGreater(C.NUKE_MIN_STRENGTH, 0)
+
+    def test_nuke_weak_below_threshold(self):
+        """火力不达标时核弹只有一半伤害。"""
+        def dmg(strength: int) -> int:
+            b, es = _battle(n_enemies=3, hp=9999)
+            if strength:
+                b.apply_buff(b.player, "strength", strength)
+            b.player.energy = 30
+            b.player.hand.clear()
+            b.add_card_to_hand("nuke", n=1)
+            before = sum(e.hp for e in es)
+            b.play_card(b.player.hand[-1], first_enemy(b))
+            return before - sum(e.hp for e in es)
+
+        weak = dmg(C.NUKE_MIN_STRENGTH - 5)
+        strong = dmg(C.NUKE_MIN_STRENGTH + 10)
+        self.assertLess(weak, strong * 0.5,
+                        "低于门槛时核弹没有明显变弱")
+
+    def test_nuke_below_100_at_threshold(self):
+        """刚好达到门槛时，核弹不该超过 100（对 3 个敌人的总和）。"""
+        b, es = _battle(n_enemies=3, hp=9999)
+        b.apply_buff(b.player, "strength", C.NUKE_MIN_STRENGTH)
+        b.player.energy = 30
+        b.player.hand.clear()
+        b.add_card_to_hand("nuke", n=1)
+        before = sum(e.hp for e in es)
+        b.play_card(b.player.hand[-1], first_enemy(b))
+        total = before - sum(e.hp for e in es)
+        self.assertLess(total, 150,
+                        "门槛处核弹就打出了 %d（3 个敌人总和）" % total)
+
+    def test_finisher_combo_is_reasonable(self):
+        """整套连招不该像第一版那样爆炸（当时 534）。"""
+        b, es = _battle(n_enemies=3, hp=9999)
+        b.player.energy = 60
+        combo = ["dig_in", "dig_in", "steady_advance", "steady_advance",
+                 "prepare_offensive", "all_in", "arsenal_overload",
+                 "mass_mobilize", "annihilation", "nuke"]
+        total = 0
+        for cid in combo:
+            b.player.hand.clear()
+            b.add_card_to_hand(cid, n=1)
+            ci = b.player.hand[-1]
+            if b.can_play(ci):
+                before = sum(e.hp for e in es)
+                b.play_card(ci, first_enemy(b))
+                total += before - sum(e.hp for e in es)
+        self.assertLess(total, 400,
+                        "整套连招 %d 伤害，超模了" % total)
+        self.assertGreater(total, 150,
+                           "整套连招只有 %d 伤害，太弱了" % total)

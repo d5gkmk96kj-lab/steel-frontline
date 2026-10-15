@@ -1037,14 +1037,29 @@ class VersusScreen(QWidget):
     # 生命周期
     # =================================================================
     def start_local(self, battle, my_side: int = 0,
-                    names: Optional[List[str]] = None, rng=None) -> None:
-        """单机试玩 / 本地热座：直接持有 VersusBattle。"""
+                    names: Optional[List[str]] = None, rng=None,
+                    ai_difficulty: Optional[str] = None) -> None:
+        """单机试玩 / 本地热座 / **人机对战**：直接持有 VersusBattle。
+
+        ai_difficulty 不为 None 时启用电脑对手（接管非 my_side 的一方）。
+        取值 "easy" / "normal" / "hard"，见 core/ai.py。
+        """
         self.mode = "local"
         self._mode = "local"
         self.battle = battle
         self.net = None
         self.my_side = int(my_side)
         self._names = list(names or ["我方", "对手"])
+        self._ai = None
+        self._ai_difficulty = ai_difficulty
+        if ai_difficulty and battle is not None:
+            try:
+                from core.ai import VersusAI
+                foe_side = 1 - int(my_side)
+                self._ai = VersusAI(foe_side, difficulty=ai_difficulty)
+            except Exception as exc:
+                print(f"[qversus] AI 初始化失败：{exc!r}", flush=True)
+                self._ai = None
         self._reset()
         if self.battle is not None:
             try:
@@ -1058,6 +1073,7 @@ class VersusScreen(QWidget):
         """联机对战：net 为 Host 或 Client，快照从它所处的事件里取。"""
         self.mode = "net"
         self._mode = "net"
+        self._ai = None            # 联机绝不跑本地 AI
         self.net = net
         self.battle = None
         self.my_side = int(my_side)
@@ -1464,10 +1480,40 @@ class VersusScreen(QWidget):
                 self.battle.tick(dt)
             except Exception:
                 pass
+            self._step_ai()
             self._sync(animate=True)
         else:
             # 联机：轮询网络事件（客户端与房主都从这里驱动 UI）
             self.poll_net()
+
+    def _step_ai(self) -> None:
+        """人机对战：轮到电脑时，每个 tick 让它走一小步。
+
+        刻意**不**在一个 tick 里让 AI 打完整个回合 —— 那样界面会突然跳变。
+        每个 tick 只走一步（出牌或结束回合），节奏交给 QTimer。
+        """
+        ai = getattr(self, "_ai", None)
+        if ai is None or self.battle is None or self._ended:
+            return
+        try:
+            if self.battle.result() != "ongoing":
+                return
+            side = int(self.battle.current_side())
+            if side == int(self.my_side):
+                return                    # 轮到我，别抢
+            # 冷却：给动画留时间（约每 0.45 秒一步）
+            self._ai_cool = getattr(self, "_ai_cool", 0) + 1
+            every = max(1, int(0.45 / (self.TICK_MS / 1000.0)))
+            if self._ai_cool < every:
+                return
+            self._ai_cool = 0
+            ai.step(self.battle)
+        except Exception as exc:
+            print(f"[qversus] AI 出错（已忽略）：{exc!r}", flush=True)
+            try:
+                self._ai = None       # 出错就停掉 AI，别卡住界面
+            except Exception:
+                pass
 
     def _on_card_clicked(self, idx: int) -> None:
         if self._ended or self._busy:

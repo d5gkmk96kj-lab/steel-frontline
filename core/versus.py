@@ -220,6 +220,16 @@ class VersusCardContext(E.CardContext):
     def draw(self, n) -> None:
         self.owner.draw_cards(self.source, int(n))
 
+    def gain_max_hp(self, n) -> None:
+        """提高总部血量上限（1v1 用）。"""
+        fn = getattr(self.battle, "gain_max_hp", None)
+        if fn is None:
+            return
+        try:
+            fn(self.source, int(n))
+        except Exception:
+            pass
+
     def gain_energy(self, n) -> None:
         self.source.energy += int(n)
 
@@ -609,6 +619,18 @@ class VersusBattle:
             return
         target.hp -= int(n)
         self._check_end()
+
+    def gain_max_hp(self, target: Combatant, n: int) -> None:
+        """提高血量上限，并同时回复等量血量。"""
+        n = int(n)
+        if n <= 0:
+            return
+        target.max_hp = int(target.max_hp) + n
+        target.hp = min(target.max_hp, int(target.hp) + n)
+        try:
+            self.log_msg("%s 的总部上限 +%d" % (target.name, n))
+        except Exception:
+            pass
 
     def heal(self, target: Combatant, n: int) -> None:
         if target is None or n <= 0 or not target.alive():
