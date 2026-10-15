@@ -1,14 +1,14 @@
 {
-  "version": "0.9.21",
-  "label": "0.9.21 测试版",
-  "label_en": "0.9.21 Beta",
+  "version": "0.9.22",
+  "label": "0.9.22 测试版",
+  "label_en": "0.9.22 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：CI 在 Windows 上以 exit 127 失败（UI 测试的 QTimer 未清理，进程拿不到退出码）"
+    "改进：CI 测试运行器改为边跑边输出 + 启用 faulthandler（崩溃时能定位到具体测试）"
   ],
   "notes_en": [
-    "Fix: CI failed with exit 127 on Windows (UI tests left a QTimer running, so the process never reported an exit code)"
+    "Improve: CI test runner now streams per-test progress and enables faulthandler, so a native crash points at the exact test"
   ]
 }
