@@ -1,20 +1,20 @@
 {
-  "version": "0.9.03",
-  "label": "0.9.03 测试版",
-  "label_en": "0.9.03 Beta",
-  "released": "2026-10-14",
+  "version": "0.9.04",
+  "label": "0.9.04 测试版",
+  "label_en": "0.9.04 Beta",
+  "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：通用提示 50% / 场景专属 50% 的加权随机（用户指定）",
-    "新增：版本号支持手动跳大版本（--set 1.0.0.0）",
-    "修复：版本比较在 1.0 与 1.0.0.0 之间判断错误",
-    "文档：README 补充版本号规则与提示概率说明（中英）"
+    "新增：卡牌命中特效 —— 火花、冲击环、高伤害斩击弧",
+    "新增：界面过渡动画（主菜单/地图/战斗之间淡入淡出）",
+    "新增：格挡与总部挨打特效",
+    "新增：设置里可关闭特效与过渡（低配机器友好）"
   ],
   "notes_en": [
-    "New: weighted tips — 50% general / 50% scene-specific",
-    "New: manual major-version jumps (--set 1.0.0.0)",
-    "Fix: version comparison between 1.0 and 1.0.0.0",
-    "Docs: README versioning rules and tip probabilities (zh/en)"
+    "New: card hit effects — sparks, impact rings, slash arcs on heavy hits",
+    "New: screen transition fades between menu / map / battle",
+    "New: block and HQ-damage effects",
+    "New: toggle in Settings to disable effects and transitions"
   ]
 }

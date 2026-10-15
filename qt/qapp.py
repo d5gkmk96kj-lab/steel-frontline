@@ -44,7 +44,7 @@ from core import run as run_mod      # noqa: E402
 
 from . import qtheme as T            # noqa: E402
 from . import qbattle, qmap, qscreens  # noqa: E402
-from . import qdeckbuild, qlobby, qsave, qupdate, qversus  # noqa: E402
+from . import qdeckbuild, qfx, qlobby, qsave, qupdate, qversus  # noqa: E402
 from .qconsole import ConsoleOverlay  # noqa: E402
 
 
@@ -79,7 +79,13 @@ class GameWindow(QMainWindow):
         self.battle = None            # BattleState
         self.meta = run_mod.MetaProgress.load()
         self.cfg: Dict = dict(DEFAULT_CFG)
+        self._ready = False
         self._load_cfg()
+        # 特效开关跟随配置（默认开）
+        try:
+            qfx.set_enabled(bool(self.cfg.get("animation", True)))
+        except Exception:
+            pass
         self._pending: Dict = {}      # move_to 返回的遭遇描述
         self._gold_gain = 0
         self._history: List[str] = ["menu"]
@@ -118,6 +124,7 @@ class GameWindow(QMainWindow):
         self._wire()
         self._install_cheat_hook()
         self.show_screen("menu")
+        self._ready = True
         self._start_update_check()
 
     # ------------------------------------------------------- 更新检查 -- #
@@ -465,7 +472,12 @@ class GameWindow(QMainWindow):
                 self.screens["versus"].stop()
             except Exception:
                 pass
-        self.stack.setCurrentWidget(w)
+        # 界面过渡：淡入淡出（可在设置里关掉）
+        cur = self.stack.currentWidget()
+        if cur is not None and cur is not w and getattr(self, "_ready", False):
+            qfx.fade_switch(self, lambda: self.stack.setCurrentWidget(w))
+        else:
+            self.stack.setCurrentWidget(w)
         self._music_for(name)
         if name not in ("menu",) and (not self._history or self._history[-1] != name):
             self._history.append(name)

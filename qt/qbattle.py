@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from . import qtheme as T
+from . import qfx as FX
 from . import qwidgets as W
 
 
@@ -816,10 +817,14 @@ class BattleScreen(QWidget):
         if block_gain:
             self._overlay.float_text(cx.x(), cx.y(), f"掩体 +{block_gain}",
                                      T.Q_BLOCK, size=22, rise=42)
+            FX.block_effect(self._overlay, cx.x(), cx.y() - 10)
         if dmg_to_player:
             self._overlay.float_text(cx.x(), cx.y() - 16, f"-{dmg_to_player}",
                                      T.RED, size=30, rise=58)
             self._screen_shake(9)
+            # 总部挨打：红色火花 + 震屏
+            FX.hit_effect(self._overlay, cx.x(), cx.y() - 4, T.RED,
+                          power=min(1.8, 0.6 + dmg_to_player / 18.0))
         if heal:
             self._overlay.float_text(cx.x(), cx.y() - 16, f"+{heal}",
                                      T.GREEN, size=26, rise=50)
@@ -834,12 +839,19 @@ class BattleScreen(QWidget):
             if not e.get("alive", True) and w.property("hit") != -1:
                 self._overlay.float_text(pt.x(), pt.y(), "击 毁", T.GOLD,
                                          size=26, rise=52)
+                # 击毁：来一发大的
+                FX.hit_effect(self._overlay, pt.x(), pt.y() - 6,
+                              T.Q_GOLD, power=1.7)
                 w.setProperty("hit", -1)
             elif e.get("hp") is not None and getattr(w, "_last_hp", None) is not None:
                 d = int(w._last_hp) - int(e.get("hp", 0))
                 if d > 0:
                     self._overlay.float_text(pt.x(), pt.y(), f"-{d}", T.RED,
                                              size=28, rise=54)
+                    # 伤害越高火花越大：0.6 小 / 1.0 中 / 1.6+ 大
+                    FX.hit_effect(self._overlay, pt.x(), pt.y() + 4,
+                                  T.Q_GOLD if d < 20 else T.RED,
+                                  power=min(2.0, 0.55 + d / 22.0))
         for i, e in enumerate(snap.get("enemies", [])):
             if i < len(self._enemy_widgets):
                 self._enemy_widgets[i]._last_hp = int(e.get("hp", 0))

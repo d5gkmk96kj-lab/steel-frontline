@@ -2088,6 +2088,21 @@ class SettingsScreen(QWidget):
         self.cb_lang.currentIndexChanged.connect(self._lang_changed)
         lang_row.addWidget(self.cb_lang)
         dv.addLayout(lang_row)
+        # 特效开关（低配机器 / 不喜欢花哨可以关）
+        self.cb_fx = QCheckBox("战斗特效与界面过渡动画", disp)
+        try:
+            from PyQt6.QtWidgets import QCheckBox as _CB
+            from . import qfx as _FX
+            # 复用已有的 "animation" 配置项（默认开）
+            self.cb_fx.setChecked(bool(self.cfg.get("animation", True)))
+            _FX.set_enabled(bool(self.cfg.get("animation", True)))
+            self.cb_fx.toggled.connect(
+                lambda on: (self.cfg.__setitem__("animation", bool(on)),
+                            _FX.set_enabled(bool(on))))
+        except Exception:
+            pass
+        dv.addWidget(self.cb_fx)
+
         self.cb_full = QCheckBox("启动时全屏", disp)
         self.cb_full.setChecked(bool(self.cfg.get("fullscreen", False)))
         dv.addWidget(self.cb_full)
