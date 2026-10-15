@@ -1,4 +1,4 @@
-、name: Build Windows Rework
+name: Build Windows Rework
 
 on:
   push:
@@ -32,103 +32,92 @@ jobs:
           python -c "import json;d=json.load(open('version.json',encoding='utf-8'));print('version='+d['version']);print('label='+d.get('label',d['version']))" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
+        shell: bash
         run: |
+          set -e
           python -m pip install --upgrade pip
           python -m pip install pyinstaller PyQt6
 
       - name: Run test suite
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
-          python -m unittest discover -s tests -v --pattern "test_*.py" -k "not test_updater"
+          set -e
+          python -m unittest discover -s tests
 
       - name: Build icon
-        run: python packaging/make_icon.py
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -e
+          python packaging/make_icon.py
+          ls -la packaging/icon.ico
 
       - name: Build with PyInstaller
-        shell: python
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: '1'
+        # 参数交给独立的 Python 脚本生成，不在 YAML 里拼长命令行。
+        # 关键：**不要传 --specpath** —— 那会让 --add-data / --icon 的
+        # 相对路径基于 spec 目录解析，报 "icon.ico not found"（踩过）。
+        # 全部路径一律用绝对路径，最保险。
         run: |
-          import subprocess, sys, os
+          set -e
+          python .github/build_windows.py
 
-          NAME = "SteelFrontlineWindowsRework"
-          ROOT = os.path.abspath(".")
-          hidden = [
-              "core", "core.run", "core.cards", "core.enemies", "core.engine",
-              "core.versus", "core.netplay", "core.saves", "core.session",
-              "core.reconnect", "core.relay_client", "core.updater",
-              "core.cleanup", "core.tips", "core.audio", "core.i18n",
-              "core.version", "core.cheats", "core.deckbuild",
-              "qt", "qt.qapp", "qt.qscreens", "qt.qbattle", "qt.qversus",
-              "qt.qlobby", "qt.qdeckbuild", "qt.qsave", "qt.qupdate",
-              "qt.qcleanup", "qt.qconsole", "qt.qfx", "qt.qmap",
-              "qt.qtheme", "qt.qwidgets",
-          ]
-          cmd = [sys.executable, "-m", "PyInstaller",
-                 "--noconfirm", "--clean", "--windowed",
-                 "--name", NAME,
-                 "--distpath", "dist_win",
-                 "--workpath", "build_win",
-                 "--specpath", "build_win",
-                 "--paths", ".",
-                 "--add-data", f"{ROOT}/locales;locales",
-                 "--add-data", f"{ROOT}/tips.txt;.",
-                 "--icon", "packaging/icon.ico"]
-          for h in hidden:
-              cmd += ["--hidden-import", h]
-          cmd.append("packaging/app_entry.py")
-
-          print("running:", " ".join(cmd[:8]), "...")
-          r = subprocess.run(cmd)
-          sys.exit(r.returncode)
-
-      - name: Verify the exe runs
-        shell: pwsh
+      - name: Verify the exe exists
+        shell: bash
         run: |
-          $exe = "dist_win\SteelFrontlineWindowsRework\SteelFrontlineWindowsRework.exe"
-          if (-not (Test-Path $exe)) { throw "exe not found: $exe" }
-          Write-Host "exe size: $((Get-Item $exe).Length) bytes"
-          $env:QT_QPA_PLATFORM = "offscreen"
-          $env:SF_GAME_HOME = "$env:TEMP\sftest"
-          New-Item -ItemType Directory -Force -Path $env:SF_GAME_HOME | Out-Null
-          & $exe --selftest
-          $code = $LASTEXITCODE
-          Write-Host "selftest exit code: $code"
-          if ($code -ne 0) { throw "selftest failed with $code" }
-          Write-Host "selftest passed"
+          set -e
+          EXE="dist_win/SteelFrontlineWindowsRework/SteelFrontlineWindowsRework.exe"
+          if [ ! -f "$EXE" ]; then
+            echo "::error::exe not found: $EXE"
+            ls -R dist_win 2>/dev/null | head -60
+            exit 1
+          fi
+          ls -la "$EXE"
+
+      - name: Run the exe selftest
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -e
+          EXE="dist_win/SteelFrontlineWindowsRework/SteelFrontlineWindowsRework.exe"
+          export QT_QPA_PLATFORM=offscreen
+          export SF_GAME_HOME="$RUNNER_TEMP/sftest"
+          mkdir -p "$SF_GAME_HOME"
+          WEXE=$(cygpath -w "$EXE")
+          echo "running: $WEXE --selftest"
+          cmd //c ""$WEXE" --selftest"
+          echo "selftest passed"
 
       - name: Assemble release folder
-        shell: pwsh
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: '1'
         run: |
-          $name = "SteelFrontlineWindowsRework"
-          $ver = "${{ steps.ver.outputs.version }}"
-          $out = "release/SteelFrontline-WindowsRework-$ver"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          set -e
+          NAME="SteelFrontlineWindowsRework"
+          VER="${{ steps.ver.outputs.version }}"
+          OUT="release/SteelFrontline-WindowsRework-$VER"
 
-          Copy-Item -Recurse "dist_win/$name" "$out/$name"
-          if (Test-Path "tips.txt")  { Copy-Item "tips.txt"  "$out/" }
-          if (Test-Path "README.md") { Copy-Item "README.md" "$out/游戏教程.md" }
-          New-Item -ItemType Directory -Force -Path "$out/music" | Out-Null
-          New-Item -ItemType Directory -Force -Path "$out/data"  | Out-Null
+          rm -rf release
+          mkdir -p "$OUT"
+          cp -r "dist_win/$NAME" "$OUT/$NAME"
+          if [ -f tips.txt ]; then cp tips.txt "$OUT/"; fi
+          if [ -f README.md ]; then cp README.md "$OUT/游戏教程.md"; fi
+          mkdir -p "$OUT/music" "$OUT/data"
 
-          $L = @()
-          $L += "============================================================"
-          $L += " 钢铁战线 Steel Frontline - Windows Rework"
-          $L += " Version: $ver"
-          $L += "============================================================"
-          $L += ""
-          $L += "How to run:"
-          $L += "  1. Double-click $name.exe"
-          $L += "  2. If Windows SmartScreen appears, click More info - Run anyway."
-          $L += "  3. First launch may take 5-10 seconds."
-          $L += ""
-          $L += "Saves:  %APPDATA%\钢铁战线\data\"
-          $L += "Music:  drop files into music\ as music1.mp3, music2.ogg, ..."
-          $L += ""
-          $L += " ⚠️ 本游戏全部由 AI（DeepSeek-V4.1-Flash）生成 ⚠️"
-          $L += " This game is entirely AI-generated."
-          $L += "============================================================"
-          $L | Set-Content -Path "$out/README-FIRST.txt" -Encoding UTF8
+          NAME="$NAME" VER="$VER" OUT="$OUT" python .github/make_readme.py
 
-          Compress-Archive -Path "$out/*" -DestinationPath "$out.zip" -Force
-          Write-Host "created $out.zip"
+          cd release
+          python -c "import shutil; shutil.make_archive('SteelFrontline-WindowsRework-$VER', 'zip', '.', 'SteelFrontline-WindowsRework-$VER')"
+          ls -la
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
