@@ -37,14 +37,9 @@ jobs:
 
       - name: Read version
         id: ver
-        shell: python
+        shell: bash
         run: |
-          import json, os
-          d = json.load(open('version.json', encoding='utf-8'))
-          v = d['version']
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
-              f.write("version=%s\n" % v)
-              f.write("label=%s\n" % d.get('label', v))
+          python -c "import json;d=json.load(open('version.json',encoding='utf-8'));print('version='+d['version']);print('label='+d.get('label',d['version']))" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         run: |
@@ -103,8 +98,11 @@ jobs:
           # 无头自检：遍历所有界面 + 打完一场战斗
           $env:QT_QPA_PLATFORM = "offscreen"
           $env:SF_GAME_HOME = "$env:TEMP\sftest"
+          New-Item -ItemType Directory -Force -Path $env:SF_GAME_HOME | Out-Null
           & $exe --selftest
-          if ($LASTEXITCODE -ne 0) { throw "selftest failed with $LASTEXITCODE" }
+          $code = $LASTEXITCODE
+          Write-Host "selftest exit code: $code"
+          if ($code -ne 0) { throw "selftest failed with $code" }
           Write-Host "selftest passed"
 
       - name: Assemble release folder
@@ -112,48 +110,46 @@ jobs:
         run: |
           $name = "SteelFrontlineWindowsRework"
           $ver = "${{ steps.ver.outputs.version }}"
-          $out = "release\SteelFrontline-WindowsRework-$ver"
+          $out = "release/SteelFrontline-WindowsRework-$ver"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-          Copy-Item -Recurse "dist_win\$name" "$out\$name"
-          if (Test-Path "tips.txt")   { Copy-Item "tips.txt"   "$out\" }
-          if (Test-Path "README.md")  { Copy-Item "README.md"  "$out\游戏教程.md" }
-          New-Item -ItemType Directory -Force -Path "$out\music" | Out-Null
-          New-Item -ItemType Directory -Force -Path "$out\data"  | Out-Null
+          Copy-Item -Recurse "dist_win/$name" "$out/$name"
+          if (Test-Path "tips.txt")  { Copy-Item "tips.txt"  "$out/" }
+          if (Test-Path "README.md") { Copy-Item "README.md" "$out/游戏教程.md" }
+          New-Item -ItemType Directory -Force -Path "$out/music" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$out/data"  | Out-Null
 
-          $readme = @"
-          ============================================================
-           钢铁战线 Steel Frontline — Windows Rework
-           Version: $ver
-          ============================================================
+          # 用数组拼文本，避免 here-string 在 YAML 里的缩进坑
+          $L = @()
+          $L += "============================================================"
+          $L += " 钢铁战线 Steel Frontline - Windows Rework"
+          $L += " Version: $ver"
+          $L += "============================================================"
+          $L += ""
+          $L += "How to run:"
+          $L += "  1. Double-click $name.exe"
+          $L += "  2. If Windows SmartScreen appears, click More info - Run anyway."
+          $L += "     This is normal: no paid Microsoft code-signing certificate."
+          $L += "     Full source is on GitHub if you want to verify it yourself."
+          $L += "  3. First launch may take 5-10 seconds."
+          $L += ""
+          $L += "Saves:  %APPDATA%\钢铁战线\data\"
+          $L += "Music:  drop files into music\ as music1.mp3, music2.ogg, ..."
+          $L += ""
+          $L += "------------------------------------------------------------"
+          $L += " 怎么玩："
+          $L += "   1. 双击 $name.exe"
+          $L += "   2. 如果弹出「Windows 已保护你的电脑」："
+          $L += "      点「更多信息」→「仍要运行」"
+          $L += "   3. 存档位置：%APPDATA%\钢铁战线\data\"
+          $L += "   4. 加音乐：把文件放进 music\，命名 music1.mp3 / music2.ogg ..."
+          $L += ""
+          $L += " ⚠️ 本游戏全部由 AI（DeepSeek-V4.1-Flash）生成 ⚠️"
+          $L += " This game is entirely AI-generated."
+          $L += "============================================================"
+          $L | Set-Content -Path "$out/README-FIRST.txt" -Encoding UTF8
 
-          How to run:
-            1. Double-click $name.exe
-            2. If Windows SmartScreen appears ("Windows protected your PC"),
-               click "More info" then "Run anyway".
-               This is normal: the app has no paid Microsoft code-signing
-               certificate. The full source is on GitHub if you want to
-               verify it yourself.
-            3. First launch may take 5-10 seconds.
-
-          Saves:  %APPDATA%\钢铁战线\data\
-          Music:  drop files into the music\ folder as music1.mp3, music2.ogg, ...
-
-          ------------------------------------------------------------
-           怎么玩：
-             1. 双击 $name.exe
-             2. 如果弹出「Windows 已保护你的电脑」：
-                点「更多信息」→「仍要运行」
-             3. 存档位置：%APPDATA%\钢铁战线\data\
-             4. 加音乐：把文件放进 music\，命名 music1.mp3 / music2.ogg ...
-
-           ⚠️ 本游戏全部由 AI（DeepSeek-V4.1-Flash）生成 ⚠️
-           This game is entirely AI-generated.
-          ============================================================
-          "@
-          Set-Content -Path "$out\README-FIRST.txt" -Value $readme -Encoding UTF8
-
-          Compress-Archive -Path "$out\*" -DestinationPath "$out.zip" -Force
+          Compress-Archive -Path "$out/*" -DestinationPath "$out.zip" -Force
           Write-Host "created $out.zip"
 
       - name: Upload artifact
