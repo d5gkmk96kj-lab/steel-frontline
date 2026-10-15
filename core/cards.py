@@ -1158,6 +1158,217 @@ def fx_curse_of_the_deep(ctx) -> None:
 # 卡表定义
 # --------------------------------------------------------------------------
 
+# ==== 新增：破甲增伤 + 条件牌（见文件末尾的 NEW_CARDS）====
+def fx_armor_crack(ctx) -> None:
+    """破甲弹：小伤害 + 易伤。"""
+    ctx.deal_damage(5, ctx.target)
+    _apply(ctx, BUFF_VULNERABLE, 3, ctx.target)
+
+
+def fx_siege_shell(ctx) -> None:
+    """攻坚弹：高伤 + 易伤，给自己一点副作用（疲惫）。"""
+    ctx.deal_damage(14, ctx.target)
+    _apply(ctx, BUFF_VULNERABLE, 2, ctx.target)
+    ctx.gain_block(4)
+
+
+def fx_mark_target(ctx) -> None:
+    """标记目标：不造成伤害，但给大量易伤 + 抽牌。"""
+    _apply(ctx, BUFF_VULNERABLE, 4, ctx.target)
+    ctx.draw(1)
+
+
+def fx_chain_breach(ctx) -> None:
+    """连环破袭：全体易伤。"""
+    ctx.apply_buff_all(BUFF_VULNERABLE, 2)
+
+
+# --------------------------------------------------------------------------
+# B 组 · 增伤（BUFF_STRENGTH = 火力，每点 +1 伤害）
+# --------------------------------------------------------------------------
+def fx_mass_mobilize(ctx) -> None:
+    """全军动员：获得火力，本回合打出的攻击牌越多越强。"""
+    n = 0
+    fn = getattr(ctx, "cards_played_this_turn", None)
+    if callable(fn):
+        try:
+            n = int(fn())
+        except Exception:
+            n = 0
+    _apply(ctx, BUFF_STRENGTH, 2 + min(3, n), ctx.source)
+
+
+def fx_last_stand(ctx) -> None:
+    """背水一战：**血量越低，火力越高**（平常很蛆，残血时爆炸）。"""
+    hp = int(getattr(ctx.source, "hp", 1) or 1)
+    mx = max(1, int(getattr(ctx.source, "max_hp", 1) or 1))
+    missing = max(0, mx - hp)
+    gain = 1 + missing // 8          # 每缺 8 点血 +1 火力
+    _apply(ctx, BUFF_STRENGTH, min(8, gain), ctx.source)
+    ctx.gain_block(missing // 6)
+
+
+def fx_arsenal_overload(ctx) -> None:
+    """弹药过载：火力大提升，但立即失去少量耐久。"""
+    _apply(ctx, BUFF_STRENGTH, 5, ctx.source)
+    try:
+        ctx.source.hp = max(1, int(ctx.source.hp) - 4)
+    except Exception:
+        pass
+
+
+# --------------------------------------------------------------------------
+# C 组 · 减防（BUFF_FRAIL = 脆弱，自己受到的伤害 +50%，这里用于「换攻」）
+# --------------------------------------------------------------------------
+def fx_all_in(ctx) -> None:
+    """孤注一掷：本回合火力暴涨，但自己也变脆（高风险高回报）。"""
+    _apply(ctx, BUFF_STRENGTH, 4, ctx.source)
+    _apply(ctx, BUFF_FRAIL, 2, ctx.source)
+    ctx.gain_energy(1)
+
+
+def fx_reckless_assault(ctx) -> None:
+    """蛮勇突击：高伤害，自身受 3 点伤害。"""
+    ctx.deal_damage(16, ctx.target)
+    try:
+        ctx.source.hp = max(1, int(ctx.source.hp) - 3)
+    except Exception:
+        pass
+
+
+# --------------------------------------------------------------------------
+# D 组 · 「平常很蛆，特定情况能量巨大」
+# --------------------------------------------------------------------------
+def fx_scrap_heap(ctx) -> None:
+    """废铁堆：伤害很低，但**手牌越多伤害越高**。"""
+    n = 0
+    try:
+        n = len(getattr(ctx.source, "hand", []) or [])
+    except Exception:
+        n = 0
+    ctx.deal_damage(2 + n * 2, ctx.target)
+
+
+def fx_ambush(ctx) -> None:
+    """伏击：本回合**还没出过牌**时伤害翻倍（第一张出它才强）。"""
+    n = 0
+    fn = getattr(ctx, "cards_played_this_turn", None)
+    if callable(fn):
+        try:
+            n = int(fn())
+        except Exception:
+            n = 0
+    dmg = 18 if n <= 1 else 5
+    ctx.deal_damage(dmg, ctx.target)
+
+
+def fx_overrun(ctx) -> None:
+    """碾压：**敌人越多越强**（单体时很蛆）。"""
+    n = 0
+    fn = getattr(ctx, "alive_enemies", None)
+    if callable(fn):
+        try:
+            n = len(fn())
+        except Exception:
+            n = 0
+    ctx.deal_damage(4 + n * 7, ctx.target)
+
+
+def fx_bullet_hail(ctx) -> None:
+    """弹幕覆盖：对每个敌人各打一次（人少时很蛆）。"""
+    n = 0
+    fn = getattr(ctx, "alive_enemies", None)
+    if callable(fn):
+        try:
+            n = len(fn())
+        except Exception:
+            n = 0
+    for _ in range(max(1, n)):
+        ctx.deal_damage(6, ctx.target)
+
+
+def fx_desperate_gamble(ctx) -> None:
+    """绝境豪赌：**血量低于 30% 时**给予巨额火力，否则几乎没有效果。"""
+    hp = int(getattr(ctx.source, "hp", 1) or 1)
+    mx = max(1, int(getattr(ctx.source, "max_hp", 1) or 1))
+    if hp * 10 <= mx * 3:
+        _apply(ctx, BUFF_STRENGTH, 6, ctx.source)
+        ctx.gain_energy(2)
+        ctx.draw(2)
+    else:
+        ctx.gain_block(3)
+
+
+def fx_entrench(ctx) -> None:
+    """掘壕固守：本回合不攻击的话，回合末获得大量掩体（很蛆但保命）。"""
+    ctx.gain_block(6)
+
+
+def fx_salvage(ctx) -> None:
+    """回收残骸：**手牌越少抽越多**（平常抽 1，手牌空时抽 4）。"""
+    n = 0
+    try:
+        n = len(getattr(ctx.source, "hand", []) or [])
+    except Exception:
+        n = 0
+    ctx.draw(4 if n <= 1 else 1)
+
+
+def fx_deadweight_shot(ctx) -> None:
+    """负重射击：伤害等于**已打出牌数 × 3**（第一张很蛆）。"""
+    n = 0
+    fn = getattr(ctx, "cards_played_this_turn", None)
+    if callable(fn):
+        try:
+            n = int(fn())
+        except Exception:
+            n = 0
+    ctx.deal_damage(max(3, n * 3), ctx.target)
+
+
+def fx_siege_momentum(ctx) -> None:
+    """攻势蓄能：每次打出都叠火力，**越打越猛**（起手很蛆）。"""
+    _apply(ctx, BUFF_STRENGTH, 1, ctx.source)
+    ctx.draw(1)
+    ctx.gain_energy(1)
+
+
+def fx_veteran_instinct(ctx) -> None:
+    """老兵直觉：**牌库越薄越强**（未升级的牌越多越弱）。"""
+    n = 0
+    try:
+        n = len(getattr(ctx.source, "draw_pile", []) or [])
+    except Exception:
+        n = 0
+    ctx.gain_block(4)
+    if n <= 5:
+        _apply(ctx, BUFF_STRENGTH, 3, ctx.source)
+
+
+def fx_fortify_line(ctx) -> None:
+    """死守防线：获得掩体，且**本回合每受一次击额外 +2 掩体**（被动）。"""
+    ctx.gain_block(10)
+    _apply(ctx, BUFF_PLATED_ARMOR, 2, ctx.source)
+
+
+def fx_zero_hour(ctx) -> None:
+    """零点攻势：**本回合第一次出牌时**全体易伤 + 抽满（后续出就是废牌）。"""
+    n = 0
+    fn = getattr(ctx, "cards_played_this_turn", None)
+    if callable(fn):
+        try:
+            n = int(fn())
+        except Exception:
+            n = 0
+    if n <= 1:
+        ctx.apply_buff_all(BUFF_VULNERABLE, 3)
+        ctx.draw(2)
+    else:
+        ctx.draw(1)
+
+
+
+
 CARD_LIST: List[CardDef] = [
 
     # ================= 强攻 · 火力 (attack) — 24 张 =================
@@ -1609,6 +1820,93 @@ CARD_LIST: List[CardDef] = [
     CardDef("barnacle_curse", "辎重拖累", -2, "curse", RARITY_UNCOMMON, ARCH_BLOCK,
             "无法打出。回合结束时获得 1 层混乱。", "self", fx_shame, ethereal=True,
             keywords=("诅咒", "不可打出", "不稳固")),
+
+    # ---- A 组 · 破甲 ----
+    CardDef("armor_crack", "破甲弹", 1, "attack", RARITY_COMMON, ARCH_ATTACK,
+            "造成 {damage} 点伤害，施加 {magic} 层破甲（受到伤害 +50%）。",
+            "enemy", fx_armor_crack,
+            upgrade={"magic": 4, "damage": 7}, damage=5, magic=3,
+            keywords=("破甲",)),
+    CardDef("siege_shell", "攻坚弹", 2, "attack", RARITY_UNCOMMON, ARCH_ATTACK,
+            "造成 {damage} 点伤害，施加 {magic} 层破甲，获得 4 点掩体。",
+            "enemy", fx_siege_shell,
+            upgrade={"damage": 18}, damage=14, magic=2,
+            keywords=("破甲", "火力")),
+    CardDef("mark_target", "标记目标", 0, "skill", RARITY_COMMON, ARCH_ATTACK,
+            "施加 {magic} 层破甲，抽 1 张牌。", "enemy", fx_mark_target,
+            upgrade={"magic": 5}, magic=4, keywords=("破甲", "抽牌")),
+    CardDef("chain_breach", "连环破袭", 1, "skill", RARITY_UNCOMMON, ARCH_ATTACK,
+            "对**全体**敌人各施加 {magic} 层破甲。", "none", fx_chain_breach,
+            upgrade={"magic": 3, "cost": 0}, magic=2, keywords=("破甲", "群体")),
+
+    # ---- B 组 · 增伤 ----
+    CardDef("mass_mobilize", "全军动员", 2, "power", RARITY_UNCOMMON, ARCH_ATTACK,
+            "获得火力：基础 2 点，本回合每已打出一张牌再 +1（最多 +3）。",
+            "self", fx_mass_mobilize, upgrade={"cost": 1},
+            magic=2, keywords=("火力", "成长")),
+    CardDef("last_stand", "背水一战", 1, "skill", RARITY_UNCOMMON, ARCH_BLOCK,
+            "**每损失 8 点耐久**获得 1 点火力（最多 8），并获得掩体。",
+            "self", fx_last_stand, upgrade={"cost": 0},
+            keywords=("火力", "残血")),
+    CardDef("arsenal_overload", "弹药过载", 1, "skill", RARITY_RARE, ARCH_ATTACK,
+            "获得 {magic} 点火力，但立即失去 4 点耐久。", "self",
+            fx_arsenal_overload, upgrade={"magic": 7}, magic=5, exhaust=True,
+            keywords=("火力", "自伤")),
+
+    # ---- C 组 · 换攻（自己变脆）----
+    CardDef("all_in", "孤注一掷", 1, "skill", RARITY_UNCOMMON, ARCH_ATTACK,
+            "获得 {magic} 点火力与 1 点补给，但自身获得 2 层脆弱。",
+            "self", fx_all_in, upgrade={"magic": 6}, magic=4,
+            keywords=("火力", "脆弱", "风险")),
+    CardDef("reckless_assault", "蛮勇突击", 1, "attack", RARITY_COMMON, ARCH_ATTACK,
+            "造成 {damage} 点伤害，自身失去 3 点耐久。", "enemy",
+            fx_reckless_assault, upgrade={"damage": 21}, damage=16,
+            keywords=("火力", "自伤")),
+
+    # ---- D 组 · 条件牌 ----
+    CardDef("scrap_heap", "废铁堆", 0, "attack", RARITY_COMMON, ARCH_ATTACK,
+            "造成 2 点伤害，**手牌每有 1 张再 +2**。", "enemy", fx_scrap_heap,
+            upgrade={"cost": 0, "damage": 3}, damage=2,
+            keywords=("条件", "手牌")),
+    CardDef("ambush", "伏击", 1, "attack", RARITY_UNCOMMON, ARCH_ATTACK,
+            "**本回合第一张出牌**时造成 {damage} 点伤害，否则只有 5 点。",
+            "enemy", fx_ambush, upgrade={"damage": 24}, damage=18,
+            keywords=("条件", "先手")),
+    CardDef("overrun", "碾压", 1, "attack", RARITY_UNCOMMON, ARCH_ATTACK,
+            "造成 4 点伤害，**每个存活敌人再 +7**（敌人越多越强）。",
+            "enemy", fx_overrun, upgrade={"damage": 7}, damage=4,
+            keywords=("条件", "群体")),
+    CardDef("bullet_hail", "弹幕覆盖", 1, "attack", RARITY_RARE, ARCH_ATTACK,
+            "对目标造成 6 点伤害，**每个存活敌人各打一次**。", "enemy",
+            fx_bullet_hail, upgrade={"damage": 8}, damage=6,
+            keywords=("条件", "多段")),
+    CardDef("desperate_gamble", "绝境豪赌", 0, "skill", RARITY_RARE, ARCH_ATTACK,
+            "**耐久低于 30%** 时：获得 6 火力、2 补给、抽 2 张；否则只获得 3 掩体。",
+            "self", fx_desperate_gamble, upgrade={"cost": 0},
+            keywords=("条件", "残血")),
+    CardDef("salvage", "回收残骸", 0, "skill", RARITY_COMMON, ARCH_ENERGY,
+            "抽 1 张牌；**手牌 ≤1 张时改为抽 4 张**。", "self", fx_salvage,
+            upgrade={"cost": 0}, keywords=("条件", "抽牌")),
+    CardDef("deadweight_shot", "负重射击", 0, "attack", RARITY_UNCOMMON, ARCH_ATTACK,
+            "造成**本回合已出牌数 × 3** 点伤害（至少 3）。", "enemy",
+            fx_deadweight_shot, upgrade={"magic": 4}, magic=3,
+            keywords=("条件", "连射")),
+    CardDef("siege_momentum", "攻势蓄能", 0, "skill", RARITY_UNCOMMON, ARCH_ENERGY,
+            "获得 1 点火力，抽 1 张牌，获得 1 点补给。", "self",
+            fx_siege_momentum, upgrade={"magic": 2}, magic=1,
+            keywords=("成长", "循环")),
+    CardDef("veteran_instinct", "老兵直觉", 1, "skill", RARITY_UNCOMMON, ARCH_BLOCK,
+            "获得 4 点掩体；**抽牌堆 ≤5 张时**额外获得 3 点火力。", "self",
+            fx_veteran_instinct, upgrade={"block": 7}, block=4,
+            keywords=("条件", "掩体")),
+    CardDef("fortify_line", "死守防线", 2, "power", RARITY_RARE, ARCH_BLOCK,
+            "获得 {block} 点掩体与 {magic} 层装甲板（每次受击减伤）。",
+            "self", fx_fortify_line, upgrade={"block": 14}, block=10, magic=2,
+            keywords=("掩体", "能力")),
+    CardDef("zero_hour", "零点攻势", 1, "skill", RARITY_RARE, ARCH_ATTACK,
+            "**本回合第一张出牌**时：全体施加 3 层破甲并抽 2 张；否则只抽 1 张。",
+            "none", fx_zero_hour, upgrade={"cost": 0},
+            keywords=("条件", "破甲", "群体")),
 ]
 
 

@@ -1,14 +1,20 @@
 {
-  "version": "0.9.15",
-  "label": "0.9.15 测试版",
-  "label_en": "0.9.15 Beta",
+  "version": "0.9.16",
+  "label": "0.9.16 测试版",
+  "label_en": "0.9.16 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：exe 自检崩溃 —— main_qt/main/app_entry 强制 UTF-8 输出"
+    "新增：20 张卡 —— 破甲增伤流派 8 张 + 条件牌 12 张",
+    "新增：破甲/火力/脆弱可在单回合内叠出爆发伤害",
+    "新增：条件牌（残血/手牌数/敌人数量/出牌序）特定情况下收益巨大",
+    "修复：新增卡的 id 与 effect 函数与旧卡重名"
   ],
   "notes_en": [
-    "Fix: exe selftest crashed — all entry points now force UTF-8 stdout"
+    "New: 20 cards — 8 armor-break/damage-amp cards + 12 conditional cards",
+    "New: armor break / strength / frail now stack into single-turn burst damage",
+    "New: conditional cards (low HP / hand size / enemy count / play order) pay off hugely in the right spot",
+    "Fix: new card ids and effect names collided with existing ones"
   ]
 }
