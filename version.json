@@ -1,20 +1,16 @@
 {
-  "version": "0.9.08",
-  "label": "0.9.08 测试版",
-  "label_en": "0.9.08 Beta",
+  "version": "0.9.09",
+  "label": "0.9.09 测试版",
+  "label_en": "0.9.09 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：Windows Rework 版（构建脚本 + GitHub Actions 自动打包）",
-    "新增：PyQt6 缺失时的中英双语安装提示（含各平台命令）",
-    "修复：Windows 存档路径改用 %APPDATA%（避免 Program Files 无写权限）",
-    "修复：清理功能按平台扫描目录，并识别 Windows 的 .exe/.zip"
+    "修复：Windows CI 构建失败（shell: python 与 PowerShell here-string）",
+    "修复：音频测试在非 macOS 平台会失败"
   ],
   "notes_en": [
-    "New: Windows Rework build (build script + GitHub Actions auto-packaging)",
-    "New: bilingual PyQt6-missing hint with per-platform install commands",
-    "Fix: Windows saves now use %APPDATA% instead of an unwritable Program Files path",
-    "Fix: cleanup scans per-platform directories and recognises Windows .exe/.zip"
+    "Fix: Windows CI build failure (shell: python step and PowerShell here-string)",
+    "Fix: audio test failed on non-macOS platforms"
   ]
 }

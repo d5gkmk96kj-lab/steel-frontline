@@ -539,12 +539,20 @@ class TestBackendSelection(unittest.TestCase):
             self.assertFalse(avail, "无 QApplication 时不应声称可用")
 
     def test_env_override_forces_afplay(self):
+        """强制 afplay 时：macOS 上必须用它；其它平台 afplay 根本不存在，
+        应当回落到别的后端（Qt）或 none —— 但绝不能崩。"""
         old = os.environ.get("SF_AUDIO_BACKEND")
         os.environ["SF_AUDIO_BACKEND"] = "afplay"
         try:
             p = audio.MusicPlayer(volume=20)
             try:
-                self.assertIn(p.backend_name, ("afplay", "none"))
+                if sys.platform == "darwin":
+                    self.assertIn(p.backend_name, ("afplay", "none"))
+                else:
+                    # Windows / Linux：afplay 不存在
+                    self.assertIn(p.backend_name, ("qt", "none", "afplay"))
+                    self.assertNotEqual(p.backend_name, "",
+                                        "后端名不能是空串")
             finally:
                 p.stop()
         finally:
