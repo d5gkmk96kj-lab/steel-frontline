@@ -70,7 +70,19 @@ def _dir_size(path: str) -> int:
 
 
 def _is_protected(path: str) -> bool:
-    p = "/" + os.path.abspath(path).lstrip("/")
+    """这条路径是否属于「绝对不能删」的范围（存档 / 音乐 / 仓库）。
+
+    注意：PROTECTED 里存的是 **POSIX 风格** 的片段（"/Documents/" 等）。
+    Windows 上 os.path.abspath 会给出反斜杠路径，直接比字符串必然不匹配
+    （真踩过：测试里 /Users/x/Documents/... 被判成"不受保护"）。
+    所以这里先把路径统一成正斜杠再比较。
+    """
+    try:
+        p = os.path.abspath(path).replace("\\", "/")
+    except Exception:
+        p = str(path).replace("\\", "/")
+    if not p.startswith("/"):
+        p = "/" + p
     return any(seg in p for seg in PROTECTED)
 
 

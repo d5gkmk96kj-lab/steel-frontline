@@ -208,9 +208,18 @@ class TestSelftestStillPasses(unittest.TestCase):
         main_py = os.path.join(ROOT, "main.py")
         if not os.path.exists(main_py):
             self.fail("main.py 不存在（附录 B.4 要求 --selftest 通过）")
+        # 用 encoding + errors 明确指定：Windows 上子进程输出可能是
+        # cp1252/GBK，text=True 的默认解码会让 stdout/stderr 变成 None
+        # （真踩过：TypeError: unsupported operand type(s) for +: 'NoneType' and 'str'）
+        import os as _os
+        env = dict(_os.environ)
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
         proc = subprocess.run([sys.executable, "main.py", "--selftest"],
-                              cwd=ROOT, capture_output=True, text=True, timeout=180)
-        combined = proc.stdout + proc.stderr
+                              cwd=ROOT, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace",
+                              timeout=180, env=env)
+        combined = (proc.stdout or "") + (proc.stderr or "")
         self.assertEqual(proc.returncode, 0,
                          "main.py --selftest 返回 %d\n输出:\n%s"
                          % (proc.returncode, combined[-3000:]))

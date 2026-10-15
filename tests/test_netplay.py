@@ -119,8 +119,14 @@ class TestPortAndStartup(NetplayCase):
         """端口被占用时 start() 应返回 False，不抛异常。"""
         # 注意：房主绑定的是所有接口（0.0.0.0），所以只占 127.0.0.1 不构成冲突
         # （我第一版就是这么写错的）。必须占 0.0.0.0 才能真正制造「端口被占用」。
+        # Windows 上 SO_REUSEADDR 的语义与 POSIX **不同**：
+        # 它允许两个 socket 绑同一端口（相当于 Linux 的 SO_REUSEPORT），
+        # 于是"占住端口"这个前提根本不成立，Host.start() 照样成功。
+        # 所以这里必须**不设** SO_REUSEADDR。
         s = socket.socket()
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if os.name != "nt":
+            # POSIX 上要设，否则 TIME_WAIT 会导致绑定失败
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind(("0.0.0.0", self.port))
         except OSError:
