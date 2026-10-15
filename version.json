@@ -1,14 +1,20 @@
 {
-  "version": "0.9.22",
-  "label": "0.9.22 测试版",
-  "label_en": "0.9.22 Beta",
+  "version": "0.9.23",
+  "label": "0.9.23 测试版",
+  "label_en": "0.9.23 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "改进：CI 测试运行器改为边跑边输出 + 启用 faulthandler（崩溃时能定位到具体测试）"
+    "新增：中继服务器七层防护（输入校验/心跳超时/单IP限连/房间上限/频率限制/异常日志/一键关服）",
+    "新增：server/ban.sh 封 IP 工具（报告/封禁/解封/排行）",
+    "新增：server/SECURITY.md 防护文档（双语，含调参与应急）",
+    "新增：tests/test_relay_guard.py 真实打服务器的防护测试（16 项）"
   ],
   "notes_en": [
-    "Improve: CI test runner now streams per-test progress and enables faulthandler, so a native crash points at the exact test"
+    "New: seven-layer relay server hardening (input validation / heartbeat timeout / per-IP connection cap / room cap / rate limit / abuse logging / kill switch)",
+    "New: server/ban.sh IP banning tool (report / ban / unban / top talkers)",
+    "New: server/SECURITY.md hardening guide (bilingual, with tuning and incident response)",
+    "New: tests/test_relay_guard.py attacks a real server over sockets (16 checks)"
   ]
 }
