@@ -1,20 +1,24 @@
 {
-  "version": "0.9.04",
-  "label": "0.9.04 测试版",
-  "label_en": "0.9.04 Beta",
+  "version": "0.9.05",
+  "label": "0.9.05 测试版",
+  "label_en": "0.9.05 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：卡牌命中特效 —— 火花、冲击环、高伤害斩击弧",
-    "新增：界面过渡动画（主菜单/地图/战斗之间淡入淡出）",
-    "新增：格挡与总部挨打特效",
-    "新增：设置里可关闭特效与过渡（低配机器友好）"
+    "新增：联机房间码 —— 输错码连不上，防同网段陌生人乱入",
+    "新增：消息 HMAC 签名 + 防重放，篡改的消息会被丢弃并记数",
+    "新增：掉线重连（指数退避，窗口内可续打）",
+    "修复：connected 在鉴权前就发出，导致输错码也会切界面",
+    "修复：Host 预设 _peer_name 使 hello 应答永不发出",
+    "修复：客户端收发共用票据，序号去重表互相污染"
   ],
   "notes_en": [
-    "New: card hit effects — sparks, impact rings, slash arcs on heavy hits",
-    "New: screen transition fades between menu / map / battle",
-    "New: block and HQ-damage effects",
-    "New: toggle in Settings to disable effects and transitions"
+    "New: LAN room code — a wrong code cannot join, blocking strangers on the same network",
+    "New: HMAC message signing + replay protection; tampered messages are dropped and counted",
+    "New: reconnection with exponential backoff inside a grace window",
+    "Fix: 'connected' fired before auth, so a wrong code still advanced the UI",
+    "Fix: Host pre-set _peer_name, so the hello reply was never sent",
+    "Fix: client shared one ticket for send and receive, polluting the replay table"
   ]
 }

@@ -24,14 +24,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.04 测试版** · *Current version: 0.9.04 Beta*
+**当前版本：v0.9.05 测试版** · *Current version: 0.9.05 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 钢铁战线 v0.9.04 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.04-beta.dmg)**
+**[⬇️ 钢铁战线 v0.9.05 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.05-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西**。
 安装方法见 [下载说明](releases/README.md)。
@@ -44,7 +44,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.04 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.05 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -53,8 +53,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.04 测试版 · 公开版** | `SteelFrontline-Public-v0.9.04-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.04 测试版 · 完整版 | `钢铁战线-v0.9.04 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.05 测试版 · 公开版** | `SteelFrontline-Public-v0.9.05-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.05 测试版 · 完整版 | `钢铁战线-v0.9.05 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
@@ -253,6 +253,47 @@ macOS 用户也可以直接双击 **`启动游戏.command`**。
 3. **防火墙** —— macOS 首次会弹「是否允许接受传入连接」，点「允许」
 4. **换端口** —— 45671 被占用时换一个
 5. **VPN 关掉** —— 部分 VPN 会把局域网流量劫走，导致同网段也连不上
+
+---
+
+## 联机安全性
+
+局域网里任何人都能连上你的端口，所以加了**房间码**：
+
+### 怎么用
+
+1. 房主勾选 **「需要房间码（更安全）」**，开房后会显示一串码，例如：
+
+   ```
+   房间码：K7F2-9QMX-3BPD
+   ```
+
+2. 把这串码告诉同学（念前几组也行，最少 8 个字符）
+3. 同学在「加入房间」页填进去 → 连上
+
+**不勾选**就还是原来的行为（谁都能连），适合自己家里玩。
+
+### 安全措施
+
+| 措施 | 作用 |
+|---|---|
+| **房间码** | 不知道码就进不来，防止同网段陌生人乱入 |
+| **消息签名（HMAC）** | 每条消息都签名，中间改了内容会被发现并丢弃 |
+| **防重放** | 同一条消息重复发送会被拒绝 |
+| **连续异常断开** | 连续 5 次校验失败直接断开，不给爆破机会 |
+| **码最短 8 位** | 太短的输入不接受，避免"输两个字符就进去" |
+
+> 房间码是**短期**的（默认 6 小时），过期后需要重新开房。
+
+---
+
+## 掉线重连
+
+网络抖一下（切 WiFi、合盖唤醒）不至于整局作废：
+
+- 掉线后进入**重连窗口**（默认 60 秒），房主不会立刻销毁对局
+- 客户端自动重试，间隔逐步拉长：`0.8s → 1.6s → 2.5s → 4s → 6s → 8s`
+- 窗口内连回来就能继续打，超过窗口才真正结束
 
 ---
 
@@ -601,7 +642,7 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 
 > **看不到「仍要打开」按钮？**
 >
-> 那说明你下载的是**旧版本**（v0.9.04 之前的包签名是坏的）。
+> 那说明你下载的是**旧版本**（v0.9.05 之前的包签名是坏的）。
 > 旧包的签名有缺陷，macOS 无法识别它，所以**不提供放行按钮** ——
 > 这种情况只能用下面的命令行方法。
 >
@@ -748,11 +789,11 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 `钢铁战线` 用这样的版本号：
 
 ```
-0.9  →  0.9.04  →  0.9.04  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.05  →  0.9.05  →  ...  →  0.9.99  →  0.10  →  1.0
 ```
 
 - **每次推送 +0.01**（小更新）
-- 补零编号 `0.9.01 < 0.9.04 < ...`，到 `0.9.99` 自动进位成 `0.10`
+- 补零编号 `0.9.01 < 0.9.05 < ...`，到 `0.9.99` 自动进位成 `0.10`
 - **要上大版本就手动跳**，比如直接 `1.0` 或 `1.0.0.0`
 - 发版脚本：
 
@@ -898,7 +939,7 @@ The human did exactly three things: **asked for it, ran it, reported bugs.**
 > - **Arguments of the form "AI-made things are not real games" are not welcome
 >   here.** This is an experiment: let us see what AI can build on its own today.
 
-**Current version: 0.9.04 Beta**
+**Current version: 0.9.05 Beta**
 
 > Bilingual document. Chinese is above; English starts here.
 > [Back to top / 回到顶部](#钢铁战线-steel-frontline)
@@ -1095,6 +1136,47 @@ Honest list, so you do not get surprised:
 3. **Firewall** — macOS asks "allow incoming connections?" on first host; click Allow
 4. **Different port** — try another if 45671 is taken
 5. **Turn off VPN** — some VPNs hijack LAN traffic, breaking same-subnet connections
+
+## Online Security
+
+Anyone on your LAN can reach your port, so there is a **room code**:
+
+### How to use it
+
+1. The host ticks **"Require room code (more secure)"**; a code appears:
+
+   ```
+   Room code: K7F2-9QMX-3BPD
+   ```
+
+2. Tell your friend the code (reading just the first groups works — 8 chars min)
+3. They type it into the Join tab and connect
+
+Leave it unticked and behaviour is unchanged (anyone can join) — fine at home.
+
+### Protections
+
+| Measure | Effect |
+|---|---|
+| **Room code** | No code, no entry — blocks strangers on the same network |
+| **HMAC signing** | Every message is signed; tampering is detected and dropped |
+| **Replay protection** | Re-sending the same message is rejected |
+| **Auto-disconnect** | 5 failed checks in a row drops the connection |
+| **8-char minimum** | Very short codes are refused, so two characters can't get in |
+
+> Codes are **short-lived** (6 hours by default); re-host after they expire.
+
+---
+
+## Reconnection
+
+A brief network hiccup (switching Wi-Fi, closing the lid) no longer kills the match:
+
+- After a drop the host keeps the match alive for a **grace window** (60s default)
+- The client retries with growing delays: `0.8s → 1.6s → 2.5s → 4s → 6s → 8s`
+- Reconnect inside the window and play on; past it the match really ends
+
+---
 
 ## On Cheating: Our Stance
 
@@ -1509,11 +1591,11 @@ file cannot pollute your save list.
 ## Versioning
 
 ```
-0.9  →  0.9.04  →  0.9.04  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.05  →  0.9.05  →  ...  →  0.9.99  →  0.10  →  1.0
 ```
 
 - **Every push bumps +0.01**
-- Zero-padded numbers sort correctly (`0.9.01 < 0.9.04`), and `0.9.99`
+- Zero-padded numbers sort correctly (`0.9.01 < 0.9.05`), and `0.9.99`
   carries over to `0.10`
 - **Major versions are manual** — jump straight to `1.0` or `1.0.0.0`
 - Release script:
@@ -1616,7 +1698,7 @@ Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies 
 
 **I found a bug — where do I report it?**
 Please file it on the [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki).
-Include the version string (shown under the main menu title, e.g. `0.9.04 Beta`),
+Include the version string (shown under the main menu title, e.g. `0.9.05 Beta`),
 the exact steps to reproduce, and a screenshot if you have one. If the game
 crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
 

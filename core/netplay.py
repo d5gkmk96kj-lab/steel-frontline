@@ -68,6 +68,8 @@ import random
 import socket
 import threading
 import time
+
+from . import session as _sess
 from typing import Any, Callable, List, Optional
 
 # --------------------------------------------------------------------------
@@ -619,9 +621,14 @@ class _Conn:
     """房主/客户端共用的 TCP 收发骨架。子类只需实现 ``_handle(msg)``。"""
 
     def __init__(self, on_event: Optional[Callable[[dict], None]] = None,
-                 name: str = "玩家") -> None:
+                 name: str = "玩家",
+                 ticket=None) -> None:
         self._on_event = on_event if callable(on_event) else None
         self.name = _sanitize_name(name, "玩家")
+        # 会话票据：不为 None 时，收发消息都带 HMAC 签名（房间码安全）
+        self._ticket = ticket
+        self._send_seq = 0
+        self._sec_fails = 0
         self._events: "queue.Queue[dict]" = queue.Queue()
         self._sock: Optional[socket.socket] = None
         self._reader: Optional[threading.Thread] = None
@@ -672,11 +679,27 @@ class _Conn:
 
     # ---------------- 发送 ----------------
     def _send(self, msg: dict) -> bool:
-        """把一条消息编码成一行 JSON 发出去。失败返回 False，不抛异常。"""
+        """把一条消息编码成一行 JSON 发出去。失败返回 False，不抛异常。
+
+        如果本次会话带了票据（房间码），会自动附上序号与 HMAC 签名；
+        没带票据时按原样发送（局域网默认模式，向后兼容）。
+
+        **密钥一致性**：房主开的码可能比对方输入的长（对方只念了前几组）。
+        签名必须用双方**实际约定的那一串**（即对方输入的值），
+        否则两边算出的 HMAC 不同，消息会被对方判为篡改。
+        """
         sock = self._sock
         if sock is None:
             return False
         try:
+            tk = getattr(self, "_ticket", None)
+            peer_code = getattr(self, "_peer_code", None)
+            if peer_code:
+                # 已有约定的共享密钥（房主侧，对方输入的那个码）
+                tk = _sess.Ticket(token=peer_code, require_code=True)
+            if tk is not None:
+                self._send_seq = int(getattr(self, "_send_seq", 0)) + 1
+                msg = _sess.wrap(tk, msg, self._send_seq)
             line = json.dumps(msg, ensure_ascii=False, separators=(",", ":"))
         except (TypeError, ValueError):
             return False
@@ -739,6 +762,24 @@ class _Conn:
                 self._handle_raw(raw)
         self._finished.set()
 
+    def _security_reject(self, why: str) -> None:
+        """票据/签名校验失败：记一次并拒绝。
+
+        不直接断线 —— 可能只是网络把包弄坏了，丢这一条继续。
+        但如果连续多次失败，就说明对方在乱来，直接断开。
+        """
+        try:
+            self._sec_fails = int(getattr(self, "_sec_fails", 0)) + 1
+        except Exception:
+            self._sec_fails = 1
+        try:
+            self._emit({"type": "security", "msg": str(why),
+                        "count": self._sec_fails})
+        except Exception:
+            pass
+        if self._sec_fails >= 5:
+            self._drop_peer("对方连续发送未通过校验的消息，已断开。")
+
     def _handle_raw(self, raw: bytes) -> None:
         raw = raw.strip()
         if not raw:
@@ -751,6 +792,79 @@ class _Conn:
         if not isinstance(msg, dict):
             self._error(ERR_BAD_FRAME)
             return
+
+        # 票据校验：带了房间码时必须签名有效，否则整条丢弃。
+        # 校验通过后 _s/_t/_g 会被摘掉，下面拿到的就是干净的业务消息。
+        tk = getattr(self, "_recv_ticket", None) or getattr(self, "_ticket", None)
+        if tk is not None and getattr(tk, "require_code", False) \
+                and getattr(self, "_peer_code", None) is None \
+                and getattr(self, "side", 1) == 0:
+            # 房主开了房间码，但还不知道对方输的是什么码 ——
+            # hello 里会带；在那之前不收任何业务消息。
+            if msg.get("t") != "hello":
+                self._security_reject("请先发送带房间码的 hello。")
+                return
+            typed = str(msg.get("code") or "")
+            if not _sess.code_matches(tk.token, typed):
+                self._security_reject("房间码不正确。")
+                try:
+                    self._send({"t": "bye", "reason": "房间码不正确，已拒绝。"})
+                except Exception:
+                    pass
+                self._drop_peer("对方房间码不正确，已断开。")
+                return
+            # 记下对方的码：以后所有消息都用它验签
+            self._peer_code = _sess.normalize_code(typed)
+            self._auth_pending = False
+            self._announce_connected()
+            # 用对方的码验这条 hello 的签名
+            ok, why = _sess.unwrap(
+                _sess.Ticket(token=self._peer_code, require_code=True), msg)
+            if not ok:
+                self._security_reject(why)
+                return
+            try:
+                self._handle(msg)
+            except Exception as exc:
+                self._error("处理对方消息时出错：%s" % exc)
+            return
+
+        if tk is not None:
+            # 房主侧已记录对方用的码 -> 用它验签；否则用本房 token
+            peer_code = getattr(self, "_peer_code", None)
+            verify_tk = (_sess.Ticket(token=peer_code, require_code=True)
+                         if peer_code else tk)
+            ok, why = _sess.unwrap(verify_tk, msg)
+            if not ok:
+                # ---- 校验失败 ----
+                self._security_reject(why)
+                if getattr(self, "_auth_pending", False):
+                    # 房主侧：还没鉴权成功对方就发不合法消息 -> 踢掉
+                    try:
+                        self._send({"t": "bye",
+                                    "reason": "房间码不正确，已拒绝。"})
+                    except Exception:
+                        pass
+                    self._drop_peer("对方房间码不正确，已断开。")
+                elif getattr(self, "_awaiting_auth", False):
+                    # 客户端侧：房主没回签名正确的消息 -> 说明码不对
+                    self._awaiting_auth = False
+                    self._emit({"type": "error",
+                                "msg": "房间码不正确，或房主没有开启房间码。"})
+                    self._drop_peer("房间码校验未通过。")
+                return
+            # ---- 校验通过 ----
+            if getattr(self, "_auth_pending", False):
+                # 房主侧：鉴权通过，现在才算真正连上
+                self._auth_pending = False
+                self._announce_connected()
+            elif getattr(self, "_awaiting_auth", False):
+                # 客户端侧：房主回话了且签名正确 -> 码是对的
+                self._awaiting_auth = False
+                self._emit({"type": "connected",
+                            "host": getattr(self, "_host_ip", ""),
+                            "port": getattr(self, "_host_port", 0)})
+
         t = msg.get("t")
         now = _now()
         # 心跳在基类统一处理
@@ -805,11 +919,28 @@ class _Conn:
         self._heart.start()
 
     # ---------------- 生命周期 ----------------
+    def _reset_peer_auth(self) -> None:
+        """清掉与"上一个对手"有关的鉴权状态。
+
+        不清的话，房主重新开始等待后，新连入的人会被当成
+        「已经鉴权过的同一人」而直接放行（或反之被拒）。
+        """
+        try:
+            self._peer_code = None
+            self._announced = False
+            self._auth_pending = False
+            self._peer_name = ""
+            self._peer_ready = False
+            self._i_ready = False
+        except Exception:
+            pass
+
     def _drop_peer(self, reason: str) -> None:
         """判定对端掉线：通知一次，然后优雅收摊。"""
         if self._finished.is_set():
             return
         self._finished.set()
+        self._reset_peer_auth()
         self._emit({"type": "disconnected", "msg": str(reason)})
         self._emit({"type": "bye", "reason": str(reason)})
         self._teardown(notify=False)
@@ -940,8 +1071,20 @@ class Host(_Conn):
 
     def __init__(self, on_event: Optional[Callable[[dict], None]] = None,
                  port: int = DEFAULT_PORT, name: str = "房主",
-                 time_limit: Optional[float] = None) -> None:
-        super().__init__(on_event, name)
+                 time_limit: Optional[float] = None,
+                 token: Optional[str] = None,
+                 require_code: bool = False) -> None:
+        # 房主默认**生成**一张票据；require_code=False 时只在日志里展示房间码，
+        # 不强制对方输入（局域网默认行为，向后兼容）。
+        tk = None
+        if token is None:
+            token = _sess.new_token()
+        try:
+            tk = _sess.Ticket(token=str(token), host_name=name,
+                              require_code=bool(require_code))
+        except Exception:
+            tk = None
+        super().__init__(on_event, name, ticket=tk)
         self.port = _safe_int(port, DEFAULT_PORT)
         self.side = 0
         self._server: Optional[socket.socket] = None
@@ -961,7 +1104,10 @@ class Host(_Conn):
         # 对手作弊标记（彩蛋）：一旦判定，对方头顶显示「挂狗」。
         self._cheater_flagged = False
         self._cheater_reason = ""
-        self._peer_name = "加入者"
+        # 注意：这里**不能**预设 _peer_name。
+        # `_handle` 里用 `if not self._peer_name:` 判断"是否已收到对方 hello"，
+        # 预设值会让房主永远不回 hello，客户端便一直等鉴权、连不上。
+        # 真正的名字在收到 hello 时写入（_sanitize_name 有兜底）。
 
     # ---------------- 房主作弊开关 ----------------
     def set_cheats(self, on: bool) -> None:
@@ -1055,6 +1201,15 @@ class Host(_Conn):
         """本机局域网 IP，显示给玩家（如 ``10.16.64.27``）。"""
         return local_ip()
 
+    def _announce_connected(self, addr=None) -> None:
+        """确认（或无需）鉴权后，对外声明"连上了"。只发一次。"""
+        if getattr(self, "_announced", False):
+            return
+        self._announced = True
+        self._emit({"type": "connected",
+                    "host": (addr[0] if addr else ""),
+                    "port": (addr[1] if addr else 0)})
+
     def _accept_loop(self) -> None:
         srv = self._server
         if srv is None:
@@ -1097,9 +1252,14 @@ class Host(_Conn):
         self._peer = conn
         self._sock = conn
         self._connected = True
-        self._emit({"type": "connected",
-                    "host": (addr[0] if addr else ""),
-                    "port": (addr[1] if addr else 0)})
+        # 注意：这里**先不发 connected**。
+        # 如果本房要求房间码，对方的第一条消息必须带正确签名，
+        # 校验通过后才算真正连上（否则「连上」的瞬间 UI 就切界面了，
+        # 输错码的人照样能进来 —— 这正是之前的漏洞）。
+        self._auth_pending = bool(
+            getattr(getattr(self, "_ticket", None), "require_code", False))
+        if not self._auth_pending:
+            self._announce_connected(addr)
         self._reader = threading.Thread(
             target=self._reader_loop, args=(conn,),
             name="netplay-host-recv", daemon=True)
@@ -1444,8 +1604,30 @@ class Client(_Conn):
     """加入方。只发意图，一切状态以房主广播的快照为准。"""
 
     def __init__(self, on_event: Optional[Callable[[dict], None]] = None,
-                 name: str = "挑战者") -> None:
-        super().__init__(on_event, name)
+                 name: str = "挑战者",
+                 token: Optional[str] = None,
+                 require_code: bool = True) -> None:
+        tk = None
+        # 规范化：去掉分隔符、统一大写 —— 用户可能输入 "abcd-2345"，
+        # 而房主那边是 normalize 过的；两边密钥必须逐字节一致，
+        # 否则 HMAC 对不上（前缀码就会连不上）。
+        norm = _sess.normalize_code(token) if token else ""
+        if norm:
+            try:
+                tk = _sess.Ticket(token=norm, require_code=bool(require_code))
+            except Exception:
+                tk = None
+        super().__init__(on_event, name, ticket=tk)
+        # 收发分离：发送用 _ticket（带自己的发送序号），
+        # 收件另用一张，避免两边序号空间混在一起导致误判"重放"。
+        self._recv_ticket = None
+        if tk is not None:
+            try:
+                self._recv_ticket = _sess.Ticket(
+                    token=tk.token, require_code=True)
+            except Exception:
+                self._recv_ticket = None
+        self.token = str(token or "")
         self.side = 1
         self._my_deck: List[str] = []
         self._i_ready = False
@@ -1507,14 +1689,31 @@ class Client(_Conn):
         self._connected_once = True
         self._buf = b""
         self._closing.clear()
-        self._emit({"type": "connected", "host": host, "port": port})
+        # 带了房间码时，要等房主回一条验签通过的消息才宣告连上，
+        # 否则输错码的人本地已经切到卡组界面了（界面与实际不符）。
+        self._awaiting_auth = bool(
+            getattr(getattr(self, "_ticket", None),
+                    "require_code", False))
+        self._host_ip = host
+        self._host_port = port
+        if not self._awaiting_auth:
+            self._emit({"type": "connected", "host": host,
+                        "port": port})
         self._reader = threading.Thread(
             target=self._reader_loop, args=(sock,),
             name="netplay-client-recv", daemon=True)
         self._reader.start()
         self._start_heartbeat()
         # 自报家门
-        self._send({"t": "hello", "ver": PROTOCOL_VERSION, "name": self.name})
+        hello = {"t": "hello", "ver": PROTOCOL_VERSION, "name": self.name}
+        # 把「我输入的码」告诉房主 —— 房主用它验签（前缀匹配也行）
+        try:
+            tk = getattr(self, "_ticket", None)
+            if tk is not None and tk.token:
+                hello["code"] = tk.token
+        except Exception:
+            pass
+        self._send(hello)
         return True
 
     # ---------------- 消息 ----------------

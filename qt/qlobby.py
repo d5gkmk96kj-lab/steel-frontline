@@ -24,7 +24,8 @@ from typing import Dict, List, Optional
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPen
 from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QSizePolicy,
     QSpinBox, QVBoxLayout, QWidget,
 )
 
@@ -316,6 +317,21 @@ class LobbyScreen(QWidget):
         portrow.addStretch(1)
         hv.addLayout(portrow)
 
+        # 需要房间码（更安全，但对方必须知道码）
+        self.cb_code = QCheckBox("需要房间码（更安全）", self.host_box)
+        self.cb_code.setChecked(False)
+        self.cb_code.setToolTip(
+            "开启后，对方必须输入正确的房间码才能进入，\n"
+            "防止同一个网络里的陌生人乱入。")
+        hv.addWidget(self.cb_code)
+
+        self.lbl_code = QLabel("", self.host_box)
+        self.lbl_code.setStyleSheet(
+            f"color:{T.GOLD};font-size:{T.FONT_H2}px;font-weight:800;"
+            f"background:transparent;letter-spacing:2px;")
+        self.lbl_code.hide()
+        hv.addWidget(self.lbl_code)
+
         self.btn_open = QPushButton("开 始 等 待 对 手", self.host_box)
         self.btn_open.setObjectName("Primary")
         self.btn_open.setMinimumHeight(48)
@@ -370,6 +386,20 @@ class LobbyScreen(QWidget):
         self.btn_join_now.setMinimumHeight(48)
         self.btn_join_now.clicked.connect(self.start_join)
         jv.addWidget(self.btn_join_now)
+
+        # 房间码（房主开了「需要房间码」时必须填）
+        code_row = QHBoxLayout()
+        code_row.addWidget(QLabel("房间码（房主开了才要填）", self.join_box))
+        self.ed_code = QLineEdit(self.join_box)
+        self.ed_code.setPlaceholderText("ABCD-2345-EFGH")
+        self.ed_code.setMaxLength(24)
+        self.ed_code.setStyleSheet(
+            f"QLineEdit{{background:{T.PANEL_LO}; border:1px solid {T.BORDER};"
+            f"border-radius:6px; padding:6px 10px; color:{T.TEXT};"
+            f"font-size:{T.FONT_BODY}px;}}"
+            f"QLineEdit:focus{{border:1px solid {T.GOLD};}}")
+        code_row.addWidget(self.ed_code, 1)
+        jv.addLayout(code_row)
 
         self.lbl_mine = QLabel(
             T.tr("（本机地址：%s —— 方便对方反过来告诉你他的 IP）") % local_ip(),
@@ -507,7 +537,21 @@ class LobbyScreen(QWidget):
         QApplication_process()
         # netplay 的契约：端口在构造时传入，start() 不接受参数。
         try:
-            self.host = np.Host(on_event=None, port=port, name=self._player_name)
+            require_code = bool(getattr(self, "cb_code", None)
+                                and self.cb_code.isChecked())
+            self.host = np.Host(on_event=None, port=port,
+                                name=self._player_name,
+                                require_code=require_code)
+            try:
+                code = getattr(getattr(self.host, "_ticket", None),
+                               "display", lambda: "")()
+                if code:
+                    self.lbl_code.setText(
+                        ("房间码：%s" % code) if require_code
+                        else ("本房房间码：%s（对方可不填）" % code))
+                    self.lbl_code.show()
+            except Exception:
+                pass
         except TypeError:
             # 兼容更早的 Host(on_event, name) 签名
             try:
@@ -583,7 +627,21 @@ class LobbyScreen(QWidget):
         self.radar.set_live(True)
         QApplication_process()
         try:
-            self.client = np.Client(on_event=None, name=self._player_name)
+            code = ""
+            try:
+                code = (self.ed_code.text() or "").strip()
+            except Exception:
+                code = ""
+            try:
+                if code:
+                    self.client = np.Client(on_event=None,
+                                            name=self._player_name,
+                                            token=code)
+                else:
+                    self.client = np.Client(on_event=None,
+                                            name=self._player_name)
+            except TypeError:
+                self.client = np.Client(on_event=None, name=self._player_name)
         except Exception as exc:
             self._status("⚠ 创建连接失败：%s" % exc, T.Q_RED)
             self.client = None
