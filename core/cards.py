@@ -1158,6 +1158,105 @@ def fx_curse_of_the_deep(ctx) -> None:
 # 卡表定义
 # --------------------------------------------------------------------------
 
+# ==== 新增：核爆终结技 ====
+def fx_dig_in(ctx) -> None:
+    """构筑工事：0 费，攻击牌越多越强的起手铺垫。"""
+    ctx.gain_block(4)
+    _apply(ctx, BUFF_STRENGTH, 1, ctx.source)
+
+
+def fx_steady_advance(ctx) -> None:
+    """稳步推进：抽牌 + 火力，纯铺垫。"""
+    ctx.draw(1)
+    _apply(ctx, BUFF_STRENGTH, 2, ctx.source)
+
+
+def fx_prepare_offensive(ctx) -> None:
+    """战前准备：本回合每已打出一张牌 +1 火力（最多 +4）。"""
+    n = 0
+    fn = getattr(ctx, "cards_played_this_turn", None)
+    if callable(fn):
+        try:
+            n = int(fn())
+        except Exception:
+            n = 0
+    _apply(ctx, BUFF_STRENGTH, min(4, n), ctx.source)
+    ctx.gain_energy(1)
+
+
+# --------------------------------------------------------------------------
+# 爆（终结）
+# --------------------------------------------------------------------------
+def fx_bunker_buster(ctx) -> None:
+    """要塞破坏者：单体巨伤，对已破甲目标额外加成。"""
+    v = 0
+    try:
+        v = int(ctx.target.buffs.get(BUFF_VULNERABLE, 0) or 0)
+    except Exception:
+        v = 0
+    ctx.deal_damage(12 + v * 3, ctx.target)
+
+
+def fx_decisive_strike(ctx) -> None:
+    """决定性一击：伤害 = 基础 + 当前火力 × 2（吃满火力加成）。"""
+    s = 0
+    try:
+        s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
+    except Exception:
+        s = 0
+    ctx.deal_damage(8 + s * 2, ctx.target)
+
+
+def fx_annihilation(ctx) -> None:
+    """歼灭令：全体巨伤，本回合每打出一张牌再 +2（全体）。"""
+    n = 0
+    fn = getattr(ctx, "cards_played_this_turn", None)
+    if callable(fn):
+        try:
+            n = int(fn())
+        except Exception:
+            n = 0
+    ctx.deal_damage_all(10 + n * 2)
+
+
+def fx_final_offensive(ctx) -> None:
+    """最后总攻：全体伤害 = 当前火力（每点火力都是全体伤害）。"""
+    s = 0
+    try:
+        s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
+    except Exception:
+        s = 0
+    ctx.deal_damage_all(6 + s)
+
+
+# --------------------------------------------------------------------------
+# 核弹
+# --------------------------------------------------------------------------
+def fx_nuke(ctx) -> None:
+    """战略核打击：**对全体敌人造成巨额伤害**，代价是你这局不能再打它。
+
+    真正的"核弹"——打出即终结。伤害 = 30 + 火力 × 3。
+    """
+    s = 0
+    try:
+        s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
+    except Exception:
+        s = 0
+    ctx.deal_damage_all(30 + s * 3)
+
+
+def fx_second_strike(ctx) -> None:
+    """二次打击：核弹之后还有一发（配合核弹使用）。"""
+    s = 0
+    try:
+        s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
+    except Exception:
+        s = 0
+    ctx.deal_damage_all(12 + s * 2)
+
+
+
+
 # ==== 新增：指挥点 / 干扰 / 科研 / 单位 ====
 def fx_supply_drop(ctx) -> None:
     """空投补给：直接给指挥点 + 抽牌。"""
@@ -2199,6 +2298,50 @@ CARD_LIST: List[CardDef] = [
             "征召「指挥坦克」（{magic} 耐久 / {magic2} 攻击），并获得 2 点火力。",
             "self", fx_deploy_command_tank, upgrade={"magic": 20},
             magic=15, magic2=6, keywords=("单位", "火力", "能力")),
+
+    # ---- 攒 ----
+    CardDef("dig_in", "构筑工事", 0, "skill", RARITY_COMMON, ARCH_BLOCK,
+            "获得 4 点掩体与 1 点火力。", "self", fx_dig_in,
+            upgrade={"block": 7}, block=4, magic=1, keywords=("火力", "铺垫")),
+    CardDef("steady_advance", "稳步推进", 1, "skill", RARITY_COMMON, ARCH_ATTACK,
+            "抽 1 张牌，获得 {magic} 点火力。", "self", fx_steady_advance,
+            upgrade={"magic": 3}, magic=2, keywords=("火力", "铺垫")),
+    CardDef("prepare_offensive", "战前准备", 1, "skill", RARITY_UNCOMMON,
+            ARCH_ENERGY,
+            "获得 1 点指挥点；**本回合每已打出一张牌**再 +1 火力（最多 +4）。",
+            "self", fx_prepare_offensive, upgrade={"cost": 0},
+            keywords=("火力", "铺垫", "指挥点")),
+
+    # ---- 爆 ----
+    CardDef("bunker_buster", "要塞破坏者", 2, "attack", RARITY_UNCOMMON,
+            ARCH_ATTACK,
+            "造成 12 点伤害；**目标每有 1 层破甲再 +3**。", "enemy",
+            fx_bunker_buster, upgrade={"damage": 16}, damage=12,
+            keywords=("火力", "破甲", "终结")),
+    CardDef("decisive_strike", "决定性一击", 2, "attack", RARITY_RARE,
+            ARCH_ATTACK,
+            "造成 8 点伤害；**每点火力再 +2**（吃满火力加成）。", "enemy",
+            fx_decisive_strike, upgrade={"cost": 1}, damage=8,
+            keywords=("火力", "终结")),
+    CardDef("annihilation", "歼灭令", 2, "attack", RARITY_RARE, ARCH_ATTACK,
+            "对**全体**敌人造成 10 点伤害；**本回合每打出一张牌再 +2**。",
+            "all_enemies", fx_annihilation, upgrade={"cost": 1},
+            keywords=("群体", "终结")),
+    CardDef("final_offensive", "最后总攻", 2, "attack", RARITY_RARE, ARCH_ATTACK,
+            "对**全体**敌人造成 6 + **当前火力**点伤害。", "all_enemies",
+            fx_final_offensive, upgrade={"cost": 1},
+            keywords=("群体", "火力", "终结")),
+
+    # ---- 核弹 ----
+    CardDef("nuke", "战略核打击", 3, "attack", RARITY_RARE, ARCH_ATTACK,
+            "【核弹】对**全体**敌人造成 30 + **火力 × 3** 点伤害。消耗。",
+            "all_enemies", fx_nuke, exhaust=True,
+            keywords=("核弹", "群体", "终结", "消耗")),
+    CardDef("second_strike", "二次打击", 2, "attack", RARITY_UNCOMMON,
+            ARCH_ATTACK,
+            "对**全体**敌人造成 12 + **火力 × 2** 点伤害。（核打击之后补刀）",
+            "all_enemies", fx_second_strike, upgrade={"cost": 1},
+            keywords=("核弹", "群体", "终结")),
 ]
 
 

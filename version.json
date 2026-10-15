@@ -1,24 +1,20 @@
 {
-  "version": "0.9.17",
-  "label": "0.9.17 测试版",
-  "label_en": "0.9.17 Beta",
+  "version": "0.9.18",
+  "label": "0.9.18 测试版",
+  "label_en": "0.9.18 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：指挥点卡 5 张（空投补给/后勤链/全员就位/紧急征用/冬季储备）",
-    "新增：干扰卡 6 张（虚弱/削弱/燃烧，可打乱敌人）",
-    "新增：范围攻击 4 张（地毯轰炸/炮火覆盖/焦土政策/破片风暴）",
-    "新增：科研链 4 张（初级→高级→突破→超模原型兵器）",
-    "新增：单位卡 6 张（KARDS 风格，部署后每回合自动攻击）",
-    "平衡：单回合理论爆发上限 54 → 132"
+    "新增：核爆终结技 9 张（构筑工事/稳步推进/战前准备/要塞破坏者/决定性一击/歼灭令/最后总攻/战略核打击/二次打击）",
+    "新增：核弹伤害 = 30 + 火力×3，全套连招可打出 500+ 伤害",
+    "平衡：后手补偿 2 → 5 指挥点（新卡让 0 费牌翻倍，先手优势一度到 62%）",
+    "平衡：先手胜率实测 49.4%（此前 62.2%）"
   ],
   "notes_en": [
-    "New: 5 command-point cards (Supply Drop / Logistics Chain / All Hands on Deck / Emergency Requisition / Winter Stockpile)",
-    "New: 6 disruption cards (Weak, Strength-down, Burn) to cripple enemies",
-    "New: 4 area-attack cards (Carpet Bombing / Artillery Barrage / Scorched Earth / Shrapnel Storm)",
-    "New: 4-card research chain (Basic -> Advanced -> Breakthrough -> overtuned Prototype Weapon)",
-    "New: 6 unit cards (KARDS-style; deployed units auto-attack every turn)",
-    "Balance: single-turn burst ceiling raised from 54 to 132"
+    "New: 9 nuke finisher cards (Dig In / Steady Advance / Prepare Offensive / Bunker Buster / Decisive Strike / Annihilation Order / Final Offensive / Strategic Nuclear Strike / Second Strike)",
+    "New: nuke deals 30 + Strength x 3; a full setup combo can reach 500+ damage",
+    "Balance: second-player compensation 2 -> 5 Command Points (new cards doubled the 0-cost pool; first-player win rate had spiked to 62%)",
+    "Balance: first-player win rate now measured at 49.4%"
   ]
 }

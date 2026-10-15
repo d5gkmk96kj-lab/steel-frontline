@@ -552,3 +552,179 @@ class TestUnits(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+# ==========================================================================
+# 第四批：核爆终结技（用户反馈"打核爆最爽"）
+# ==========================================================================
+
+NUKE_CARDS = [
+    "dig_in", "steady_advance", "prepare_offensive",
+    "bunker_buster", "decisive_strike", "annihilation", "final_offensive",
+    "nuke", "second_strike",
+]
+
+
+class TestNukeCards(unittest.TestCase):
+
+    def test_all_present(self):
+        for cid in NUKE_CARDS:
+            with self.subTest(card=cid):
+                self.assertIn(cid, C.CARD_DB)
+
+    def test_all_playable(self):
+        for cid in NUKE_CARDS:
+            with self.subTest(card=cid):
+                b, _ = _battle(n_enemies=3)
+                b.player.energy = 30
+                b.player.hand.clear()
+                b.add_card_to_hand(cid, n=1)
+                self.assertTrue(b.play_card(b.player.hand[-1],
+                                            first_enemy(b)))
+
+    def test_nuke_scales_with_strength(self):
+        """核弹必须吃火力加成。"""
+        def nuke_damage(prep_strength: int) -> int:
+            b, es = _battle(n_enemies=3)
+            if prep_strength:
+                b.apply_buff(b.player, "strength", prep_strength)
+            b.player.energy = 30
+            b.player.hand.clear()
+            b.add_card_to_hand("nuke", n=1)
+            before = sum(e.hp for e in es)
+            b.play_card(b.player.hand[-1], first_enemy(b))
+            return before - sum(e.hp for e in es)
+
+        self.assertGreater(nuke_damage(20), nuke_damage(0),
+                           "核弹没有吃火力加成")
+
+    def test_nuke_is_exhaust(self):
+        """核弹是一次性的（消耗）。"""
+        self.assertTrue(C.CARD_DB["nuke"].exhaust, "核弹不是消耗牌")
+
+    def test_bunker_buster_scales_with_armor_break(self):
+        def dmg(vuln: int) -> int:
+            b, es = _battle()
+            if vuln:
+                b.apply_buff(es[0], "vulnerable", vuln)
+            b.player.energy = 30
+            b.player.hand.clear()
+            b.add_card_to_hand("bunker_buster", n=1)
+            before = es[0].hp
+            b.play_card(b.player.hand[-1], es[0])
+            return before - es[0].hp
+
+        self.assertGreater(dmg(6), dmg(0), "要塞破坏者没有吃破甲加成")
+
+    def test_decisive_strike_scales_with_strength(self):
+        def dmg(s: int) -> int:
+            b, es = _battle()
+            if s:
+                b.apply_buff(b.player, "strength", s)
+            b.player.energy = 30
+            b.player.hand.clear()
+            b.add_card_to_hand("decisive_strike", n=1)
+            before = es[0].hp
+            b.play_card(b.player.hand[-1], es[0])
+            return before - es[0].hp
+
+        self.assertGreater(dmg(15), dmg(0), "决定性一击没有吃火力加成")
+
+    def test_final_offensive_is_area(self):
+        b, es = _battle(n_enemies=3)
+        b.apply_buff(b.player, "strength", 10)
+        b.player.energy = 30
+        b.player.hand.clear()
+        b.add_card_to_hand("final_offensive", n=1)
+        b.play_card(b.player.hand[-1], first_enemy(b))
+        for i, e in enumerate(es):
+            with self.subTest(enemy=i):
+                self.assertLess(e.hp, e.max_hp, "最后总攻漏了第 %d 个" % i)
+
+
+class TestNukeCombo(unittest.TestCase):
+    """完整核爆连招：攒 buff -> 一发入魂。"""
+
+    def test_full_combo_deals_massive_damage(self):
+        b, es = _battle(n_enemies=3, hp=9999)
+        b.player.energy = 60
+        combo = ["dig_in", "dig_in", "steady_advance", "steady_advance",
+                 "prepare_offensive", "all_in", "arsenal_overload",
+                 "mass_mobilize", "annihilation", "nuke"]
+        total = 0
+        for cid in combo:
+            b.player.hand.clear()
+            b.add_card_to_hand(cid, n=1)
+            ci = b.player.hand[-1]
+            if b.can_play(ci):
+                before = sum(e.hp for e in es)
+                b.play_card(ci, first_enemy(b))
+                total += before - sum(e.hp for e in es)
+        self.assertGreater(total, 300,
+                           "整套核爆连招只打出 %d 伤害（预期 >300）" % total)
+
+
+class TestVersusSymmetry(unittest.TestCase):
+    """1v1 后手补偿：必须把先手优势压在 60% 以下。
+
+    背景：新增卡牌把 0 费牌从 10 张涨到 20 张，先手方"白打一张"
+    滚雪球更早，先手胜率一度冲到 62%。补偿从 +2 提到 +5 才压回来。
+    """
+
+    def test_first_player_advantage_is_bounded(self):
+        """跑 450 场（3 组种子 x 150）汇总，压住抽样波动。
+
+        单独用 200 场时波动能到 ±5 个百分点：单跑能过、全量跑偶发
+        失败（真踩过 60.5%）。多组种子汇总才稳。
+        """
+        from core import deckbuild as DB
+        from core import versus as V
+        import random as _r
+
+        def _play(deck, seed):
+            bs = V.VersusBattle(list(deck), list(deck),
+                                rng=_r.Random(seed), hp=75)
+            g = 0
+            while bs.result() == "ongoing" and g < 400:
+                g += 1
+                sd = bs.current_side()
+                played = False
+                for k in range(15):
+                    try:
+                        if bs.can_play(sd, k) and bs.play_card(sd, k):
+                            played = True
+                            break
+                    except Exception:
+                        break
+                if not played:
+                    if not bs.end_turn(sd):
+                        break
+                bs.tick(0.1)
+            return bs.result()
+
+        a = b = d = o = 0
+        for seed in (1, 2, 3):
+            deck = DB.random_deck(_r.Random(seed), 20)
+            for i in range(150):
+                r = _play(deck, i * 7 + seed)
+                if r == "a_wins":
+                    a += 1
+                elif r == "b_wins":
+                    b += 1
+                elif r == "draw":
+                    d += 1
+                else:
+                    o += 1
+
+        rate = a / float(max(1, a + b + d))
+        self.assertLessEqual(
+            rate, 0.60,
+            "先手胜率 %.1f%% 超过 60%%（后手补偿 FIRST_TURN_BONUS_SUPPLY "
+            "可能需要调高）" % (rate * 100))
+        self.assertEqual(o, 0, "有 %d 场未收敛" % o)
+
+    def test_bonus_is_not_absurd(self):
+        """补偿不能高到反过来压死后手 —— 保持个位数。"""
+        from core import versus as V
+        self.assertGreaterEqual(V.FIRST_TURN_BONUS_SUPPLY, 0)
+        self.assertLessEqual(V.FIRST_TURN_BONUS_SUPPLY, 10)
