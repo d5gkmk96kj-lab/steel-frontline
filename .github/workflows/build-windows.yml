@@ -40,6 +40,8 @@ jobs:
       - name: Read version
         id: ver
         shell: bash
+        env:
+          PYTHONIOENCODING: utf-8   # 关键修复：强制 UTF-8 输出，避免 cp1252 编码崩溃
         run: |
           python -c "import json;d=json.load(open('version.json',encoding='utf-8'));print('version='+d['version']);print('label='+d.get('label',d['version']))" >> "$GITHUB_OUTPUT"
 
