@@ -33,7 +33,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+          # 注意：**不要**加 cache: 'pip' ——
+          # 缓存需要一个 requirements.txt / pyproject.toml 来算 key，
+          # 而本项目零第三方依赖，没有那个文件，会导致这步直接失败。
 
       - name: Read version
         id: ver
