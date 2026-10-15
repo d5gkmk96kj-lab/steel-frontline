@@ -208,7 +208,28 @@ class TestAiUiWiring(unittest.TestCase):
             from qt.qapp import MainWindow
         except Exception as exc:
             self.skipTest("无法导入 MainWindow：%r" % (exc,))
-        return MainWindow()
+        win = MainWindow()
+
+        # 统一清理：MainWindow 里的 QTimer 必须停掉。
+        # 不停的话 CI（尤其 Windows）会在测试跑完后拿不到退出码，
+        # 表现为 "Process completed with exit code 127"。
+        def _quiet():
+            try:
+                for name in ("versus", "lobby", "battle"):
+                    sc = win.screens.get(name)
+                    tm = getattr(sc, "_timer", None)
+                    if tm is not None:
+                        tm.stop()
+            except Exception:
+                pass
+            try:
+                from core import audio as _a
+                _a.shutdown()
+            except Exception:
+                pass
+
+        self.addCleanup(_quiet)
+        return win
 
     def test_menu_has_ai_button(self):
         w = self._window()
@@ -263,9 +284,27 @@ class TestAiUiWiring(unittest.TestCase):
                         "电脑一个回合一点伤害都没打出来")
 
     def test_net_mode_has_no_ai(self):
-        """联机模式绝不能跑本地 AI（否则会抢对手的操作）。"""
+        """联机模式绝不能跑本地 AI（否则会抢对手的操作）。
+
+        注意：start_net 会启动 QTimer 并一直轮询网络。测试结束必须停掉，
+        否则在 CI 上这个 timer 会活到进程退出，导致
+        "Process completed with exit code 127"（Windows runner 上
+        表现为整个 test suite 拿不到退出码）。
+        """
         w = self._window()
         vs = w.screens["versus"]
+
+        def _stop():
+            try:
+                vs._timer.stop()
+            except Exception:
+                pass
+            try:
+                vs.net = None
+            except Exception:
+                pass
+
+        self.addCleanup(_stop)
         vs.start_net(object(), 0)
         self.assertIsNone(getattr(vs, "_ai", None),
                           "联机模式不该有本地 AI")
@@ -340,6 +379,61 @@ class TestStalemate(unittest.TestCase):
             r, _ = play_game("normal", "normal", i)
             self.assertNotEqual(r, "ongoing")
             self.assertIn(r, ("a_wins", "b_wins", "draw"))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+
+
+class TestNoResourceLeaks(unittest.TestCase):
+    """回归防护：UI 测试不能留下活跃的 QTimer。
+
+    这条是踩坑换来的：test_net_mode_has_no_ai 调 start_net() 会启动一个
+    永久轮询的 QTimer，测试结束后它还活着。本地看不出来，但 CI 上
+    （Windows runner）整个 test suite 会拿不到退出码，报
+    "Process completed with exit code 127"，看起来像测试全挂。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        try:
+            from PyQt6.QtWidgets import QApplication
+        except Exception:
+            raise unittest.SkipTest("没有 PyQt6")
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_start_net_timer_can_be_stopped(self):
+        """start_net 启的 timer 必须能停（否则 CI 拿不到退出码）。"""
+        from qt.qapp import MainWindow
+        w = MainWindow()
+
+        # 和 TestAiUiWiring 一样要清理全局状态：
+        # MainWindow 构造时会调 audio.on_screen() 改全局 BGM 单例，
+        # 不还原就会污染同进程后续的 test_audio
+        # （单独跑全过、连跑就挂）。
+        def _restore():
+            try:
+                from core import audio as _a
+                _a.shutdown()
+            except Exception:
+                pass
+
+        self.addCleanup(_restore)
+        vs = w.screens["versus"]
+        vs.start_net(object(), 0)
+        # 允许它启动
+        self.assertTrue(vs._timer.isActive(), "start_net 应启动 timer")
+        # 必须能干净地停掉
+        vs._timer.stop()
+        self.assertFalse(vs._timer.isActive(), "timer 停不掉")
+
+    def test_cleanup_helpers_exist(self):
+        """测试文件必须提供清理路径（防止以后有人删掉）。"""
+        import inspect
+        src = inspect.getsource(sys.modules[__name__])
+        self.assertIn("_timer.stop()", src,
+                      "缺少 QTimer 清理 —— CI 会以 exit 127 失败")
 
 
 if __name__ == "__main__":

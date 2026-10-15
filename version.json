@@ -1,16 +1,14 @@
 {
-  "version": "0.9.20",
-  "label": "0.9.20 测试版",
-  "label_en": "0.9.20 Beta",
+  "version": "0.9.21",
+  "label": "0.9.21 测试版",
+  "label_en": "0.9.21 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：双方都打不死对方时 1v1 会永久卡死（新增 60 回合僵局判定）",
-    "修复：退化卡组（如 20 张铁丝网反击）人机对战无法结束"
+    "修复：CI 在 Windows 上以 exit 127 失败（UI 测试的 QTimer 未清理，进程拿不到退出码）"
   ],
   "notes_en": [
-    "Fix: 1v1 could hang forever when neither side can kill the other (added a 60-turn stalemate rule)",
-    "Fix: degenerate decks (e.g. 20x Riposte) made vs-CPU games unending"
+    "Fix: CI failed with exit 127 on Windows (UI tests left a QTimer running, so the process never reported an exit code)"
   ]
 }
