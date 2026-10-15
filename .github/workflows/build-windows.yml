@@ -1,0 +1,172 @@
+name: Build Windows Rework
+
+# ---------------------------------------------------------------------------
+# 每次推送 tag 或手动触发时，自动在 GitHub 的 Windows 机器上打包。
+#
+# 为什么用 CI：PyInstaller **不支持交叉编译** —— 作者用 macOS，
+# 没法在本机产出 Windows 的 .exe。交给 GitHub 的 Windows runner 最省事，
+# 而且公开仓库完全免费。
+#
+# 产物：SteelFrontline-WindowsRework-<版本>.zip（自动挂到 Actions 里）
+#       如果是打 tag 推送，还会自动创建 Release 并附上 zip。
+# ---------------------------------------------------------------------------
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:          # 也可以手动点按钮触发
+
+permissions:
+  contents: write             # 打 tag 时需要创建 Release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Read version
+        id: ver
+        shell: python
+        run: |
+          import json, os
+          d = json.load(open('version.json', encoding='utf-8'))
+          v = d['version']
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write("version=%s\n" % v)
+              f.write("label=%s\n" % d.get('label', v))
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller PyQt6
+
+      - name: Run test suite
+        # 单机逻辑全平台一致，先在 Windows 上跑一遍，确保没有平台假设
+        run: python -m unittest discover -s tests -v
+        continue-on-error: false
+
+      - name: Build icon
+        run: python packaging/make_icon.py
+
+      - name: Build with PyInstaller
+        shell: python
+        run: |
+          import subprocess, sys
+
+          NAME = "SteelFrontlineWindowsRework"
+          hidden = [
+              "core", "core.run", "core.cards", "core.enemies", "core.engine",
+              "core.versus", "core.netplay", "core.saves", "core.session",
+              "core.reconnect", "core.relay_client", "core.updater",
+              "core.cleanup", "core.tips", "core.audio", "core.i18n",
+              "core.version", "core.cheats", "core.deckbuild",
+              "qt", "qt.qapp", "qt.qscreens", "qt.qbattle", "qt.qversus",
+              "qt.qlobby", "qt.qdeckbuild", "qt.qsave", "qt.qupdate",
+              "qt.qcleanup", "qt.qconsole", "qt.qfx", "qt.qmap",
+              "qt.qtheme", "qt.qwidgets",
+          ]
+          cmd = [sys.executable, "-m", "PyInstaller",
+                 "--noconfirm", "--clean", "--windowed",
+                 "--name", NAME,
+                 "--distpath", "dist_win",
+                 "--workpath", "build_win",
+                 "--specpath", "build_win",
+                 "--paths", ".",
+                 "--add-data", "locales;locales",
+                 "--add-data", "tips.txt;.",
+                 "--icon", "packaging/icon.ico"]
+          for h in hidden:
+              cmd += ["--hidden-import", h]
+          cmd.append("packaging/app_entry.py")
+
+          print("running:", " ".join(cmd[:8]), "...")
+          r = subprocess.run(cmd)
+          sys.exit(r.returncode)
+
+      - name: Verify the exe runs
+        shell: pwsh
+        run: |
+          $exe = "dist_win\SteelFrontlineWindowsRework\SteelFrontlineWindowsRework.exe"
+          if (-not (Test-Path $exe)) { throw "exe not found: $exe" }
+          Write-Host "exe size: $((Get-Item $exe).Length) bytes"
+          # 无头自检：遍历所有界面 + 打完一场战斗
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $env:SF_GAME_HOME = "$env:TEMP\sftest"
+          & $exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw "selftest failed with $LASTEXITCODE" }
+          Write-Host "selftest passed"
+
+      - name: Assemble release folder
+        shell: pwsh
+        run: |
+          $name = "SteelFrontlineWindowsRework"
+          $ver = "${{ steps.ver.outputs.version }}"
+          $out = "release\SteelFrontline-WindowsRework-$ver"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          Copy-Item -Recurse "dist_win\$name" "$out\$name"
+          if (Test-Path "tips.txt")   { Copy-Item "tips.txt"   "$out\" }
+          if (Test-Path "README.md")  { Copy-Item "README.md"  "$out\游戏教程.md" }
+          New-Item -ItemType Directory -Force -Path "$out\music" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$out\data"  | Out-Null
+
+          $readme = @"
+          ============================================================
+           钢铁战线 Steel Frontline — Windows Rework
+           Version: $ver
+          ============================================================
+
+          How to run:
+            1. Double-click $name.exe
+            2. If Windows SmartScreen appears ("Windows protected your PC"),
+               click "More info" then "Run anyway".
+               This is normal: the app has no paid Microsoft code-signing
+               certificate. The full source is on GitHub if you want to
+               verify it yourself.
+            3. First launch may take 5-10 seconds.
+
+          Saves:  %APPDATA%\钢铁战线\data\
+          Music:  drop files into the music\ folder as music1.mp3, music2.ogg, ...
+
+          ------------------------------------------------------------
+           怎么玩：
+             1. 双击 $name.exe
+             2. 如果弹出「Windows 已保护你的电脑」：
+                点「更多信息」→「仍要运行」
+             3. 存档位置：%APPDATA%\钢铁战线\data\
+             4. 加音乐：把文件放进 music\，命名 music1.mp3 / music2.ogg ...
+
+           ⚠️ 本游戏全部由 AI（DeepSeek-V4.1-Flash）生成 ⚠️
+           This game is entirely AI-generated.
+          ============================================================
+          "@
+          Set-Content -Path "$out\README-FIRST.txt" -Value $readme -Encoding UTF8
+
+          Compress-Archive -Path "$out\*" -DestinationPath "$out.zip" -Force
+          Write-Host "created $out.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SteelFrontline-WindowsRework-${{ steps.ver.outputs.version }}
+          path: release/*.zip
+          retention-days: 90
+
+      - name: Attach to Release (only on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.zip
+          name: ${{ steps.ver.outputs.label }}
+          generate_release_notes: true
