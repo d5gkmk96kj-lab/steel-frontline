@@ -14,6 +14,23 @@
 
 from __future__ import annotations
 
+import sys as _sys
+
+
+def _force_utf8_stdout() -> None:
+    """Windows 上强制 UTF-8 输出，否则 print 中文会崩。"""
+    for name in ("stdout", "stderr"):
+        st = getattr(_sys, name, None)
+        if st is None:
+            continue
+        try:
+            st.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_force_utf8_stdout()
+
 import os
 import sys
 

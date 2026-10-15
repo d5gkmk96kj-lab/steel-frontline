@@ -14,6 +14,27 @@
 from __future__ import annotations
 
 
+def _force_utf8_stdout() -> None:
+    """把 stdout/stderr 切到 UTF-8。
+
+    Windows 上 Python 默认 cp1252，print 中文直接抛
+    UnicodeEncodeError。打包成 --windowed 的 exe 后自检会静默崩掉。
+    在最早期就 reconfigure，不依赖任何外部环境变量。
+    """
+    import sys
+    for name in ("stdout", "stderr"):
+        st = getattr(sys, name, None)
+        if st is None:
+            continue
+        try:
+            st.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_force_utf8_stdout()
+
+
 def _writable_home() -> str:
     """找一个可写目录放 music/ 与 data/。"""
     import os

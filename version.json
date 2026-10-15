@@ -1,14 +1,14 @@
 {
-  "version": "0.9.14",
-  "label": "0.9.14 测试版",
-  "label_en": "0.9.14 Beta",
+  "version": "0.9.15",
+  "label": "0.9.15 测试版",
+  "label_en": "0.9.15 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：Windows 上 exe 自检无输出直接退出（--windowed 没有控制台）"
+    "修复：exe 自检崩溃 —— main_qt/main/app_entry 强制 UTF-8 输出"
   ],
   "notes_en": [
-    "Fix: exe selftest exited silently on Windows (--windowed has no console)"
+    "Fix: exe selftest crashed — all entry points now force UTF-8 stdout"
   ]
 }

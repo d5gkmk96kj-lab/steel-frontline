@@ -21,6 +21,26 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 
+def _force_utf8_stdout() -> None:
+    """把 stdout/stderr 切到 UTF-8。
+
+    Windows 上 Python 默认用 cp1252 输出，一 print 中文就抛
+    UnicodeEncodeError（打包成 exe 后自检直接崩，且看不到任何输出）。
+    这里显式 reconfigure，不依赖外部环境变量。
+    """
+    for name in ("stdout", "stderr"):
+        st = getattr(sys, name, None)
+        if st is None:
+            continue
+        try:
+            st.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_force_utf8_stdout()
+
+
 def _title() -> str:
     """窗口标题（Windows 版自动带 Windows Rework 后缀）。"""
     try:
