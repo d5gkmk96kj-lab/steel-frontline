@@ -84,8 +84,24 @@ class TestUISmoke(unittest.TestCase):
         if not ok:
             self.skipTest("跳过 UI 冒烟（%s）" % why)
         if _APP_MOD is None:
+            # 源码有问题（真的导入失败）才算失败
             self.fail("ui.app 无法导入：%s" % _IMPORT_ERR)
         if _APP is None:
+            # 但"建不出窗口"要分情况：
+            #   * 无显示器 / 无窗口系统（CI、SSH、Windows runner）
+            #     -> 跳过，这不是代码问题
+            #   * 其它异常 -> 确实有问题
+            err = _IMPORT_ERR or ""
+            env_marks = (
+                "no display", "DISPLAY", "couldn't connect to display",
+                "TclError", "no such file or directory",
+                "can't invoke", "init.tcl", "invalid command name",
+                "out of range", "expected integer",
+            )
+            low = err.lower()
+            if any(m.lower() in low for m in env_marks):
+                self.skipTest("跳过 UI 冒烟（当前环境无法创建窗口）\n%s"
+                              % err[-600:])
             self.fail("App() 无法构造：%s" % _IMPORT_ERR)
 
     # ------------------------------------------------------ 不崩

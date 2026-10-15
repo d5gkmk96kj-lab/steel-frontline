@@ -1,14 +1,16 @@
 {
-  "version": "0.9.11",
-  "label": "0.9.11 测试版",
-  "label_en": "0.9.11 Beta",
+  "version": "0.9.12",
+  "label": "0.9.12 测试版",
+  "label_en": "0.9.12 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：CI 上 Qt 测试因缺少无头环境而崩溃（test_fx / test_audio）"
+    "修复：Windows CI 上 Tkinter 建不了窗口时应当跳过而不是失败",
+    "新增：CI 专用测试运行器，失败时明确列出用例名"
   ],
   "notes_en": [
-    "Fix: Qt tests crashed in CI without a headless display (test_fx / test_audio)"
+    "Fix: Tk smoke tests should skip (not fail) when no display is available",
+    "New: dedicated CI test runner that lists failing cases clearly"
   ]
 }
