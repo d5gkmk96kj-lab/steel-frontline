@@ -273,3 +273,74 @@ class TestAiUiWiring(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestStalemate(unittest.TestCase):
+    """僵局判定：双方都打不死对方时不能永久卡住。
+
+    真实场景：20 张「铁丝网反击」（riposte，基础伤害 0）互相对挠，
+    双方 75/75 一动不动。修之前实测跑 150 回合仍是 ongoing，
+    人机对战会永久卡死、玩家只能强退。
+    """
+
+    def test_max_turns_constant_exists(self):
+        self.assertTrue(hasattr(V, "MAX_TURNS"), "缺少 MAX_TURNS 常量")
+        self.assertGreater(V.MAX_TURNS, 10)
+        self.assertLessEqual(V.MAX_TURNS, 200, "上限太高，玩家会干等")
+
+    def test_degenerate_deck_terminates(self):
+        """纯防御卡组必须能结束（判平局或按血量定胜负）。"""
+        deck = ["riposte"] * 20
+        bs = V.VersusBattle(list(deck), list(deck),
+                            rng=random.Random(0), hp=75)
+        g = 0
+        while bs.result() == "ongoing" and g < 2000:
+            g += 1
+            s = bs.current_side()
+            played = False
+            for k in range(15):
+                try:
+                    if bs.can_play(s, k) and bs.play_card(s, k):
+                        played = True
+                        break
+                except Exception:
+                    break
+            if not played:
+                try:
+                    if not bs.end_turn(s):
+                        break
+                except Exception:
+                    break
+            bs.tick(0.05)
+        self.assertNotEqual(bs.result(), "ongoing",
+                            "退化卡组跑 %d 步仍未结束（会卡死玩家）" % g)
+
+    def test_turn_limit_is_draw_when_hp_equal(self):
+        """双方血量相同时打满回合数应判平局。"""
+        deck = ["riposte"] * 20
+        bs = V.VersusBattle(list(deck), list(deck),
+                            rng=random.Random(0), hp=75)
+        bs.turn = int(V.MAX_TURNS)
+        self.assertEqual(bs.result(), "draw",
+                         "血量相同且打满回合数应判平局")
+
+    def test_turn_limit_favors_higher_hp(self):
+        deck = ["riposte"] * 20
+        bs = V.VersusBattle(list(deck), list(deck),
+                            rng=random.Random(0), hp=75)
+        bs.turn = int(V.MAX_TURNS)
+        bs.side(0).combatant.hp = 50
+        bs.side(1).combatant.hp = 20
+        self.assertEqual(bs.result(), "a_wins",
+                         "打满回合数时血量高的一方应获胜")
+
+    def test_normal_games_finish_well_before_limit(self):
+        """正常卡组不该被回合上限误伤。"""
+        for i in range(12):
+            r, _ = play_game("normal", "normal", i)
+            self.assertNotEqual(r, "ongoing")
+            self.assertIn(r, ("a_wins", "b_wins", "draw"))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

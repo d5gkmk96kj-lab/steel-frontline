@@ -118,6 +118,17 @@ RESULT_A_WINS = "a_wins"
 RESULT_B_WINS = "b_wins"
 RESULT_DRAW = "draw"
 
+# 僵局上限：到这个回合数还没分出胜负就判平局。
+#
+# 为什么必须有：有些卡组**永远打不死对方**。极端例子是 20 张「铁丝网反击」
+# （riposte 基础伤害 0，伤害全靠铁丝网层数）—— 双方互相挠痒，
+# 血量 75/75 一动不动，实测跑 150 回合仍然 ongoing。
+# 没有这个上限，人机对战会永久卡住，玩家只能强退。
+#
+# 60 回合：正常对局实测平均 30 几步（见 test_versus 的平衡性测试），
+# 所以 60 足够打完，又不会让人干等太久。
+MAX_TURNS = 60
+
 MAX_LOG = 60
 
 SIDE_NAMES = {SIDE_A: "本机部队", SIDE_B: "对手部队"}
@@ -380,10 +391,24 @@ class VersusBattle:
         return None
 
     def result(self) -> str:
-        """``"ongoing" | "a_wins" | "b_wins" | "draw"``。"""
+        """``"ongoing" | "a_wins" | "b_wins" | "draw"``。
+
+        除了血量判定，还有**僵局判定**：打到 MAX_TURNS 回合仍未分胜负
+        直接判平局（双方都打不死对方时，否则会永久卡住）。
+        此时血量高的一方算赢，血量相同才是平局。
+        """
         a = self.sides[SIDE_A].combatant.alive()
         b = self.sides[SIDE_B].combatant.alive()
         if a and b:
+            # 僵局：超过回合上限，按血量定胜负
+            if int(getattr(self, "turn", 0)) >= MAX_TURNS:
+                ha = int(self.sides[SIDE_A].combatant.hp)
+                hb = int(self.sides[SIDE_B].combatant.hp)
+                if ha > hb:
+                    return RESULT_A_WINS
+                if hb > ha:
+                    return RESULT_B_WINS
+                return RESULT_DRAW
             return RESULT_ONGOING
         if a and not b:
             return RESULT_A_WINS
@@ -900,7 +925,7 @@ class VersusBattle:
             elif r == RESULT_B_WINS:
                 self.log_msg(f"{self.sides[SIDE_B].name} 取得胜利！")
             else:
-                self.log_msg("双方同归于尽，平局。")
+                self.log_msg("双方僵持不下，判平局。")
         return True
 
     # ------------------------------------------------------------------

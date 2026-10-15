@@ -1,24 +1,16 @@
 {
-  "version": "0.9.19",
-  "label": "0.9.19 测试版",
-  "label_en": "0.9.19 Beta",
+  "version": "0.9.20",
+  "label": "0.9.20 测试版",
+  "label_en": "0.9.20 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：人机 1v1 对战（core/ai.py，三档难度：新手/老兵/王牌）",
-    "新增：主菜单「人机对战」入口 + 难度下拉框",
-    "新增：11 张总部卡 —— 叠血量上限 5 张 + 回血 6 张",
-    "平衡：核弹大幅削弱（378 → 门槛内约 60），火力不足时只有一半伤害",
-    "平衡：歼灭令/最后总攻/决定性一击/要塞破坏者/原型兵器/弹药过载 全线下调",
-    "修复：i18n 分片 key 重复、UI 测试污染全局音频状态"
+    "修复：双方都打不死对方时 1v1 会永久卡死（新增 60 回合僵局判定）",
+    "修复：退化卡组（如 20 张铁丝网反击）人机对战无法结束"
   ],
   "notes_en": [
-    "New: 1v1 vs. computer (core/ai.py, three difficulties: Rookie / Veteran / Ace)",
-    "New: 'Vs. Computer' menu entry with a difficulty dropdown",
-    "New: 11 HQ cards -- 5 that raise max HP and 6 that heal",
-    "Balance: nuke heavily nerfed (378 -> ~60 at threshold); half damage below the Strength requirement",
-    "Balance: Annihilation Order / Final Offensive / Decisive Strike / Bunker Buster / Prototype Weapon / Arsenal Overload all tuned down",
-    "Fix: duplicate i18n shard keys; UI tests leaking global audio state"
+    "Fix: 1v1 could hang forever when neither side can kill the other (added a 60-turn stalemate rule)",
+    "Fix: degenerate decks (e.g. 20x Riposte) made vs-CPU games unending"
   ]
 }

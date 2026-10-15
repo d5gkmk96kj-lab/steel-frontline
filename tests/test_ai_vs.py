@@ -180,23 +180,31 @@ class TestAIConvergence(unittest.TestCase):
                              "%d/100 局未收敛（AI 可能卡死循环）" % nonconv)
 
     def test_degenerate_deck_is_reported_not_hidden(self):
-        """退化卡组（只有零伤害牌）本就无法收敛 —— 断言它是可复现的。
+        """退化卡组（只有零伤害牌）必须**能结束**，而不是永久卡住。
 
-        这不仅测试 AI，也把「卡池里存在无法分出胜负的卡组」这件事
-        显式记录下来，避免以后被误当成 AI 的 bug。
+        历史：这条测试原本断言 steps == cap（即"它本来就跑不完"），
+        把引擎缺回合上限这件事当成了既定事实。后来发现这会让
+        人机对战永久卡死（玩家只能强退），于是在 core/versus.py 里
+        加了 MAX_TURNS 僵局判定。现在改为断言对局能正常收尾。
+
+        riposte 基础伤害为 0（伤害等同铁丝网层数），单靠它赢不了，
+        所以结果应该是 draw（或按血量判定的胜负），但绝不能是 ongoing。
         """
         from core import cards as C
         deck = ["riposte"] * 20
-        # riposte 基础伤害为 0（伤害等同铁丝网层数），单靠它赢不了
         self.assertEqual(C.CARD_DB["riposte"].damage, 0)
         rng = random.Random(1)
         bs = self.V.VersusBattle(list(deck), list(deck), rng=rng, hp=75)
         ais = {0: self.A.VersusAI(0, rng=rng, difficulty="hard"),
                1: self.A.VersusAI(1, rng=rng, difficulty="hard")}
         res, steps = _play_out(self.A, self.V, bs, ais, cap=120)
-        print("\n[core.ai] 退化卡组（20x riposte）：result=%s steps=%d" % (res, steps))
-        # 关键断言：AI 必须**跑完**而不是卡死（step 到上限就停）
-        self.assertEqual(steps, 120)
+        print("\n[core.ai] 退化卡组（20x riposte）：result=%s steps=%d"
+              % (res, steps))
+        self.assertNotEqual(
+            res, self.V.RESULT_ONGOING,
+            "退化卡组跑了 %d 步仍是 ongoing —— 僵局判定没生效" % steps)
+        self.assertLess(steps, 120,
+                        "退化卡组不该跑满 %d 步（说明还在僵持）" % 120)
 
     def test_difficulty_ordering(self):
         """hard 对 easy 应当有优势（200 局统计）。"""
