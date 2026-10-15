@@ -153,6 +153,15 @@ def main() -> int:
         except Exception:
             pass
 
+    # --selftest：无窗口自检。
+    # Windows 上用 --windowed 打包的 exe **没有控制台**，
+    # 此时 sys.stdout 是 None —— print() 会直接抛异常，
+    # 自检看起来"跑了一秒就退出"。所以这里分两步：
+    #   1. 把结果写进文件（一定能拿到）
+    #   2. 尽量往控制台打一份（有就用，没有就跳过）
+    if "--selftest" in sys.argv:
+        return _run_selftest()
+
     # 高画质版（PyQt6 已打进包内）
     try:
         from qt.main_qt import main as qt_main
@@ -167,6 +176,87 @@ def main() -> int:
     except Exception:
         _report("Tkinter 版启动失败：\n" + traceback.format_exc())
     return 1
+
+
+def _run_selftest() -> int:
+    """跑 --selftest，并把结果同时写进文件与控制台。
+
+    为什么需要这个函数：
+      PyInstaller 的 --windowed 在 Windows 上不分配控制台，
+      sys.stdout 可能是 None。直接 print 会抛
+      "AttributeError: 'NoneType' object has no attribute 'write'"
+      或 OSError，进程立刻以非 0 退出 —— CI 里就表现为
+      "Run the exe selftest" 跑 1 秒就失败，且没有任何输出。
+
+    所以：
+      * 结果统一收集到 buf
+      * 写进 <data>/selftest.log（一定成功）
+      * 再尽力往 stdout 打（没有就忽略）
+    """
+    import io
+    import os
+    import sys
+    import traceback
+
+    buf = io.StringIO()
+
+    def out(text: str = "") -> None:
+        buf.write(text + "\n")
+
+    code = 1
+    try:
+        out("== 钢铁战线 自检 ==")
+        out("python: %s" % sys.version.split()[0])
+        out("frozen: %s" % getattr(sys, "frozen", False))
+        out("argv: %r" % (sys.argv,))
+        out("stdout is None: %s" % (sys.stdout is None))
+
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+        from qt.main_qt import main as qt_main
+        code = int(qt_main([sys.argv[0], "--selftest"]) or 0)
+        out("qt_main 返回: %d" % code)
+    except BaseException:
+        out("自检抛异常：")
+        out(traceback.format_exc())
+        code = 1
+
+    text = buf.getvalue()
+
+    # 1) 写文件（最可靠）
+    try:
+        d = os.environ.get("SF_GAME_HOME")
+        if not d:
+            base = os.path.dirname(os.path.abspath(sys.executable))
+            d = os.path.join(base, "data")
+        os.makedirs(d, exist_ok=True)
+        lp = os.path.join(d, "selftest.log")
+        with open(lp, "w", encoding="utf-8") as f:
+            f.write(text)
+        print_path = lp
+    except Exception:
+        print_path = "(写日志失败)"
+
+    # 2) 尽力打到控制台
+    for stream in (sys.stdout, sys.stderr):
+        if stream is None:
+            continue
+        try:
+            stream.write(text)
+            stream.write("\n[selftest] exit code = %d\n" % code)
+            stream.flush()
+        except Exception:
+            pass
+
+    # 3) 完全没有控制台时，把日志路径也追加到文件末尾
+    if print_path != "(写日志失败)":
+        try:
+            with open(print_path, "a", encoding="utf-8") as f:
+                f.write("\n[selftest] exit code = %d\n" % code)
+        except Exception:
+            pass
+
+    return code
 
 
 if __name__ == "__main__":

@@ -1,14 +1,14 @@
 {
-  "version": "0.9.13",
-  "label": "0.9.13 测试版",
-  "label_en": "0.9.13 Beta",
+  "version": "0.9.14",
+  "label": "0.9.14 测试版",
+  "label_en": "0.9.14 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：Windows 上三个测试失败（编码、SO_REUSEADDR 语义、路径分隔符）"
+    "修复：Windows 上 exe 自检无输出直接退出（--windowed 没有控制台）"
   ],
   "notes_en": [
-    "Fix: three tests failed on Windows (encoding, SO_REUSEADDR semantics, path separators)"
+    "Fix: exe selftest exited silently on Windows (--windowed has no console)"
   ]
 }
