@@ -1,24 +1,13 @@
-、name: Build Windows Rework
-
-# ---------------------------------------------------------------------------
-# 每次推送 tag 或手动触发时，自动在 GitHub 的 Windows 机器上打包。
-#
-# 为什么用 CI：PyInstaller **不支持交叉编译** —— 作者用 macOS，
-# 没法在本机产出 Windows 的 .exe。交给 GitHub 的 Windows runner 最省事，
-# 而且公开仓库完全免费。
-#
-# 产物：SteelFrontline-WindowsRework-<版本>.zip（自动挂到 Actions 里）
-#       如果是打 tag 推送，还会自动创建 Release 并附上 zip。
-# ---------------------------------------------------------------------------
+name: Build Windows Rework
 
 on:
   push:
     branches: [main]
     tags: ['v*']
-  workflow_dispatch:          # 也可以手动点按钮触发
+  workflow_dispatch:
 
 permissions:
-  contents: write             # 打 tag 时需要创建 Release
+  contents: write
 
 jobs:
   build-windows:
@@ -33,15 +22,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          # 注意：**不要**加 cache: 'pip' ——
-          # 缓存需要一个 requirements.txt / pyproject.toml 来算 key，
-          # 而本项目零第三方依赖，没有那个文件，会导致这步直接失败。
 
       - name: Read version
         id: ver
         shell: bash
         env:
-          PYTHONIOENCODING: utf-8   # 关键修复：强制 UTF-8 输出，避免 cp1252 编码崩溃
+          PYTHONIOENCODING: utf-8
         run: |
           python -c "import json;d=json.load(open('version.json',encoding='utf-8'));print('version='+d['version']);print('label='+d.get('label',d['version']))" >> "$GITHUB_OUTPUT"
 
@@ -51,13 +37,8 @@ jobs:
           python -m pip install pyinstaller PyQt6
 
       - name: Run test suite
-        # 单机逻辑全平台一致，先在 Windows 上跑一遍，确保没有平台假设。
-        # 注意：跳过 test_updater —— 它假定路径是 macOS/Linux 风格，
-        #      在 Windows 上会因为路径分隔符/家目录不同而误报失败。
-        #      清理逻辑已在 macOS 本机跑过全绿，这里只需要验证构建能过。
         run: |
           python -m unittest discover -s tests -v --pattern "test_*.py" -k "not test_updater"
-        continue-on-error: false
 
       - name: Build icon
         run: python packaging/make_icon.py
@@ -68,7 +49,7 @@ jobs:
           import subprocess, sys, os
 
           NAME = "SteelFrontlineWindowsRework"
-          ROOT = os.path.abspath(".")   # 项目根目录，用于 --add-data 的绝对路径
+          ROOT = os.path.abspath(".")
           hidden = [
               "core", "core.run", "core.cards", "core.enemies", "core.engine",
               "core.versus", "core.netplay", "core.saves", "core.session",
@@ -104,7 +85,6 @@ jobs:
           $exe = "dist_win\SteelFrontlineWindowsRework\SteelFrontlineWindowsRework.exe"
           if (-not (Test-Path $exe)) { throw "exe not found: $exe" }
           Write-Host "exe size: $((Get-Item $exe).Length) bytes"
-          # 无头自检：遍历所有界面 + 打完一场战斗
           $env:QT_QPA_PLATFORM = "offscreen"
           $env:SF_GAME_HOME = "$env:TEMP\sftest"
           New-Item -ItemType Directory -Force -Path $env:SF_GAME_HOME | Out-Null
@@ -128,7 +108,6 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$out/music" | Out-Null
           New-Item -ItemType Directory -Force -Path "$out/data"  | Out-Null
 
-          # 用数组拼文本，避免 here-string 在 YAML 里的缩进坑
           $L = @()
           $L += "============================================================"
           $L += " 钢铁战线 Steel Frontline - Windows Rework"
@@ -138,20 +117,10 @@ jobs:
           $L += "How to run:"
           $L += "  1. Double-click $name.exe"
           $L += "  2. If Windows SmartScreen appears, click More info - Run anyway."
-          $L += "     This is normal: no paid Microsoft code-signing certificate."
-          $L += "     Full source is on GitHub if you want to verify it yourself."
           $L += "  3. First launch may take 5-10 seconds."
           $L += ""
           $L += "Saves:  %APPDATA%\钢铁战线\data\"
           $L += "Music:  drop files into music\ as music1.mp3, music2.ogg, ..."
-          $L += ""
-          $L += "------------------------------------------------------------"
-          $L += " 怎么玩："
-          $L += "   1. 双击 $name.exe"
-          $L += "   2. 如果弹出「Windows 已保护你的电脑」："
-          $L += "      点「更多信息」→「仍要运行」"
-          $L += "   3. 存档位置：%APPDATA%\钢铁战线\data\"
-          $L += "   4. 加音乐：把文件放进 music\，命名 music1.mp3 / music2.ogg ..."
           $L += ""
           $L += " ⚠️ 本游戏全部由 AI（DeepSeek-V4.1-Flash）生成 ⚠️"
           $L += " This game is entirely AI-generated."
