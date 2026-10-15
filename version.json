@@ -1,20 +1,14 @@
 {
-  "version": "0.9.10",
-  "label": "0.9.10 测试版",
-  "label_en": "0.9.10 Beta",
+  "version": "0.9.11",
+  "label": "0.9.11 测试版",
+  "label_en": "0.9.11 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：GitHub Actions 自动构建 Windows 版（含完整构建脚本）",
-    "修复：Windows 上 Python 输出中文报错（cp1252 编码）",
-    "修复：测试在非 macOS 平台会失败（音频后端断言）",
-    "优化：更新检查的网络测试改为确定性，不再依赖真实连接"
+    "修复：CI 上 Qt 测试因缺少无头环境而崩溃（test_fx / test_audio）"
   ],
   "notes_en": [
-    "New: GitHub Actions auto-builds the Windows edition (with full build scripts)",
-    "Fix: Python crashed printing Chinese on Windows (cp1252 encoding)",
-    "Fix: tests failed on non-macOS platforms (audio backend assertion)",
-    "Improve: update-checker network test is now deterministic"
+    "Fix: Qt tests crashed in CI without a headless display (test_fx / test_audio)"
   ]
 }
