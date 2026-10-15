@@ -63,6 +63,11 @@ class TitleBar(QWidget):
         self.title = title
         self.subtitle = subtitle
         self.color = color or T.Q_GOLD
+
+    def set_subtitle(self, text: str) -> None:
+        """换副标题并重绘（联机大厅切换模式时用）。"""
+        self.subtitle = str(text or "")
+        self.update()
         self.setFixedHeight(64)
 
     def paintEvent(self, ev):  # noqa: N802

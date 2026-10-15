@@ -256,6 +256,24 @@ class LobbyScreen(QWidget):
         self.btn_join.setMinimumHeight(42)
         self.btn_join.clicked.connect(lambda: self.set_mode("join"))
         tabrow.addWidget(self.btn_join)
+
+        # -- 公网（中继）两个模式 --
+        self.btn_net_host = QPushButton("公 网 建 房", self)
+        self.btn_net_host.setObjectName("Tab")
+        self.btn_net_host.setCheckable(True)
+        self.btn_net_host.setMinimumWidth(170)
+        self.btn_net_host.setMinimumHeight(42)
+        self.btn_net_host.clicked.connect(lambda: self.set_mode("net_host"))
+        tabrow.addWidget(self.btn_net_host)
+
+        self.btn_net_join = QPushButton("公 网 加 入", self)
+        self.btn_net_join.setObjectName("Tab")
+        self.btn_net_join.setCheckable(True)
+        self.btn_net_join.setMinimumWidth(170)
+        self.btn_net_join.setMinimumHeight(42)
+        self.btn_net_join.clicked.connect(lambda: self.set_mode("net_join"))
+        tabrow.addWidget(self.btn_net_join)
+
         tabrow.addStretch(1)
         root.addLayout(tabrow)
 
@@ -338,6 +356,72 @@ class LobbyScreen(QWidget):
         self.btn_open.clicked.connect(self.start_host)
         hv.addWidget(self.btn_open)
         hv.addStretch(1)
+        # -- 公网面板（中继：房间号匹配，跨网络可用） --
+        self.net_box = QWidget(self.panel)
+        self.net_box.setObjectName("LobbyPane")
+        self.net_box.setStyleSheet("QWidget#LobbyPane{background:transparent;}")
+        nv = QVBoxLayout(self.net_box)
+        nv.setContentsMargins(4, 4, 4, 4)
+        nv.setSpacing(12)
+
+        self.lbl_net_title = QLabel("公网联机（自动匹配）", self.net_box)
+        self.lbl_net_title.setStyleSheet(
+            f"color:{T.GOLD};font-size:{T.FONT_H2}px;font-weight:800;"
+            f"background:transparent;")
+        nv.addWidget(self.lbl_net_title)
+
+        self.lbl_net_hint = QLabel("", self.net_box)
+        self.lbl_net_hint.setWordWrap(True)
+        self.lbl_net_hint.setStyleSheet(
+            f"color:{T.TEXT_DIM};font-size:{T.FONT_SMALL}px;"
+            f"background:transparent;")
+        nv.addWidget(self.lbl_net_hint)
+
+        # 房间号大字显示（房主）
+        self.lbl_room = QLabel("", self.net_box)
+        self.lbl_room.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_room.setStyleSheet(
+            f"color:{T.GOLD};font-size:64px;font-weight:900;"
+            f"background:transparent;letter-spacing:14px;")
+        self.lbl_room.hide()
+        nv.addWidget(self.lbl_room)
+
+        # 房间号输入（加入方）
+        row_room = QHBoxLayout()
+        row_room.addWidget(QLabel("房间号", self.net_box))
+        self.ed_room = QLineEdit(self.net_box)
+        self.ed_room.setPlaceholderText("4 位数字，例如 4821")
+        self.ed_room.setMaxLength(4)
+        self.ed_room.setFixedWidth(180)
+        self.ed_room.setStyleSheet(
+            f"QLineEdit{{background:{T.PANEL_LO};border:1px solid {T.BORDER};"
+            f"border-radius:6px;padding:8px 12px;color:{T.TEXT};"
+            f"font-size:28px;font-weight:800;letter-spacing:6px;}}"
+            f"QLineEdit:focus{{border:1px solid {T.GOLD};}}")
+        row_room.addWidget(self.ed_room)
+        row_room.addStretch(1)
+        self.net_room_row = QWidget(self.net_box)
+        rl = QHBoxLayout(self.net_room_row)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.addLayout(row_room)
+        nv.addWidget(self.net_room_row)
+
+        self.btn_net_go = QPushButton("创 建 房 间", self.net_box)
+        self.btn_net_go.setObjectName("Primary")
+        self.btn_net_go.setMinimumHeight(48)
+        self.btn_net_go.clicked.connect(self.start_net)
+        nv.addWidget(self.btn_net_go)
+
+        self.lbl_net_srv = QLabel("", self.net_box)
+        self.lbl_net_srv.setStyleSheet(
+            f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"
+            f"background:transparent;")
+        nv.addWidget(self.lbl_net_srv)
+
+        nv.addStretch(1)
+        self.net_box.hide()
+        pv.addWidget(self.net_box, 1)
+
         pv.addWidget(self.host_box, 1)
 
         # -- 加入区 --
@@ -492,19 +576,129 @@ class LobbyScreen(QWidget):
     # 模式
     # =================================================================
     def set_mode(self, mode: str) -> None:
-        mode = "join" if str(mode) == "join" else "host"
+        mode = str(mode)
+        if mode not in ("host", "join", "net_host", "net_join"):
+            mode = "host"
         if mode != self._mode:
             self.stop_all()
         self._mode = mode
         self.btn_host.setChecked(mode == "host")
         self.btn_join.setChecked(mode == "join")
+        self.btn_net_host.setChecked(mode == "net_host")
+        self.btn_net_join.setChecked(mode == "net_join")
         self.host_box.setVisible(mode == "host")
         self.join_box.setVisible(mode == "join")
+        is_net = mode in ("net_host", "net_join")
+        self.net_box.setVisible(is_net)
         self.radar.set_live(False)
+        # 副标题跟着模式走，避免"局域网"字样出现在公网模式里
+        try:
+            if is_net:
+                self.tb.set_subtitle("公网联机 · 用房间号匹配 · 跨网络可用")
+            else:
+                self.tb.set_subtitle("局域网 1v1 · 双方各带一套卡组")
+        except Exception:
+            pass
+
+        if is_net:
+            self._prepare_net(mode)
+            return
+        self.lbl_room.hide()
         if mode == "host":
-            self._status("点「开始等待对手」后，把这台设备的地址念给同学。", T.TEXT_DIM)
+            self._status("点「开始等待对手」后，把这台设备的地址念给同学。",
+                         T.TEXT_DIM)
         else:
             self._status("输入房主的 IP，然后点「连接房主」。", T.TEXT_DIM)
+
+    # ------------------------------------------------------------------
+    # 公网（中继）
+    # ------------------------------------------------------------------
+    def _prepare_net(self, mode: str) -> None:
+        """切到公网模式：配置输入框与按钮。"""
+        try:
+            from core import relay_client as _rc
+        except Exception:
+            _rc = None
+
+        configured = bool(_rc is not None and _rc.relay_configured())
+        if configured:
+            self.lbl_net_srv.setText("服务器：%s" % _rc.relay_address())
+        else:
+            self.lbl_net_srv.setText(
+                "⚠ 还没有配置联机服务器。这一版先保留入口，"
+                "服务器就绪后即可使用。")
+
+        if mode == "net_host":
+            self.lbl_net_title.setText("公网建房")
+            self.lbl_net_hint.setText(
+                "点下面的按钮创建房间，会得到一个 4 位房间号。\n"
+                "把房间号发给对方（微信、QQ、游戏群里都行），"
+                "他在「公网加入」里输入就能进来。\n"
+                "不需要在同一个 WiFi，也不需要知道对方 IP。")
+            self.btn_net_go.setText("创 建 房 间")
+            self.net_room_row.hide()
+            self.lbl_room.hide()
+        else:
+            self.lbl_net_title.setText("公网加入")
+            self.lbl_net_hint.setText(
+                "输入对方给你的 4 位房间号，点下面的按钮进入。\n"
+                "不需要在同一个 WiFi。")
+            self.btn_net_go.setText("加 入 房 间")
+            self.net_room_row.show()
+            self.lbl_room.hide()
+        self.btn_net_go.setEnabled(configured)
+        self._status("跨网络联机 —— 用房间号匹配。" if configured
+                     else "联机服务器还没配置，暂时不可用。",
+                     T.TEXT_DIM if configured else T.Q_ORANGE)
+
+    def start_net(self) -> None:
+        """公网建房 / 加入。"""
+        try:
+            from core import relay_client as _rc
+        except Exception as exc:
+            self._status("⚠ 缺少联机模块：%s" % exc, T.Q_RED)
+            return
+        if not _rc.relay_configured():
+            self._status("⚠ 还没有配置联机服务器。", T.Q_RED)
+            return
+
+        is_host = self._mode == "net_host"
+        self.btn_net_go.setEnabled(False)
+
+        if is_host:
+            self._status("正在创建房间…", T.Q_GOLD)
+        else:
+            room = (self.ed_room.text() or "").strip()
+            if len(room) != 4 or not room.isdigit():
+                self._status("⚠ 房间号是 4 位数字。", T.Q_ORANGE)
+                self.btn_net_go.setEnabled(True)
+                self.ed_room.setFocus()
+                return
+            self._status("正在加入房间 %s …" % room, T.Q_GOLD)
+        QApplication_process()
+
+        try:
+            if is_host:
+                net, code = _rc.host_via_relay()
+                self.host_net = net
+                self.lbl_room.setText(code)
+                self.lbl_room.show()
+                self._status(
+                    "房间已创建！把房间号 %s 发给对方。" % code, T.Q_GREEN)
+                self._poll.start()      # 开始轮询，等对方进来
+                # 配对成功后由 poll 收到 connected，走正常流程
+                self._net_waiting_host = True
+            else:
+                net, rs = _rc.join_via_relay(room)
+                self.client_net = net
+                self._poll.start()
+                self._status("已加入房间，正在进入卡组构筑…", T.Q_GREEN)
+                self.my_side = 1
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(300, lambda n=net: self.connected.emit(1, n))
+        except Exception as exc:
+            self._status("⚠ %s" % exc, T.Q_RED)
+            self.btn_net_go.setEnabled(True)
 
     def _on_port_changed(self, v: int) -> None:
         self._port = int(v)
@@ -679,7 +873,12 @@ class LobbyScreen(QWidget):
     # 事件轮询
     # =================================================================
     def poll_net(self) -> None:
-        for obj in (self.host, self.client):
+        # 公网（中继）的连接对象存在 host_net / client_net，也要一起轮询，
+        # 否则联网后永远收不到 connected / peer 事件（界面卡在等待）。
+        objs = (self.host, self.client,
+                getattr(self, "host_net", None),
+                getattr(self, "client_net", None))
+        for obj in objs:
             if obj is None:
                 continue
             try:
@@ -711,10 +910,15 @@ class LobbyScreen(QWidget):
             # 永远停在「正在交换卡组…」，看着就是卡死（用户实际遇到）。
             self.radar.set_live(True)
             self._status("已连上，正在进入卡组构筑…", T.Q_GREEN)
-            side = 0 if self.host is not None else 1
+            # 判断自己是房主还是加入方，并取出对应的连接对象。
+            # 四条路径都要覆盖：局域网房主/加入、公网房主/加入。
+            host_obj = self.host or getattr(self, "host_net", None)
+            client_obj = self.client or getattr(self, "client_net", None)
+            is_host = host_obj is not None
+            side = 0 if is_host else 1
             self.my_side = side
             # 别停轮询：后面还要等对手的 peer_ready
-            net = self.host if side == 0 else self.client
+            net = host_obj if is_host else client_obj
             if net is not None:
                 # 稍等一下让状态文字先画出来，再切界面
                 from PyQt6.QtCore import QTimer
@@ -757,7 +961,7 @@ class LobbyScreen(QWidget):
     # =================================================================
     def stop_all(self) -> None:
         self._poll.stop()
-        for attr in ("host", "client"):
+        for attr in ("host", "client", "host_net", "client_net"):
             obj = getattr(self, attr, None)
             if obj is not None:
                 try:

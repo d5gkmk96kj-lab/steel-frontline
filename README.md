@@ -24,14 +24,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.05 测试版** · *Current version: 0.9.05 Beta*
+**当前版本：v0.9.06 测试版** · *Current version: 0.9.06 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 钢铁战线 v0.9.05 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.05-beta.dmg)**
+**[⬇️ 钢铁战线 v0.9.06 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.06-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西**。
 安装方法见 [下载说明](releases/README.md)。
@@ -44,7 +44,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.05 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.06 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -53,8 +53,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.05 测试版 · 公开版** | `SteelFrontline-Public-v0.9.05-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.05 测试版 · 完整版 | `钢铁战线-v0.9.05 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.06 测试版 · 公开版** | `SteelFrontline-Public-v0.9.06-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.06 测试版 · 完整版 | `钢铁战线-v0.9.06 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
@@ -253,6 +253,31 @@ macOS 用户也可以直接双击 **`启动游戏.command`**。
 3. **防火墙** —— macOS 首次会弹「是否允许接受传入连接」，点「允许」
 4. **换端口** —— 45671 被占用时换一个
 5. **VPN 关掉** —— 部分 VPN 会把局域网流量劫走，导致同网段也连不上
+
+---
+
+## 联机方式
+
+游戏支持两种联机：
+
+| 方式 | 适用场景 | 怎么做 |
+|---|---|---|
+| **局域网** | 同一个 WiFi（家里、宿舍、教室） | 房主开房 → 把 IP 念给同学 → 对方输入 |
+| **公网** | 不在同一个网络，相隔两地 | 房主开房 → 得到 **4 位房间号** → 发给对方 → 对方输入 |
+
+### 公网联机（推荐）
+
+```
+房主：联机 → 公网建房 → 屏幕显示「4821」
+      把 4821 发给对方（微信 / QQ / 游戏群都行）
+
+对方：联机 → 公网加入 → 输入 4821 → 开打
+```
+
+**不需要在同一个 WiFi，不需要知道对方 IP，不需要任何网络配置。**
+
+> 公网联机需要一台中继服务器（作者提供）。如果暂时连不上，
+> 用局域网方式，或开手机热点让两台设备处在同一网络。
 
 ---
 
@@ -642,7 +667,7 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 
 > **看不到「仍要打开」按钮？**
 >
-> 那说明你下载的是**旧版本**（v0.9.05 之前的包签名是坏的）。
+> 那说明你下载的是**旧版本**（v0.9.06 之前的包签名是坏的）。
 > 旧包的签名有缺陷，macOS 无法识别它，所以**不提供放行按钮** ——
 > 这种情况只能用下面的命令行方法。
 >
@@ -789,11 +814,11 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 `钢铁战线` 用这样的版本号：
 
 ```
-0.9  →  0.9.05  →  0.9.05  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.06  →  0.9.06  →  ...  →  0.9.99  →  0.10  →  1.0
 ```
 
 - **每次推送 +0.01**（小更新）
-- 补零编号 `0.9.01 < 0.9.05 < ...`，到 `0.9.99` 自动进位成 `0.10`
+- 补零编号 `0.9.01 < 0.9.06 < ...`，到 `0.9.99` 自动进位成 `0.10`
 - **要上大版本就手动跳**，比如直接 `1.0` 或 `1.0.0.0`
 - 发版脚本：
 
@@ -939,7 +964,7 @@ The human did exactly three things: **asked for it, ran it, reported bugs.**
 > - **Arguments of the form "AI-made things are not real games" are not welcome
 >   here.** This is an experiment: let us see what AI can build on its own today.
 
-**Current version: 0.9.05 Beta**
+**Current version: 0.9.06 Beta**
 
 > Bilingual document. Chinese is above; English starts here.
 > [Back to top / 回到顶部](#钢铁战线-steel-frontline)
@@ -1136,6 +1161,30 @@ Honest list, so you do not get surprised:
 3. **Firewall** — macOS asks "allow incoming connections?" on first host; click Allow
 4. **Different port** — try another if 45671 is taken
 5. **Turn off VPN** — some VPNs hijack LAN traffic, breaking same-subnet connections
+
+## Multiplayer Modes
+
+| Mode | When to use | How |
+|---|---|---|
+| **LAN** | Same Wi-Fi (home, dorm, classroom) | Host opens a room, reads out the IP, friend types it |
+| **Online** | Different networks, different cities | Host opens a room, gets a **4-digit code**, sends it over, friend types it |
+
+### Online (recommended)
+
+```
+Host:   Multiplayer -> Create Online Room -> screen shows "4821"
+        Send 4821 to your friend (any chat app)
+
+Friend: Multiplayer -> Join Online Room -> type 4821 -> play
+```
+
+**No shared Wi-Fi, no IP addresses, no network configuration.**
+
+> Online play needs a relay server (provided by the author). If it is
+> unreachable, use LAN mode, or turn on a phone hotspot so both devices share
+> one network.
+
+---
 
 ## Online Security
 
@@ -1591,11 +1640,11 @@ file cannot pollute your save list.
 ## Versioning
 
 ```
-0.9  →  0.9.05  →  0.9.05  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.06  →  0.9.06  →  ...  →  0.9.99  →  0.10  →  1.0
 ```
 
 - **Every push bumps +0.01**
-- Zero-padded numbers sort correctly (`0.9.01 < 0.9.05`), and `0.9.99`
+- Zero-padded numbers sort correctly (`0.9.01 < 0.9.06`), and `0.9.99`
   carries over to `0.10`
 - **Major versions are manual** — jump straight to `1.0` or `1.0.0.0`
 - Release script:
@@ -1698,7 +1747,7 @@ Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies 
 
 **I found a bug — where do I report it?**
 Please file it on the [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki).
-Include the version string (shown under the main menu title, e.g. `0.9.05 Beta`),
+Include the version string (shown under the main menu title, e.g. `0.9.06 Beta`),
 the exact steps to reproduce, and a screenshot if you have one. If the game
 crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
 
