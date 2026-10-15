@@ -1,18 +1,20 @@
 {
-  "version": "0.9.07",
-  "label": "0.9.07 测试版",
-  "label_en": "0.9.07 Beta",
+  "version": "0.9.08",
+  "label": "0.9.08 测试版",
+  "label_en": "0.9.08 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：检查更新没有任何反应（后台线程用 QTimer 跨线程投递被静默丢弃）",
-    "修复：「已是最新版本」提示里版本号出现双 v（vv0.9.06）",
-    "修复：更新对话框两侧版本号 v 前缀不一致"
+    "新增：Windows Rework 版（构建脚本 + GitHub Actions 自动打包）",
+    "新增：PyQt6 缺失时的中英双语安装提示（含各平台命令）",
+    "修复：Windows 存档路径改用 %APPDATA%（避免 Program Files 无写权限）",
+    "修复：清理功能按平台扫描目录，并识别 Windows 的 .exe/.zip"
   ],
   "notes_en": [
-    "Fix: 'Check for updates' did nothing — background thread used QTimer across threads, silently dropped",
-    "Fix: 'already up to date' message showed a doubled v (vv0.9.06)",
-    "Fix: inconsistent v prefix between the two versions in the update dialog"
+    "New: Windows Rework build (build script + GitHub Actions auto-packaging)",
+    "New: bilingual PyQt6-missing hint with per-platform install commands",
+    "Fix: Windows saves now use %APPDATA% instead of an unwritable Program Files path",
+    "Fix: cleanup scans per-platform directories and recognises Windows .exe/.zip"
   ]
 }

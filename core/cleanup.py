@@ -19,12 +19,21 @@ from typing import List
 
 # 我们自己 App 的名字（当前版本 + 公开版）
 APP_NAMES = ("钢铁战线.app", "钢铁战线公开版.app", "SteelFrontline.app",
-             "Steel Frontline.app")
+             "Steel Frontline.app",
+             # Windows
+             "钢铁战线", "钢铁战线.exe", "SteelFrontline.exe",
+             "Steel Frontline.exe",
+             # Windows Rework 版
+             "钢铁战线WindowsRework", "钢铁战线WindowsRework.exe",
+             "SteelFrontlineWindowsRework.exe")
 
 # 安装包文件名特征
 DMG_PATTERNS = (
     re.compile(r"^钢铁战线.*\.dmg$"),
     re.compile(r"^SteelFrontline.*\.dmg$", re.I),
+    # Windows 安装包 / 压缩包
+    re.compile(r"^钢铁战线.*\.(exe|zip|7z)$", re.I),
+    re.compile(r"^SteelFrontline.*\.(exe|zip|7z)$", re.I),
 )
 
 # **绝对不碰**的路径片段（存档、音乐、用户数据）
@@ -86,10 +95,28 @@ def _is_current(path: str) -> bool:
 
 
 def default_dirs() -> List[str]:
-    """默认扫描位置。"""
-    return ["/Applications", os.path.expanduser("~/Applications"),
-            os.path.expanduser("~/Downloads"),
-            os.path.expanduser("~/Desktop")]
+    """默认扫描位置（按平台）。
+
+    macOS：/Applications + 用户目录
+    Windows：安装目录 + 下载 + 桌面 + 本地程序目录
+    Linux：/opt + 用户目录（尽力而为）
+    """
+    import sys
+    home = os.path.expanduser("~")
+    if sys.platform.startswith("win"):
+        dirs = [os.path.join(os.environ.get("LOCALAPPDATA", home),
+                             "Programs"),
+                os.path.expanduser("~/Downloads"),
+                os.path.expanduser("~/Desktop")]
+        pf = os.environ.get("ProgramFiles")
+        if pf:
+            dirs.insert(0, pf)
+        return [d for d in dirs if d]
+    if sys.platform == "darwin":
+        return ["/Applications", os.path.join(home, "Applications"),
+                os.path.join(home, "Downloads"), os.path.join(home, "Desktop")]
+    return ["/opt", "/usr/local/bin", os.path.join(home, "Downloads"),
+            os.path.join(home, "Desktop")]
 
 
 def scan(extra_dirs: List[str] = None, only: List[str] = None) -> List[Junk]:

@@ -21,6 +21,56 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 
+def _title() -> str:
+    """窗口标题（Windows 版自动带 Windows Rework 后缀）。"""
+    try:
+        from core import version as _V
+        return _V.title()
+    except Exception:
+        return "钢铁战线 Steel Frontline"
+
+
+
+def _print_missing_pyqt6() -> None:
+    """没装 PyQt6 时的友好提示（中英双语，含各平台命令）。"""
+    import sys as _s
+    line = "=" * 62
+    print(line)
+    print("  钢铁战线 · 缺少 PyQt6  /  Steel Frontline — PyQt6 missing")
+    print(line)
+    print()
+    print("  这个版本需要 PyQt6 才能运行。")
+    print("  This edition requires PyQt6 to run.")
+    print()
+    print("  请安装 / Please install:")
+    print()
+    print("      python -m pip install PyQt6")
+    print()
+    if _s.platform.startswith("win"):
+        print("  Windows 提示 / Windows note:")
+        print("      如果提示找不到 python，试试 py -m pip install PyQt6")
+        print("      If 'python' is not found, try: py -m pip install PyQt6")
+        print()
+        print("      也可以直接下载打包版（自带 Python + Qt）：")
+        print("      Or just download the packaged build (bundles Python + Qt):")
+        print("      https://github.com/d5gkmk96kj-lab/steel-frontline/releases")
+    elif _s.platform == "darwin":
+        print("  macOS 提示 / macOS note:")
+        print("      如果提示权限不足，加 --user：")
+        print("      If you get a permission error, add --user:")
+        print("          python3 -m pip install --user PyQt6")
+    else:
+        print("  Linux 提示 / Linux note:")
+        print("      可能需要先装系统依赖：")
+        print("      You may need system packages first:")
+        print("          sudo apt install python3-pyqt6")
+    print()
+    print("  不想装？用零依赖的经典版 / No install? Use the classic build:")
+    print("      python main.py")
+    print()
+    print(line)
+
+
 def main(argv=None) -> int:
     argv = list(sys.argv if argv is None else argv)
     args = [a for a in argv[1:]]
@@ -29,6 +79,14 @@ def main(argv=None) -> int:
     headless = "--selftest" in args or "--headless" in args
     if headless and not os.environ.get("QT_QPA_PLATFORM"):
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
+    # PyQt6 缺失时给一条**看得懂**的提示（中英双语）。
+    # 不能让它直接抛 ModuleNotFoundError，玩家会一脸懵。
+    try:
+        import PyQt6  # noqa: F401
+    except ImportError:
+        _print_missing_pyqt6()
+        return 2
 
     from qt.qapp import make_app, MainWindow
 
@@ -48,7 +106,7 @@ def main(argv=None) -> int:
             asc = 0
 
     win = MainWindow()
-    win.setWindowTitle("钢铁战线 Steel Frontline")
+    win.setWindowTitle(_title())
 
     if headless or "--selftest" in args:
         # 自检：切遍所有界面 + 打完一场战斗，全部无异常

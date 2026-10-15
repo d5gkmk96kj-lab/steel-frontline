@@ -34,8 +34,19 @@ def _writable_home() -> str:
             p = os.path.dirname(p)
         if p.endswith(".app"):
             p = os.path.dirname(p)
-        cands = [p, os.path.join(os.path.expanduser("~"),
-                                 "Documents", "钢铁战线")]
+
+        if sys.platform.startswith("win"):
+            # Windows：**不要**往 Program Files 里写 —— 普通用户没权限，
+            # 会直接失败。用 %APPDATA%\钢铁战线（用户目录，一定可写）。
+            appdata = (os.environ.get("APPDATA")
+                       or os.path.expanduser("~"))
+            cands = [os.path.join(appdata, "钢铁战线"),
+                     os.path.join(os.path.expanduser("~"),
+                                  "Documents", "钢铁战线"),
+                     p]
+        else:
+            cands = [p, os.path.join(os.path.expanduser("~"),
+                                     "Documents", "钢铁战线")]
         for cand in cands:
             try:
                 os.makedirs(cand, exist_ok=True)

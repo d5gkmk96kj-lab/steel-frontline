@@ -65,6 +65,16 @@ DEFAULT_CFG: Dict = {
 }
 
 
+def _title() -> str:
+    """窗口标题（Windows 版自动带 Windows Rework 后缀）。"""
+    try:
+        from core import version as _V
+        return _V.title()
+    except Exception:
+        return "钢铁战线 Steel Frontline"
+
+
+
 class GameWindow(QMainWindow):
     """主窗口 + 界面路由。"""
 
@@ -76,7 +86,7 @@ class GameWindow(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("钢铁战线 Steel Frontline")
+        self.setWindowTitle(_title())
         self.setMinimumSize(T.MIN_WIN_W, T.MIN_WIN_H)
         self.resize(T.WIN_W, T.WIN_H)
 

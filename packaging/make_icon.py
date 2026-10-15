@@ -165,10 +165,54 @@ def chunk(t, d):
     return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t+d) & 0xffffffff)
 
 
-out = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icon.png')
-open(out, 'wb').write(
-    b'\x89PNG\r\n\x1a\n' +
-    chunk(b'IHDR', struct.pack('>IIBBBBB', S, S, 8, 6, 0, 0, 0)) +
-    chunk(b'IDAT', zlib.compress(bytes(raw), 9)) +
-    chunk(b'IEND', b''))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+out = os.path.join(_HERE, 'icon.png')
+_png = (b'\x89PNG\r\n\x1a\n' +
+        chunk(b'IHDR', struct.pack('>IIBBBBB', S, S, 8, 6, 0, 0, 0)) +
+        chunk(b'IDAT', zlib.compress(bytes(raw), 9)) +
+        chunk(b'IEND', b''))
+open(out, 'wb').write(_png)
 print("wrote", out)
+
+
+# ---------- 额外：Windows 需要的 .ico ----------
+# ICO 可以直接内嵌 PNG（Vista 以后都支持），所以不用做 BMP 转换。
+# 多塞几个尺寸，任务栏 / 资源管理器 / 缩略图各取所需。
+def _write_ico(path: str, png_bytes: bytes, sizes) -> None:
+    n = len(sizes)
+    header = struct.pack('<HHH', 0, 1, n)          # reserved, type=1(icon), count
+    entries = b''
+    offset = 6 + n * 16
+    body = b''
+    for (w, h) in sizes:
+        entries += struct.pack('<BBBBHHII',
+                               w if w < 256 else 0,
+                               h if h < 256 else 0,
+                               0, 0, 1, 32,
+                               len(png_bytes), offset)
+        body += png_bytes
+        offset += len(png_bytes)
+    with open(path, 'wb') as f:
+        f.write(header + entries + body)
+
+
+try:
+    ico = os.path.join(_HERE, 'icon.ico')
+    _write_ico(ico, _png, [(16, 16), (32, 32), (48, 48), (64, 64),
+                           (128, 128), (256, 256)])
+    print("wrote", ico)
+except Exception as exc:
+    print("ico skipped:", exc)
+
+
+# ---------- 额外：Linux 用的各种尺寸 ----------
+try:
+    lin = os.path.join(_HERE, 'icons_linux')
+    os.makedirs(lin, exist_ok=True)
+    for sz in (48, 128, 256, 512):
+        # 直接复用同一张 1024 PNG（桌面环境自己会缩放）
+        with open(os.path.join(lin, 'steelfrontline-%d.png' % sz), 'wb') as f:
+            f.write(_png)
+    print("wrote", lin)
+except Exception as exc:
+    print("linux icons skipped:", exc)
