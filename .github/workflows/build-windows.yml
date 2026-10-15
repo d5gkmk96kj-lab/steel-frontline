@@ -42,12 +42,9 @@ jobs:
         shell: bash
         env:
           PYTHONIOENCODING: utf-8
-          PYTHONUTF8: '1'
-        # 用专门的运行器：unittest 默认的失败摘要会被各测试的 print
-        # 淹没，在 CI 日志里根本找不到到底哪个用例挂了。
-        # 这个运行器最后会单独打一份「失败清单」并加 ::error:: 标记。
         run: |
-          python .github/test_runner.py
+          set -e
+          python -m unittest discover -s tests
 
       - name: Build icon
         shell: bash
