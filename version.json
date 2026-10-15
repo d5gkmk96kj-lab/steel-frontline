@@ -1,20 +1,24 @@
 {
-  "version": "0.9.16",
-  "label": "0.9.16 测试版",
-  "label_en": "0.9.16 Beta",
+  "version": "0.9.17",
+  "label": "0.9.17 测试版",
+  "label_en": "0.9.17 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：20 张卡 —— 破甲增伤流派 8 张 + 条件牌 12 张",
-    "新增：破甲/火力/脆弱可在单回合内叠出爆发伤害",
-    "新增：条件牌（残血/手牌数/敌人数量/出牌序）特定情况下收益巨大",
-    "修复：新增卡的 id 与 effect 函数与旧卡重名"
+    "新增：指挥点卡 5 张（空投补给/后勤链/全员就位/紧急征用/冬季储备）",
+    "新增：干扰卡 6 张（虚弱/削弱/燃烧，可打乱敌人）",
+    "新增：范围攻击 4 张（地毯轰炸/炮火覆盖/焦土政策/破片风暴）",
+    "新增：科研链 4 张（初级→高级→突破→超模原型兵器）",
+    "新增：单位卡 6 张（KARDS 风格，部署后每回合自动攻击）",
+    "平衡：单回合理论爆发上限 54 → 132"
   ],
   "notes_en": [
-    "New: 20 cards — 8 armor-break/damage-amp cards + 12 conditional cards",
-    "New: armor break / strength / frail now stack into single-turn burst damage",
-    "New: conditional cards (low HP / hand size / enemy count / play order) pay off hugely in the right spot",
-    "Fix: new card ids and effect names collided with existing ones"
+    "New: 5 command-point cards (Supply Drop / Logistics Chain / All Hands on Deck / Emergency Requisition / Winter Stockpile)",
+    "New: 6 disruption cards (Weak, Strength-down, Burn) to cripple enemies",
+    "New: 4 area-attack cards (Carpet Bombing / Artillery Barrage / Scorched Earth / Shrapnel Storm)",
+    "New: 4-card research chain (Basic -> Advanced -> Breakthrough -> overtuned Prototype Weapon)",
+    "New: 6 unit cards (KARDS-style; deployed units auto-attack every turn)",
+    "Balance: single-turn burst ceiling raised from 54 to 132"
   ]
 }

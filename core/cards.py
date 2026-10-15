@@ -1158,6 +1158,184 @@ def fx_curse_of_the_deep(ctx) -> None:
 # 卡表定义
 # --------------------------------------------------------------------------
 
+# ==== 新增：指挥点 / 干扰 / 科研 / 单位 ====
+def fx_supply_drop(ctx) -> None:
+    """空投补给：直接给指挥点 + 抽牌。"""
+    ctx.gain_energy(2)
+    ctx.draw(1)
+
+
+def fx_logistics_chain(ctx) -> None:
+    """后勤链：给指挥点，费用为 0，等于白赚。"""
+    ctx.gain_energy(2)
+
+
+def fx_all_hands_on_deck(ctx) -> None:
+    """全员就位：给指挥点并抽牌，但抽到的牌本回合临时。"""
+    ctx.gain_energy(3)
+    ctx.draw(2)
+
+
+def fx_emergency_requisition(ctx) -> None:
+    """紧急征用：失去 4 点耐久换 3 点指挥点。"""
+    ctx.gain_energy(3)
+    try:
+        ctx.source.hp = max(1, int(ctx.source.hp) - 4)
+    except Exception:
+        pass
+
+
+def fx_winter_stockpile(ctx) -> None:
+    """冬季储备：给指挥点，但本回合结束手牌不保留（副作用靠描述提示）。"""
+    ctx.gain_energy(4)
+    ctx.draw(1)
+
+
+# --------------------------------------------------------------------------
+# B 组 · 干扰（削弱敌人 / 打乱敌人）
+# --------------------------------------------------------------------------
+def fx_suppress_fire(ctx) -> None:
+    """压制射击：给敌人「虚弱」（其攻击 -25%）。"""
+    ctx.deal_damage(6, ctx.target)
+    _apply(ctx, BUFF_WEAK, 3, ctx.target)
+
+
+def fx_disarm(ctx) -> None:
+    """缴械：给敌人虚弱 + 脆弱（无法强化自己）。"""
+    _apply(ctx, BUFF_WEAK, 2, ctx.target)
+    _apply(ctx, BUFF_FRAIL, 3, ctx.target)
+    ctx.gain_block(6)
+
+
+def fx_jam_comms(ctx) -> None:
+    """干扰通讯：全体虚弱。"""
+    ctx.apply_buff_all(BUFF_WEAK, 3)
+
+
+def fx_break_morale(ctx) -> None:
+    """瓦解士气：敌人失去火力（strength_down）。"""
+    _apply(ctx, BUFF_STRENGTH_DOWN, 3, ctx.target)
+    ctx.deal_damage(5, ctx.target)
+
+
+def fx_scatter(ctx) -> None:
+    """驱散队形：全体脆弱 + 抽牌。"""
+    ctx.apply_buff_all(BUFF_FRAIL, 2)
+    ctx.draw(1)
+
+
+def fx_rust_rounds(ctx) -> None:
+    """锈蚀弹药：给敌人叠燃烧（随时间掉血）。"""
+    _apply(ctx, BUFF_POISON, 5, ctx.target)
+    ctx.deal_damage(3, ctx.target)
+
+
+# --------------------------------------------------------------------------
+# C 组 · 范围攻击
+# --------------------------------------------------------------------------
+def fx_carpet_bomb(ctx) -> None:
+    """地毯式轰炸：对全体造成伤害。"""
+    ctx.deal_damage_all(10)
+
+
+def fx_artillery_barrage(ctx) -> None:
+    """炮火覆盖：全体伤害 + 全体破甲。"""
+    ctx.deal_damage_all(7)
+    ctx.apply_buff_all(BUFF_VULNERABLE, 2)
+
+
+def fx_scorched_earth(ctx) -> None:
+    """焦土政策：全体高伤，但自己也掉血。"""
+    ctx.deal_damage_all(16)
+    try:
+        ctx.source.hp = max(1, int(ctx.source.hp) - 5)
+    except Exception:
+        pass
+
+
+def fx_shrapnel_storm(ctx) -> None:
+    """破片风暴：全体多次小伤害（配合火力极强）。"""
+    ctx.deal_damage_all(4, hits=3)
+
+
+# --------------------------------------------------------------------------
+# D 组 · 科研（初级 → 高级 → 超模）
+# --------------------------------------------------------------------------
+def fx_research_basic(ctx) -> None:
+    """初级科研：抽 2 张牌，获得 1 点火力（打基础）。"""
+    ctx.draw(2)
+    _apply(ctx, BUFF_STRENGTH, 1, ctx.source)
+
+
+def fx_research_advanced(ctx) -> None:
+    """高级科研：**手牌中的初级科研越多，收益越高**。"""
+    n = 0
+    try:
+        for c in (ctx.source.hand or []):
+            did = getattr(c, 'def_id', '')
+            if did in ('research_basic', 'research_advanced'):
+                n += 1
+    except Exception:
+        n = 0
+    ctx.draw(2 + min(3, n))
+    _apply(ctx, BUFF_STRENGTH, 2 + min(4, n), ctx.source)
+    ctx.gain_energy(1)
+
+
+def fx_research_breakthrough(ctx) -> None:
+    """科研突破：**每打过一张科研牌**，火力 +2（成长型）。"""
+    n = int(getattr(ctx.source, 'research_count', 0) or 0)
+    _apply(ctx, BUFF_STRENGTH, 3 + min(8, n * 2), ctx.source)
+    try:
+        ctx.source.research_count = n + 1
+    except Exception:
+        pass
+    ctx.draw(2)
+
+
+def fx_prototype_weapon(ctx) -> None:
+    """原型兵器：超模范围攻击 —— 对全体造成大量伤害，消耗。"""
+    ctx.deal_damage_all(22)
+    ctx.apply_buff_all(BUFF_VULNERABLE, 3)
+
+
+# --------------------------------------------------------------------------
+# E 组 · 单位（KARDS 风格：放置后每回合自动攻击）
+# --------------------------------------------------------------------------
+def fx_deploy_riflemen(ctx) -> None:
+    """部署步兵班：每回合自动开火。"""
+    ctx.summon("步兵班", 8, 4)
+
+
+def fx_deploy_mg_nest(ctx) -> None:
+    """部署机枪巢：血厚、输出稳定。"""
+    ctx.summon("机枪巢", 14, 3)
+
+
+def fx_deploy_tank(ctx) -> None:
+    """部署中型坦克：高攻。"""
+    ctx.summon("中型坦克", 12, 7)
+
+
+def fx_deploy_artillery(ctx) -> None:
+    """部署野战炮：攻击高但脆。"""
+    ctx.summon("野战炮", 6, 10)
+
+
+def fx_deploy_engineer(ctx) -> None:
+    """部署工兵连：给掩体 + 单位（防御向）。"""
+    ctx.gain_block(8)
+    ctx.summon("工兵连", 10, 2)
+
+
+def fx_deploy_command_tank(ctx) -> None:
+    """部署指挥坦克：单位 + 全体火力。"""
+    ctx.summon("指挥坦克", 15, 6)
+    _apply(ctx, BUFF_STRENGTH, 2, ctx.source)
+
+
+
+
 # ==== 新增：破甲增伤 + 条件牌（见文件末尾的 NEW_CARDS）====
 def fx_armor_crack(ctx) -> None:
     """破甲弹：小伤害 + 易伤。"""
@@ -1907,6 +2085,120 @@ CARD_LIST: List[CardDef] = [
             "**本回合第一张出牌**时：全体施加 3 层破甲并抽 2 张；否则只抽 1 张。",
             "none", fx_zero_hour, upgrade={"cost": 0},
             keywords=("条件", "破甲", "群体")),
+
+    # ---- A 指挥点 ----
+    CardDef("supply_drop", "空投补给", 0, "skill", RARITY_COMMON, ARCH_ENERGY,
+            "获得 2 点指挥点，抽 1 张牌。", "self", fx_supply_drop,
+            upgrade={"cost": 0}, keywords=("指挥点", "抽牌")),
+    CardDef("logistics_chain", "后勤链", 0, "skill", RARITY_COMMON, ARCH_ENERGY,
+            "获得 2 点指挥点。", "self", fx_logistics_chain,
+            upgrade={"magic": 3}, magic=2, keywords=("指挥点",)),
+    CardDef("all_hands_on_deck", "全员就位", 1, "skill", RARITY_UNCOMMON, ARCH_ENERGY,
+            "获得 {magic} 点指挥点，抽 2 张牌。", "self", fx_all_hands_on_deck,
+            upgrade={"magic": 4}, magic=3, keywords=("指挥点", "抽牌")),
+    CardDef("emergency_requisition", "紧急征用", 0, "skill", RARITY_UNCOMMON,
+            ARCH_ENERGY,
+            "获得 {magic} 点指挥点，失去 4 点耐久。", "self",
+            fx_emergency_requisition, upgrade={"magic": 4}, magic=3,
+            keywords=("指挥点", "自伤")),
+    CardDef("winter_stockpile", "冬季储备", 1, "skill", RARITY_RARE, ARCH_ENERGY,
+            "获得 {magic} 点指挥点，抽 1 张牌。", "self", fx_winter_stockpile,
+            upgrade={"magic": 5}, magic=4, exhaust=True,
+            keywords=("指挥点", "爆发")),
+
+    # ---- B 干扰 ----
+    CardDef("suppress_fire", "压制射击", 1, "attack", RARITY_COMMON, ARCH_POISON,
+            "造成 {damage} 点伤害，施加 {magic} 层虚弱（敌人攻击 -25%）。",
+            "enemy", fx_suppress_fire, upgrade={"magic": 4}, damage=6, magic=3,
+            keywords=("虚弱", "干扰")),
+    CardDef("disarm", "缴械", 1, "skill", RARITY_UNCOMMON, ARCH_POISON,
+            "施加 {magic} 层虚弱与 3 层脆弱，获得 6 点掩体。", "enemy",
+            fx_disarm, upgrade={"cost": 0}, magic=2, block=6,
+            keywords=("虚弱", "脆弱", "干扰")),
+    CardDef("jam_comms", "干扰通讯", 1, "skill", RARITY_UNCOMMON, ARCH_POISON,
+            "对**全体**敌人施加 {magic} 层虚弱。", "none", fx_jam_comms,
+            upgrade={"magic": 4}, magic=3, keywords=("虚弱", "群体")),
+    CardDef("break_morale", "瓦解士气", 1, "attack", RARITY_UNCOMMON, ARCH_POISON,
+            "造成 {damage} 点伤害，并使其失去 {magic} 点火力。", "enemy",
+            fx_break_morale, upgrade={"magic": 4}, damage=5, magic=3,
+            keywords=("削弱", "干扰")),
+    CardDef("scatter", "驱散队形", 1, "skill", RARITY_COMMON, ARCH_POISON,
+            "对**全体**敌人施加 2 层脆弱，抽 1 张牌。", "none", fx_scatter,
+            upgrade={"cost": 0}, keywords=("脆弱", "群体", "抽牌")),
+    CardDef("rust_rounds", "锈蚀弹药", 1, "attack", RARITY_COMMON, ARCH_POISON,
+            "造成 {damage} 点伤害，施加 {magic} 层燃烧。", "enemy",
+            fx_rust_rounds, upgrade={"magic": 7}, damage=3, magic=5,
+            keywords=("燃烧", "持续")),
+
+    # ---- C 范围攻击 ----
+    CardDef("carpet_bomb", "地毯式轰炸", 2, "attack", RARITY_UNCOMMON, ARCH_ATTACK,
+            "对**全体**敌人各造成 {damage} 点伤害。", "all_enemies",
+            fx_carpet_bomb, upgrade={"damage": 14}, damage=10,
+            keywords=("群体", "火力")),
+    CardDef("artillery_barrage", "炮火覆盖", 2, "attack", RARITY_UNCOMMON,
+            ARCH_ATTACK,
+            "对**全体**敌人造成 {damage} 点伤害并施加 2 层破甲。",
+            "all_enemies", fx_artillery_barrage, upgrade={"damage": 10},
+            damage=7, keywords=("群体", "破甲")),
+    CardDef("scorched_earth", "焦土政策", 1, "attack", RARITY_RARE, ARCH_ATTACK,
+            "对**全体**敌人造成 {damage} 点伤害，自身失去 5 点耐久。",
+            "all_enemies", fx_scorched_earth, upgrade={"damage": 22},
+            damage=16, keywords=("群体", "自伤")),
+    CardDef("shrapnel_storm", "破片风暴", 2, "attack", RARITY_RARE, ARCH_ATTACK,
+            "对**全体**敌人造成 3 次 {damage} 点伤害（火力加成 3 次）。",
+            "all_enemies", fx_shrapnel_storm, upgrade={"damage": 6},
+            damage=4, keywords=("群体", "多段")),
+
+    # ---- D 科研 ----
+    CardDef("research_basic", "初级科研", 1, "skill", RARITY_COMMON, ARCH_ENERGY,
+            "抽 2 张牌，获得 1 点火力。（科研链的起点）", "self",
+            fx_research_basic, upgrade={"cost": 0}, keywords=("科研", "成长")),
+    CardDef("research_advanced", "高级科研", 1, "skill", RARITY_UNCOMMON,
+            ARCH_ENERGY,
+            "抽 2 张牌并获得 2 点火力；**手牌中每有一张科研牌再 +1**。",
+            "self", fx_research_advanced, upgrade={"cost": 0},
+            magic=2, keywords=("科研", "成长")),
+    CardDef("research_breakthrough", "科研突破", 2, "power", RARITY_RARE,
+            ARCH_ENERGY,
+            "获得 3 点火力；**本局每打过一张科研牌再 +2**（最多 +8）。",
+            "self", fx_research_breakthrough, upgrade={"cost": 1},
+            keywords=("科研", "成长", "能力")),
+    CardDef("prototype_weapon", "原型兵器", 3, "attack", RARITY_RARE, ARCH_ATTACK,
+            "【超模】对**全体**敌人造成 {damage} 点伤害并施加 3 层破甲。",
+            "all_enemies", fx_prototype_weapon, upgrade={"damage": 28},
+            damage=22, exhaust=True, keywords=("科研", "群体", "超模")),
+
+    # ---- E 单位 ----
+    CardDef("deploy_riflemen", "部署步兵班", 1, "power", RARITY_COMMON,
+            ARCH_SUMMON,
+            "征召「步兵班」（{magic} 耐久 / {magic2} 攻击），每回合自动开火。",
+            "self", fx_deploy_riflemen, upgrade={"magic": 11},
+            magic=8, magic2=4, keywords=("单位", "持续")),
+    CardDef("deploy_mg_nest", "部署机枪巢", 2, "power", RARITY_UNCOMMON,
+            ARCH_SUMMON,
+            "征召「机枪巢」（{magic} 耐久 / {magic2} 攻击）。", "self",
+            fx_deploy_mg_nest, upgrade={"magic": 18}, magic=14, magic2=3,
+            keywords=("单位", "耐打")),
+    CardDef("deploy_tank", "部署中型坦克", 2, "power", RARITY_UNCOMMON,
+            ARCH_SUMMON,
+            "征召「中型坦克」（{magic} 耐久 / {magic2} 攻击）。", "self",
+            fx_deploy_tank, upgrade={"magic2": 9}, magic=12, magic2=7,
+            keywords=("单位", "火力")),
+    CardDef("deploy_artillery", "部署野战炮", 2, "power", RARITY_UNCOMMON,
+            ARCH_SUMMON,
+            "征召「野战炮」（{magic} 耐久 / {magic2} 攻击，很脆）。", "self",
+            fx_deploy_artillery, upgrade={"magic": 8}, magic=6, magic2=10,
+            keywords=("单位", "高攻")),
+    CardDef("deploy_engineer", "部署工兵连", 2, "power", RARITY_COMMON,
+            ARCH_SUMMON,
+            "获得 8 点掩体，并征召「工兵连」（{magic} 耐久 / {magic2} 攻击）。",
+            "self", fx_deploy_engineer, upgrade={"block": 12}, magic=10, magic2=2,
+            block=8, keywords=("单位", "掩体")),
+    CardDef("deploy_command_tank", "部署指挥坦克", 3, "power", RARITY_RARE,
+            ARCH_SUMMON,
+            "征召「指挥坦克」（{magic} 耐久 / {magic2} 攻击），并获得 2 点火力。",
+            "self", fx_deploy_command_tank, upgrade={"magic": 20},
+            magic=15, magic2=6, keywords=("单位", "火力", "能力")),
 ]
 
 

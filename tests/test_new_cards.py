@@ -298,3 +298,257 @@ class TestRiskyCards(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+# ==========================================================================
+# 第三批：指挥点 / 干扰 / 范围 / 科研 / 单位
+# ==========================================================================
+
+BATCH3 = [
+    "supply_drop", "logistics_chain", "all_hands_on_deck",
+    "emergency_requisition", "winter_stockpile",
+    "suppress_fire", "disarm", "jam_comms", "break_morale", "scatter",
+    "rust_rounds", "carpet_bomb", "artillery_barrage", "scorched_earth",
+    "shrapnel_storm", "research_basic", "research_advanced",
+    "research_breakthrough", "prototype_weapon",
+    "deploy_riflemen", "deploy_mg_nest", "deploy_tank", "deploy_artillery",
+    "deploy_engineer", "deploy_command_tank",
+]
+
+
+class TestBatch3Exists(unittest.TestCase):
+
+    def test_all_present(self):
+        for cid in BATCH3:
+            with self.subTest(card=cid):
+                self.assertIn(cid, C.CARD_DB)
+
+    def test_all_playable(self):
+        for cid in BATCH3:
+            with self.subTest(card=cid):
+                b, _ = _battle(n_enemies=3)
+                b.player.energy = 20
+                b.player.hand.clear()
+                b.add_card_to_hand(cid, n=1)
+                self.assertTrue(b.play_card(b.player.hand[-1],
+                                            first_enemy(b)),
+                                "%s 打不出去" % cid)
+
+    def test_in_reward_pool(self):
+        for cid in BATCH3:
+            d = C.CARD_DB[cid]
+            with self.subTest(card=cid):
+                self.assertNotEqual(d.rarity, "basic")
+                self.assertNotIn(d.type, ("curse", "status"))
+
+
+class TestCommandPoints(unittest.TestCase):
+    """指挥点卡：必须真的回本或赚。"""
+
+    def _energy_delta(self, cid: str) -> int:
+        """打出这张牌之后的「能量变化」（含扣费）。
+
+        注意要先给够能量，否则 1 费的牌根本打不出去（测试会误判成"没给能量"）。
+        """
+        b, _ = _battle()
+        b.player.energy = 10
+        start = b.player.energy
+        b.player.hand.clear()
+        b.add_card_to_hand(cid, n=1)
+        cost = b.card_cost(b.player.hand[-1])
+        if not b.play_card(b.player.hand[-1], first_enemy(b)):
+            raise AssertionError("%s 打不出去" % cid)
+        return b.player.energy - (start - cost)
+
+    def test_all_gain_energy(self):
+        for cid in ("supply_drop", "logistics_chain", "all_hands_on_deck",
+                    "emergency_requisition", "winter_stockpile"):
+            with self.subTest(card=cid):
+                self.assertGreater(self._energy_delta(cid), 0,
+                                   "%s 没有给指挥点" % cid)
+
+    def test_zero_cost_ones_are_net_positive(self):
+        """0 费的后勤链 / 空投补给必须净赚（否则没人带）。"""
+        for cid in ("logistics_chain", "supply_drop"):
+            with self.subTest(card=cid):
+                b, _ = _battle()
+                b.player.energy = 5
+                b.player.hand.clear()
+                b.add_card_to_hand(cid, n=1)
+                cost = b.card_cost(b.player.hand[-1])
+                self.assertEqual(cost, 0, "%s 不是 0 费" % cid)
+                b.play_card(b.player.hand[-1], first_enemy(b))
+                self.assertGreater(b.player.energy, 5,
+                                   "%s 没有净赚指挥点" % cid)
+
+
+class TestAreaDamage(unittest.TestCase):
+    """范围攻击：必须打到所有敌人。"""
+
+    def test_hits_all_enemies(self):
+        for cid in ("carpet_bomb", "artillery_barrage", "shrapnel_storm",
+                    "prototype_weapon"):
+            with self.subTest(card=cid):
+                b, es = _battle(n_enemies=3)
+                b.player.energy = 20
+                b.player.hand.clear()
+                b.add_card_to_hand(cid, n=1)
+                b.play_card(b.player.hand[-1], first_enemy(b))
+                for i, e in enumerate(es):
+                    self.assertLess(e.hp, e.max_hp,
+                                    "%s 没打到第 %d 个敌人" % (cid, i))
+
+    def test_scales_with_enemy_count(self):
+        """3 个敌人的总伤害必须高于 1 个。"""
+        def total(cid, n):
+            b, es = _battle(n_enemies=n)
+            b.player.energy = 20
+            b.player.hand.clear()
+            b.add_card_to_hand(cid, n=1)
+            before = sum(e.hp for e in es)
+            b.play_card(b.player.hand[-1], first_enemy(b))
+            return before - sum(e.hp for e in es)
+
+        for cid in ("carpet_bomb", "artillery_barrage", "prototype_weapon"):
+            with self.subTest(card=cid):
+                self.assertGreater(total(cid, 3), total(cid, 1))
+
+
+class TestDisrupt(unittest.TestCase):
+
+    def test_weak_applied(self):
+        b, es = _battle()
+        _play(b, "suppress_fire")
+        self.assertGreater(es[0].buffs.get("weak", 0), 0)
+
+    def test_break_morale_strips_strength(self):
+        """瓦解士气施加的是「弹药短缺」（strength_down），
+        每层让敌人攻击 -1 —— 这是独立的 debuff 键，不是直接扣 strength。"""
+        b, es = _battle()
+        _play(b, "break_morale")
+        self.assertGreater(es[0].buffs.get("strength_down", 0), 0,
+                           "瓦解士气没有施加弹药短缺")
+
+    def test_strength_down_reduces_enemy_damage(self):
+        """弹药短缺必须真的降低敌人伤害。"""
+        b1, e1 = _battle()
+        b1.apply_buff(e1[0], "strength_down", 3)
+        d_with = b1.deal_damage(e1[0], b1.player, 10)
+        b2, e2 = _battle()
+        d_without = b2.deal_damage(e2[0], b2.player, 10)
+        self.assertLess(d_with, d_without,
+                        "弹药短缺没有降低敌人伤害（%d vs %d）"
+                        % (d_with, d_without))
+
+    def test_jam_comms_hits_all(self):
+        b, es = _battle(n_enemies=3)
+        _play(b, "jam_comms")
+        for i, e in enumerate(es):
+            with self.subTest(enemy=i):
+                self.assertGreater(e.buffs.get("weak", 0), 0)
+
+
+class TestResearch(unittest.TestCase):
+    """科研链：初级 -> 高级 -> 突破，收益递进。"""
+
+    def test_basic_gives_strength(self):
+        b, _ = _battle()
+        _play(b, "research_basic")
+        self.assertGreater(b.player.buffs.get("strength", 0), 0)
+
+    def test_advanced_scales_with_research_in_hand(self):
+        b1, _ = _battle()
+        b1.player.hand.clear()
+        b1.add_card_to_hand("research_advanced")
+        b1.player.energy = 20
+        b1.play_card(b1.player.hand[-1], first_enemy(b1))
+        low = b1.player.buffs.get("strength", 0)
+
+        b2, _ = _battle()
+        b2.player.hand.clear()
+        b2.add_card_to_hand("research_basic")
+        b2.add_card_to_hand("research_basic")
+        b2.add_card_to_hand("research_advanced")
+        b2.player.energy = 20
+        b2.play_card(b2.player.hand[-1], first_enemy(b2))
+        high = b2.player.buffs.get("strength", 0)
+        self.assertGreater(high, low, "高级科研没有随科研牌数量增长")
+
+    def test_breakthrough_grows(self):
+        """科研突破打多次应该越叠越高。"""
+        b, _ = _battle()
+        b.player.energy = 99
+        gains = []
+        for _ in range(3):
+            b.player.hand.clear()
+            b.add_card_to_hand("research_breakthrough")
+            b.player.energy = 99
+            before = b.player.buffs.get("strength", 0)
+            b.play_card(b.player.hand[-1], first_enemy(b))
+            gains.append(b.player.buffs.get("strength", 0) - before)
+        self.assertGreater(gains[-1], gains[0],
+                           "科研突破没有越打越强：%s" % gains)
+
+    def test_prototype_is_overtuned(self):
+        """超模范围卡：3 个敌人时总伤害应高于普通范围卡。"""
+        def total(cid):
+            b, es = _battle(n_enemies=3)
+            b.player.energy = 20
+            b.player.hand.clear()
+            b.add_card_to_hand(cid, n=1)
+            before = sum(e.hp for e in es)
+            b.play_card(b.player.hand[-1], first_enemy(b))
+            return before - sum(e.hp for e in es)
+
+        self.assertGreater(total("prototype_weapon"), total("carpet_bomb"))
+
+
+class TestUnits(unittest.TestCase):
+    """单位：部署后真的会被召唤，并且每回合自动攻击。"""
+
+    UNIT_CARDS = {
+        "deploy_riflemen": "步兵班",
+        "deploy_mg_nest": "机枪巢",
+        "deploy_tank": "中型坦克",
+        "deploy_artillery": "野战炮",
+        "deploy_engineer": "工兵连",
+        "deploy_command_tank": "指挥坦克",
+    }
+
+    def test_summons_a_unit(self):
+        for cid, name in self.UNIT_CARDS.items():
+            with self.subTest(card=cid):
+                b, _ = _battle()
+                _play(b, cid)
+                names = [m.name for m in b.player.minions]
+                self.assertIn(name, names,
+                              "%s 没有召唤出「%s」（当前 %s）"
+                              % (cid, name, names))
+
+    def test_units_have_stats(self):
+        for cid in self.UNIT_CARDS:
+            with self.subTest(card=cid):
+                b, _ = _battle()
+                _play(b, cid)
+                m = b.player.minions[-1]
+                self.assertGreater(m.hp, 0, "%s 单位血量为 0" % cid)
+                self.assertGreater(m.attack, 0, "%s 单位攻击为 0" % cid)
+
+    def test_units_attack_each_turn(self):
+        """单位必须在回合结束时对敌人造成伤害。"""
+        b, es = _battle()
+        b.player.energy = 20
+        _play(b, "deploy_tank")
+        self.assertTrue(b.player.minions, "没召唤出单位")
+        before = es[0].hp
+        # 跑完玩家回合 + 敌人回合并回到玩家回合（单位在此期间开火）
+        if hasattr(b, "end_turn"):
+            b.end_turn()
+        for _ in range(30):
+            if not hasattr(b, "enemy_step") or not b.enemy_step():
+                break
+        self.assertLess(es[0].hp, before, "单位没有自动攻击")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
