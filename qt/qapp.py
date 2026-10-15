@@ -24,7 +24,7 @@ import os
 import sys
 from typing import Dict, List, Optional
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QMessageBox, QSizePolicy, QStackedWidget, QVBoxLayout,
@@ -67,6 +67,12 @@ DEFAULT_CFG: Dict = {
 
 class GameWindow(QMainWindow):
     """主窗口 + 界面路由。"""
+
+    # 后台线程检查更新完成后，用信号把结果送回 UI 线程。
+    # 注意：**不能**在后台线程里直接 QTimer.singleShot —— Qt 的定时器
+    # 必须由拥有事件循环的那个线程创建，否则回调会被静默丢弃
+    # （这就是「点检查更新没反应」的真正原因）。
+    update_checked = pyqtSignal(object, str, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -123,6 +129,7 @@ class GameWindow(QMainWindow):
         # 信号接线（必须在界面建好之后）
         self._wire()
         self._install_cheat_hook()
+        self._connect_update_signal()
         self.show_screen("menu")
         self._ready = True
         self._start_update_check()
@@ -149,13 +156,14 @@ class GameWindow(QMainWindow):
             return
 
         def on_result(info, err):
-            # 回到 UI 线程处理（Qt 里跨线程碰控件会崩）
+            # 用**信号**跨线程投递：Qt 会自动排队到 UI 线程执行。
+            # （早期版本这里用 QTimer.singleShot，但那是从后台线程调用的，
+            #   Qt 不接受，回调被静默丢弃 —— 表现为"点检查更新没反应"。）
             try:
-                from PyQt6.QtCore import QTimer
-                QTimer.singleShot(0, lambda: self._on_update_checked(
-                    info, err, silent))
-            except Exception:
-                pass
+                self.update_checked.emit(info, str(err or ""), bool(silent))
+            except Exception as exc:
+                print(f"[qt.app] emit update_checked failed: {exc!r}",
+                      flush=True)
 
         try:
             _up.check_async(on_result)
@@ -171,15 +179,23 @@ class GameWindow(QMainWindow):
                     label = _V.short()
                 except Exception:
                     label = "?"
+                # _V.short() 已经带 "v" 前缀，这里不要再加一个
                 QMessageBox.information(
                     self, "检查更新",
-                    "当前已是最新版本（v%s）。\n\n"
+                    "当前已是最新版本（%s）。\n\n"
                     "（如果刚发布不久，可能还没同步到，稍后再试。）" % label)
             return
         try:
             qupdate.show_update_dialog(info, self)
         except Exception as exc:
             print(f"[qt.app] update dialog failed: {exc!r}", flush=True)
+
+    def _connect_update_signal(self) -> None:
+        """把更新检查结果接到 UI（跨线程安全）。"""
+        try:
+            self.update_checked.connect(self._on_update_checked)
+        except Exception:
+            pass
 
     def _install_cheat_hook(self) -> None:
         """让兑换码结束战斗后能通知界面（否则画面会卡在战斗里）。"""

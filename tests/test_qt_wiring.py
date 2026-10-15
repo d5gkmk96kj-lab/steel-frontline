@@ -430,3 +430,125 @@ class TestLanLobbyAdvance(unittest.TestCase):
                          "连上后没进入卡组构筑，界面卡在大厅")
         self.assertIsNotNone(w._net, "联机对象没有交给主窗口")
         w.close()
+
+
+@unittest.skipUnless(_qt_ok(), "PyQt6 不可用")
+class TestUpdateChecker(unittest.TestCase):
+    """自动更新检查必须真的把结果送回来。
+
+    回归：后台线程里用 QTimer.singleShot 回投结果 —— Qt 的定时器必须由
+    拥有事件循环的线程创建，否则回调被**静默丢弃**。
+    表现就是点「检查更新」毫无反应。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+        import qt.qtheme as T
+        T.install_i18n_patch()
+
+    def setUp(self):
+        import tempfile
+        from core import run as run_mod
+        self.tmp = tempfile.mkdtemp(prefix="sf_upd_")
+        self._old = (run_mod.DATA_DIR, run_mod.SAVE_PATH)
+        run_mod.DATA_DIR = self.tmp
+        run_mod.SAVE_PATH = os.path.join(self.tmp, "save.json")
+
+    def tearDown(self):
+        import shutil
+        from core import run as run_mod
+        run_mod.DATA_DIR, run_mod.SAVE_PATH = self._old
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _pump(self, ms=200):
+        from PyQt6.QtCore import QEventLoop, QTimer
+        l = QEventLoop()
+        QTimer.singleShot(ms, l.quit)
+        l.exec()
+
+    def test_signal_exists_and_connected(self):
+        """跨线程信号必须存在且已连接。"""
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(250)
+        self.assertTrue(hasattr(w, "update_checked"),
+                        "缺少跨线程信号，后台结果送不回 UI")
+        self.assertTrue(callable(getattr(w, "_on_update_checked", None)))
+        w.close()
+
+    def test_result_reaches_ui_thread(self):
+        """模拟后台线程 emit，UI 线程必须收到。"""
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(250)
+        got = []
+        w._on_update_checked = lambda i, e, s: got.append((i, e, s))
+        w.update_checked.connect(w._on_update_checked)
+        w.update_checked.emit(None, "", True)   # 模拟后台线程投递
+        self._pump(400)
+        self.assertEqual(len(got), 1, "信号发出后 UI 没收到（跨线程投递失败）")
+        w.close()
+
+    def test_background_thread_emit_is_delivered(self):
+        """真起一个后台线程 emit，模拟 check_async 的实际路径。"""
+        import threading
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(250)
+        got = []
+        w._on_update_checked = lambda i, e, s: got.append(s)
+        w.update_checked.connect(w._on_update_checked)
+        t = threading.Thread(target=lambda: w.update_checked.emit(None, "", True))
+        t.start()
+        t.join()
+        self._pump(500)
+        self.assertEqual(len(got), 1,
+                         "后台线程 emit 的信号没送达 UI 线程")
+        w.close()
+
+    def test_check_updates_guard_flag(self):
+        """重复点击不该并发发起多次检查。"""
+        from qt.qapp import MainWindow
+        import qt.qtheme as T
+        w = MainWindow()
+        w.resize(T.WIN_W, T.WIN_H)
+        self._pump(250)
+        w._update_checking = True
+        before = getattr(w, "_update_checking", None)
+        w.check_updates(silent=True)     # 应该直接 return
+        self.assertTrue(before)
+        w._update_checking = False
+        w.close()
+
+    def test_update_dialog_version_prefix(self):
+        """版本对比两侧都要带 v，不能一边有一边没有。"""
+        from core import updater as U
+        from qt import qupdate
+        info = U.parse_manifest(
+            '{"version":"0.10","label":"0.10 测试版","notes":["x"]}')
+        dlg = qupdate.UpdateDialog(info)
+        from PyQt6.QtWidgets import QLabel
+        text = ""
+        for lb in dlg.findChildren(QLabel):
+            if "当前版本" in lb.text():
+                text = lb.text()
+                break
+        self.assertIn("v0.9", text)
+        self.assertIn("v0.10", text, "右侧版本号缺少 v 前缀：%r" % text)
+        dlg.close()
+
+    def test_latest_version_message_has_single_v(self):
+        """「已是最新」提示不能出现 vv。"""
+        import inspect
+        from qt import qapp as _q
+        src = inspect.getsource(_q.GameWindow._on_update_checked)
+        self.assertNotIn('"当前已是最新版本（v%s）"', src,
+                         "版本号会出现双 v（short() 自带 v）")

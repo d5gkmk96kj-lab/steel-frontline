@@ -1,26 +1,18 @@
 {
-  "version": "0.9.06",
-  "label": "0.9.06 测试版",
-  "label_en": "0.9.06 Beta",
+  "version": "0.9.07",
+  "label": "0.9.07 测试版",
+  "label_en": "0.9.07 Beta",
   "released": "2026-10-15",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：公网联机框架 —— 4 位房间号匹配，跨网络可用（待部署服务器）",
-    "新增：server/relay.py 中继服务端（纯标准库，一键部署）",
-    "新增：server/deploy.sh systemd 部署脚本 + 运维文档",
-    "新增：客户端大厅「公网建房 / 公网加入」两个模式",
-    "修复：中继转发时客户端多包一层导致对方收到双层嵌套",
-    "修复：中继 recv 空闲返回 b\"\" 被误判为对端断开",
-    "修复：心跳 pong 被中继当成控制消息吞掉导致超时掉线"
+    "修复：检查更新没有任何反应（后台线程用 QTimer 跨线程投递被静默丢弃）",
+    "修复：「已是最新版本」提示里版本号出现双 v（vv0.9.06）",
+    "修复：更新对话框两侧版本号 v 前缀不一致"
   ],
   "notes_en": [
-    "New: online play framework — 4-digit room codes, works across networks (server pending)",
-    "New: server/relay.py relay server (stdlib only, one-command deploy)",
-    "New: server/deploy.sh systemd setup + operations docs",
-    "New: lobby modes for creating/joining online rooms",
-    "Fix: client double-wrapped relay frames, arriving nested at the peer",
-    "Fix: relay recv returned b'' when idle, misread as a peer disconnect",
-    "Fix: heartbeat pong was swallowed as a relay control message, causing timeouts"
+    "Fix: 'Check for updates' did nothing — background thread used QTimer across threads, silently dropped",
+    "Fix: 'already up to date' message showed a doubled v (vv0.9.06)",
+    "Fix: inconsistent v prefix between the two versions in the update dialog"
   ]
 }

@@ -54,8 +54,14 @@ class UpdateDialog(QDialog):
         root.addWidget(title)
 
         # --- 版本对比 ---
+        # 两边都要带 v 前缀，否则显示成 "v0.9.06 → 0.10" 很不整齐
         cur = _V.short() if _V else "?"
-        new = info.display_label() if hasattr(info, "display_label") else info.version
+        if not cur.startswith("v"):
+            cur = "v" + cur
+        new = (info.display_label() if hasattr(info, "display_label")
+               else info.version)
+        if new and not new.startswith("v"):
+            new = "v" + new
         cmp_lbl = QLabel("当前版本：%s　→　最新版本：%s" % (cur, new), self)
         cmp_lbl.setStyleSheet(
             f"color:{T.TEXT};font-size:{T.FONT_BODY}px;background:transparent;")
