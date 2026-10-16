@@ -56,3 +56,6 @@ tests/test_relay_guard.py
 钢铁战线-私有备份/
 tests/test_admin.py
 packaging/build_admin.sh
+
+# token 没有 workflow scope，这个文件在网页上维护
+.github/workflows/
