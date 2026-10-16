@@ -1,16 +1,16 @@
 {
-  "version": "0.9.28",
-  "label": "0.9.28 测试版",
-  "label_en": "0.9.28 Beta",
+  "version": "0.9.29",
+  "label": "0.9.29 测试版",
+  "label_en": "0.9.29 Beta",
   "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：README 下载链接指向已删除的 releases/ 目录（玩家点进去是 404）",
-    "新增：下载章节（macOS / Windows / 全部版本），并说明首次打开怎么放行"
+    "新增：Windows 版自动构建（GitHub Actions，push 即出包）",
+    "新增：README 直接下载链接（macOS + Windows）"
   ],
   "notes_en": [
-    "Fix: README download links pointed at the deleted releases/ folder (players got a 404)",
-    "New: download section (macOS / Windows / all versions) with first-launch instructions"
+    "New: Windows builds are now automatic via GitHub Actions (a package is produced on every push)",
+    "New: direct download links in the README (macOS + Windows)"
   ]
 }

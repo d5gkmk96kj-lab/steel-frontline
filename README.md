@@ -37,10 +37,10 @@
 
 ### 怎么下载
 
-| 平台 | 下载方式 |
+| 平台 | 直接下载 |
 |---|---|
-| **macOS** | 点上面那个蓝色链接，直接开始下载 |
-| **Windows** | [到 Releases 页面](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/latest) 找 `WindowsRework` 压缩包 |
+| **macOS** | **[⬇️ SteelFrontline-Public-v0.9.27-beta.dmg](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**（38 MB）|
+| **Windows** | **[⬇️ SteelFrontline-WindowsRework-0.9.28.zip](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-WindowsRework-0.9.28.zip)**（52 MB）|
 | **全部版本** | [Releases 页面](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/latest) |
 
 ### macOS 首次打开
@@ -49,6 +49,12 @@
 「无法验证开发者」：**右键点 App → 打开 → 再点「打开」**，之后就不会再问了。
 
 （这是因为没有买苹果的开发者证书 —— 本游戏完全由 AI 生成，没有预算买证书。）
+
+### Windows 首次打开
+
+解压后双击 `SteelFrontlineWindowsRework.exe`。如果弹出
+「Windows 已保护你的电脑」：**点「更多信息」→「仍要运行」**，
+之后就不会再问了。首次启动可能要等 5～10 秒。
 
 > ### 🐛 发现 Bug？请到 Wiki 提交
 >
