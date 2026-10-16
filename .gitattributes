@@ -1,0 +1,23 @@
+# 换行符策略：避免 Mac/Windows 之间来回拷贝时被改坏
+#
+# 背景：packaging/build_win.bat 曾经是纯 LF，在 Windows 上直接跑不起来
+# （批处理的 ^ 续行、if 块全乱）。拷到 Windows 后必须保持 CRLF。
+
+# 批处理必须 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# shell 脚本必须 LF（CRLF 会让 shebang 失效）
+*.sh  text eol=lf
+
+# Python 用 LF
+*.py  text eol=lf
+
+# 二进制不要动
+*.dmg binary
+*.ico binary
+*.icns binary
+*.png binary
+*.ogg binary
+*.exe binary
+*.zip binary

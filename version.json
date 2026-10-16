@@ -1,20 +1,16 @@
 {
-  "version": "0.9.27",
-  "label": "0.9.27 测试版",
-  "label_en": "0.9.27 Beta",
+  "version": "0.9.28",
+  "label": "0.9.28 测试版",
+  "label_en": "0.9.28 Beta",
   "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "调整：账号不再是必须的，玩家先不用登录（想设名字/头衔走「我的资料」）",
-    "调整：服务器未开放时提示「请等待 12:00～24:00 开放服务器」",
-    "调整：主菜单提示改成侧边卡片（像 MC 主页，看得清但不抢视线）",
-    "调整：主菜单按钮不再写「局域网」"
+    "修复：README 下载链接指向已删除的 releases/ 目录（玩家点进去是 404）",
+    "新增：下载章节（macOS / Windows / 全部版本），并说明首次打开怎么放行"
   ],
   "notes_en": [
-    "Change: accounts are optional now -- no login prompt (set name/title via My Profile)",
-    "Change: when the server is closed, the lobby says it opens 12:00-24:00",
-    "Change: main-menu tip is now a side card (MC-style: readable but not intrusive)",
-    "Change: the versus button no longer says LAN"
+    "Fix: README download links pointed at the deleted releases/ folder (players got a 404)",
+    "New: download section (macOS / Windows / all versions) with first-launch instructions"
   ]
 }
