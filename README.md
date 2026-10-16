@@ -15,7 +15,7 @@
 > ## 🔴 请注意
 > - **readme也是AI写的 除了这句话 有问题还是那句话：wiki
 > - **这是 AI 作品。** 它没有经过专业团队打磨，平衡性、代码质量、文案水准都可能有明显问题。
-> - **很可能存在我没测出来的 Bug。** 遇到问题请到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交，我会继续让 AI 修。
+> - **很可能存在尚未发现的 Bug。** 遇到问题欢迎到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交。
 > - **素材版权**：美术全部由**代码程序化生成**（没有一张图片文件），音乐**不附带**（避免版权问题，请自行添加）。
 > - **没有苹果签名**，macOS 首次打开会被拦一次，[点这里看怎么放行](#macos-首次运行通过审核隐私与安全性)。
 > - **不接受"AI 做的东西也配叫游戏"这类争论** —— 这本来就是个实验：看看现在 AI 能独立做出什么。
@@ -38,7 +38,7 @@
 
 > ### 🐛 发现 Bug？请到 Wiki 提交
 >
-> **遇到问题、崩溃、数值不合理，或者想提建议，请到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交。**
+> **遇到问题、崩溃、数值不合理，或者想提建议，欢迎到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交。**
 >
 > 提交时麻烦带上这几样，能快很多：
 >
@@ -49,7 +49,7 @@
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
 >
-> 已知问题（修好前不用重复报）见 [Wiki 的 Known Issues 页](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki)已修复bug可以直接在更新日志查看（微小bug不写上去哦）
+> 已知问题见 [Wiki 的 Known Issues 页](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki)；已修复的 bug 会记在更新日志里。
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
@@ -296,7 +296,7 @@ macOS 用户也可以直接双击 **`启动游戏.command`**。
 
 **不需要在同一个 WiFi，不需要知道对方 IP，不需要任何网络配置。**
 
-> 公网联机需要一台中继服务器（作者提供）。如果暂时连不上，
+> 公网联机需要中继服务器。如果暂时连不上，
 > 用局域网方式，或开手机热点让两台设备处在同一网络。
 
 ---
@@ -342,116 +342,17 @@ macOS 用户也可以直接双击 **`启动游戏.command`**。
 
 ---
 
-## 关于作弊：我们的态度
+## 公平游戏
 
-> **作弊是可耻的。**
->
-> 控制台（F1）原本只是**调试与单人测试**用的工具，不是给你在联机里用的。
->
-> **你不是房主，就没有修改别人对局的权限。**
->
 > **请公平地玩。**
 
-### 具体规则
+**单人模式**：这是你自己的游戏体验，怎么玩都行。
 
-**单人模式**：随便用作弊码，那是你自己的游戏体验，没人管你。
+**神人模式**（战役难度拉满到第 20 档）：全部辅助功能失效。
+这是最高难度的荣誉挑战，想证明自己就老老实实打。
 
-**神人模式**（战役难度拉满到第 20 档）：
-**作弊全部失效**。这是最高难度的荣誉挑战，兑换码和调试指令一律拒绝，
-设置界面的兑换码区会直接显示红框「神人模式 —— 作弊已禁用」。
-想证明自己就老老实实打。
-
-**联机模式**：
-
-- **只有房主**能用作弊码，而且要**房主主动打开开关**（默认关闭）
-- **客户端在代码层面就没有作弊接口** —— 不是藏起来，是不存在
-- 客户端任何作弊发包**一律被拒绝**，并且：
-
-### 作弊被抓会怎样（彩蛋）
-
-联机对局中，异常发包会被系统拦截，并当场标记：
-
-1. **作弊者的屏幕上弹出一行巨大的红字**：
-
-   > ## 作弊是可耻的
-
-2. **对手的界面上，作弊者头顶会挂一个红色的标签**：
-
-   > ## 作弊者
-
-对手会在战报里同时看到这次拦截的记录。
-
-> **说明**：具体判定规则不公开 —— 说清楚了就等于告诉别人怎么绕。
-> 正常操作（手滑、点错、网络抖动）不会被误伤，只有蓄意伪造协议才会被标记。
-> 完整版（自用）保留了一句更直白的措辞；公开版使用上面这套文明文案。
-
----
-
-## 控制台（F1）与兑换码
-
-### 全局控制台（推荐）
-
-在**任意界面**按 **F1** 呼出底部下拉式控制台，像正经 PC 游戏那样：
-
-| 按键 | 作用 |
-|---|---|
-| `F1` | 打开 / 关闭控制台 |
-| `Esc` | 关闭控制台（不会退出界面） |
-| `Enter` | 执行当前指令 |
-| `Tab` | 补全兑换码 |
-| `↑` / `↓` | 翻历史指令 |
-
-**内建指令**
-
-| 指令 | 作用 |
-|---|---|
-| `help` | 显示全部指令 |
-| `list` | 列出全部兑换码 |
-| `status` | 显示当前战役 / 战斗状态 |
-| `seed` | 显示当前种子 |
-| `give <卡牌id>` | 把指定卡加入手牌（战斗中） |
-| `heal [n]` | 回复总部耐久（默认 999） |
-| `hp <n>` / `maxhp <n>` | 设置当前 / 上限耐久 |
-| `gold <n>` | 设置金币 |
-| `energy <n>` / `block <n>` | 设置补给 / 掩体（战斗中） |
-| `kill` / `win` | 肃清当前战斗全部敌人 |
-| `clear` | 清空控制台输出 |
-| `close` | 关闭控制台 |
-
-在控制台里**也可以直接敲兑换码**（`manpower`、`god_mode`…），效果与设置界面里的输入框一致。
-
-### 设置界面输入框
-
-不想记快捷键也行：**设置** 界面底部有「兑换码」输入框，输入后点「兑换」。
-
-### 兑换码一览
-
-| 兑换码 | 名称 | 效果 |
-|---|---|---|
-| `it` | 闪电部署 | 立即完成本回合所有部署：补给回满、手牌补至 7 张，跳过等待 |
-| `research all` | 研究全解锁 | 解锁全部卡牌、勋章与支援装备，并填满图鉴 |
-| `ic` | 秒建防线 | 立刻瞬间完成全部工事建造：+999 掩体、+10 层铁丝网 |
-| `debug_nuke` | 战略轰炸 | 获得一张「战略轰炸」卡，打出后对敌方全体造成 **9999** 伤害 |
-| `god_mode` | 上帝模式 | 本回合我方受到的伤害强制归零 |
-| `annex all` | 全面吞并 | 直接肃清当前战斗全部敌人，瞬间结算通关 |
-| `manpower` | 兵力补充 | 总部 **+50** 耐久上限与当前耐久，并 +50 可用兵力 |
-
-**说明**
-
-- 大小写、下划线、空格都不敏感：`Research All` = `research_all` = `researchall`
-- `research all` 与 `annex all` **每局只能兑换一次**（防误触刷爆）
-- `it` / `ic` / `god_mode` / `debug_nuke` / `annex all` 需要在**战斗中**使用
-- `manpower` 在战役或战斗中都能用
-- 兑换记录写进 `CheatRegistry`，可在结算界面查阅
-- 作弊卡（战略轰炸 / 钢铁意志 / 兵力空投）是**真实的 CardDef**，走完整引擎管线，
-  能正常被打出、被 snapshot 读取、被 UI 渲染
-
-命令行也可以直接用：
-
-```python
-from core import cheats
-cheats.redeem_once("manpower", run=run, battle=battle)
-```
+**联机模式**：对局以房主为准，客户端无法单方面改动结果。
+任何试图伪造网络消息的行为都会被拦截并记录。
 
 ---
 
@@ -597,15 +498,9 @@ ambient.*     通用兜底（任何场景缺曲子时用它）
 - **后台播放**：不占用游戏帧率
 - 退出时自动停止，不留残余进程
 
-### 控制台也可查看
+### 在游戏内查看
 
-F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识别到的曲库：
-
-```
-> music              查看后端 / 音量 / 当前曲目 / 曲库
-> music off          关闭背景音乐
-> music on           打开背景音乐
-```
+设置界面可以看到当前音乐后端、音量与识别到的曲库。
 
 ---
 
@@ -957,7 +852,7 @@ The human did exactly three things: **asked for it, ran it, reported bugs.**
 > - **This is an AI project.** It has not been polished by a professional team;
 >   balance, code quality and writing may all have rough edges.
 > - **There are probably bugs I have not found.** Report them on the
->   [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) and I will have
+>   [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) and it will be
 >   the AI fix them.
 > - **Assets**: all art is **procedurally generated in code** (not a single image
 >   file), and **no music is bundled** (to avoid copyright issues — add your own).
@@ -1248,117 +1143,18 @@ A brief network hiccup (switching Wi-Fi, closing the lid) no longer kills the ma
 
 ---
 
-## On Cheating: Our Stance
+## Fair Play
 
-> **Cheating is shameful.**
->
-> The console (F1) exists for **debugging and solo testing** — not for online play.
->
-> **If you are not the host, you have no right to alter someone else's match.**
->
-> **Play fair.**
+> **Please play fair.**
 
-### The rules
+**Single player**: it is your own game, play however you like.
 
-**Solo mode** — cheat all you want. It is your own experience; nobody cares.
+**Ascension 20**: all assists are disabled. A pure honor challenge.
 
-**Godslayer Mode** (campaign level maxed to 20):
-**all cheats are disabled.** It is the highest-difficulty honour challenge; cheat
-codes and debug commands are refused, and the settings screen shows a red
-"Godslayer Mode — Cheats Disabled" notice instead of the input box. Prove yourself
-the honest way.
+**Online**: the host is authoritative; a client cannot unilaterally change
+the outcome. Any attempt to forge network messages is blocked and logged.
 
-**Multiplayer**:
-
-- **Only the host** can use cheat codes, and only after **explicitly enabling the switch** (off by default)
-- **Clients have no cheat interface at all** — not hidden, simply absent
-- Any cheating packet from a client is **rejected outright**, and then:
-
-### What happens when you get caught
-
-The system detects cheating packets in real time. On a hit:
-
-1. **A huge red banner appears on the cheater's screen**:
-
-   > ## CHEATING IS SHAMEFUL
-
-2. **A red tag appears over the cheater's head on the opponent's screen**:
-
-   > ## CHEATER
-
-The opponent also sees the detection reason in the battle log (e.g. "the opponent
-attempted to cheat (forged a host-only message); rejected and flagged").
-
-> **Note**: the private full edition keeps a blunter wording. The public edition
-> and this repository use the civilised text above. The logic is identical; only
-> the message differs.
-
-### What counts as cheating
-
-| Behaviour | Why |
-|---|---|
-| Forging `state` / `snapshot` / `start` / `over` | Impersonating the host to change HP or declare victory |
-| Impersonating cheat commands (`cheat` / `redeem` / `god_mode` / `hp` / `win`...) | Clients have no such interface; these can only be hand-crafted packets |
-| Out-of-range card index (`999` / `-1` / a string / `true`) | The real UI only lets you click cards in hand |
-| Sending message types outside the protocol | A real client never invents protocol |
-
-### What does **not** count as cheating
-
-These are misclicks and only get a normal rejection, no tag:
-
-- Playing on the opponent's turn
-- Not enough Energy
-- Malformed target field
-
-> In short: **misclicks are forgiven, deliberate packets get you tagged.**
-
-## Console (F1) and Cheat Codes
-
-Press **F1** on any screen to open a bottom-drawer console, like a real PC game:
-
-| Key | Action |
-|---|---|
-| `F1` | Open / close console |
-| `Esc` | Close console (does not leave the screen) |
-| `Enter` | Run the current command |
-| `Tab` | Autocomplete a cheat code |
-| `Up` / `Down` | Command history |
-
-**Built-in commands**
-
-| Command | Effect |
-|---|---|
-| `help` | Show all commands |
-| `list` | List all cheat codes |
-| `status` | Show current campaign / battle state |
-| `seed` | Show the current seed |
-| `give <card_id>` | Add a card to your hand (in battle) |
-| `heal [n]` | Restore HQ Integrity (default 999) |
-| `hp <n>` / `maxhp <n>` | Set current / max Integrity |
-| `gold <n>` | Set gold |
-| `energy <n>` / `block <n>` | Set Energy / Block (in battle) |
-| `kill` / `win` | Destroy all enemies in the current battle |
-| `clear` | Clear console output |
-| `close` | Close console |
-
-You can also type **cheat codes** directly in the console (`manpower`, `god_mode`...),
-with the same effect as the settings input box.
-
-### Settings input box
-
-Prefer no hotkeys? The **Settings** screen has a "Cheat Code" input at the bottom.
-
-### Cheat code list
-
-| Code | Effect |
-|---|---|
-| `it` | Lightning Deployment — refill Energy, draw up to 7 |
-| `ic` | Instant Fortifications — 999 Block + 10 Barbed Wire |
-| `research all` | Full Research Unlock — unlock every card/medal, fill the codex |
-| `debug_nuke` | Strategic Bombing card — 9999 damage to all enemies |
-| `god_mode` | God Mode — take 0 damage this turn |
-| `annex all` | Total Annexation — kill all enemies, end the battle instantly |
-| `manpower` | Manpower — HQ +50 HP, +50 troops |
+---
 
 ## Music / BGM
 
