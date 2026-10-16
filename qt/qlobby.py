@@ -412,6 +412,14 @@ class LobbyScreen(QWidget):
         self.btn_net_go.clicked.connect(self.start_net)
         nv.addWidget(self.btn_net_go)
 
+        # 固定写出开放时间（不管开没开都显示，玩家一眼知道什么时候能玩）
+        self.lbl_net_hours = QLabel(
+            "🕐 开放时间：每天 12:00 ～ 24:00", self.net_box)
+        self.lbl_net_hours.setStyleSheet(
+            f"color:{T.GOLD}; font-size:{T.FONT_SMALL}px;"
+            f"background:transparent;font-weight:600;")
+        nv.addWidget(self.lbl_net_hours)
+
         self.lbl_net_srv = QLabel("", self.net_box)
         self.lbl_net_srv.setStyleSheet(
             f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"

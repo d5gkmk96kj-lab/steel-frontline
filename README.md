@@ -1,5 +1,24 @@
 <div align="center">
 
+# 📖 想正常游玩，请先读完本页
+
+<h2>👇 尤其是「下载」「怎么玩」「联机」三节 👇</h2>
+
+**不看就玩，大概率会遇到这几个问题：**
+
+| 你可能会遇到 | 原因 | 在哪看 |
+|---|---|---|
+| macOS 打不开，说「无法验证开发者」 | 没买苹果签名 | [macOS 首次打开](#macos-首次打开) |
+| Windows 弹「已保护你的电脑」 | 没买微软签名 | [Windows 首次打开](#windows-首次打开) |
+| 联机按钮点不动 | 服务器每天只开 12 小时 | [联机服务器开放时间](#联机服务器开放时间) |
+| 没声音 | 音乐不附带（版权） | [音乐 / BGM](#音乐--bgm) |
+| 不知道干嘛 | 这是卡牌 Roguelike | [这是什么游戏](#这是什么游戏) |
+
+---
+</div>
+
+<div align="center">
+
 # ⚠️ 此游戏全部由 AI 生成 ⚠️
 
 <h2>🤖 <span style="color:#D32F2F">本项目 100% 由 AI（DeepSeek-V4.1-Flash）生成</span> 🤖</h2>
@@ -24,14 +43,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.30 测试版** · *Current version: 0.9.29 Beta*
+**当前版本：v0.9.31 测试版** · *Current version: 0.9.29 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 点此直接下载 · 钢铁战线 v0.9.30 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**
+**[⬇️ 点此直接下载 · 钢铁战线 v0.9.31 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西** —— 下载、双击、开玩。
 
@@ -71,7 +90,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.30 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.31 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -80,8 +99,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.30 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.30 测试版 · 完整版 | `钢铁战线-v0.9.30 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.31 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.31 测试版 · 完整版 | `钢铁战线-v0.9.31 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
