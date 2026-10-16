@@ -1,66 +1,47 @@
 <div align="center">
 
-# 📖 想正常游玩，请先读完本页
+# 钢铁战线 Steel Frontline
 
-<h2>👇 尤其是「下载」「怎么玩」「联机」三节 👇</h2>
-
-**不看就玩，大概率会遇到这几个问题：**
-
-| 你可能会遇到 | 原因 | 在哪看 |
-|---|---|---|
-| macOS 打不开，说「无法验证开发者」 | 没买苹果签名 | [macOS 首次打开](#macos-首次打开) |
-| Windows 弹「已保护你的电脑」 | 没买微软签名 | [Windows 首次打开](#windows-首次打开) |
-| 联机按钮点不动 | 服务器每天只开 12 小时 | [联机服务器开放时间](#联机服务器开放时间) |
-| 没声音 | 音乐不附带（版权） | [音乐 / BGM](#音乐--bgm) |
-| 不知道干嘛 | 这是卡牌 Roguelike | [这是什么游戏](#这是什么游戏) |
+**二战装甲卡牌 Roguelike** · 当前版本 **v0.9.31 测试版**
 
 ---
+---
+
+# ⬇️ 点下面直接下载 ⬇️
+
+<h2>
+
+[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)
+
+[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-WindowsRework-0.9.28.zip)
+
+</h2>
+
+**打包版自带 Python 与 Qt，不需要装任何东西** —— 下载、双击、开玩。
+
+---
+
 </div>
+
+## 📖 下载之前，请先看一眼这个
+
+**不看就玩，大概率会卡在这几个地方：**
+
+| 你可能会遇到 | 原因 | 怎么解决 |
+|---|---|---|
+| macOS 打不开，说「无法验证开发者」 | 没买苹果签名 | [看这里](#macos-首次打开) |
+| Windows 弹「已保护你的电脑」 | 没买微软签名 | [看这里](#windows-首次打开) |
+| 联机按钮点不动 | 服务器每天只开 12 小时 | [看这里](#联机服务器开放时间) |
+| 没声音 | 音乐不附带（版权原因） | [看这里](#音乐--bgm) |
+| 不知道干嘛 | 这是卡牌 Roguelike | [看这里](#这是什么游戏) |
 
 <div align="center">
 
-# ⚠️ 此游戏全部由 AI 生成 ⚠️
-
-<h2>🤖 <span style="color:#D32F2F">本项目 100% 由 AI（DeepSeek-V4.1-Flash）生成</span> 🤖</h2>
-
-**代码、卡牌、数值、美术、文案、翻译、测试、打包脚本 —— 一行一行，全部来自 AI。**
-
-人类只做了三件事：**提需求、点运行、报 Bug。**
+**[📦 全部版本 / 更新日志（Releases 页面）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases)**
 
 </div>
 
 ---
-
-> ## 🔴 请注意
-> - **readme也是AI写的 除了这句话 有问题还是那句话：wiki
-> - **这是 AI 作品。** 它没有经过专业团队打磨，平衡性、代码质量、文案水准都可能有明显问题。
-> - **很可能存在尚未发现的 Bug。** 遇到问题欢迎到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交。
-> - **素材版权**：美术全部由**代码程序化生成**（没有一张图片文件），音乐**不附带**（避免版权问题，请自行添加）。
-> - **没有苹果签名**，macOS 首次打开会被拦一次，[点这里看怎么放行](#macos-首次运行通过审核隐私与安全性)。
-> - **不接受"AI 做的东西也配叫游戏"这类争论** —— 这本来就是个实验：看看现在 AI 能独立做出什么。
-
----
-
-# 钢铁战线 Steel Frontline
-
-**当前版本：v0.9.31 测试版** · *Current version: 0.9.29 Beta*
-
-> **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
-> *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
-
-## 📥 下载 / Download
-
-**[⬇️ 点此直接下载 · 钢铁战线 v0.9.31 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**
-
-打包版自带 Python 与 Qt，**不需要安装任何东西** —— 下载、双击、开玩。
-
-### 怎么下载
-
-| 平台 | 直接下载 |
-|---|---|
-| **macOS** | **[⬇️ SteelFrontline-Public-v0.9.29-beta.dmg](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**（38 MB）|
-| **Windows** | **[⬇️ SteelFrontline-WindowsRework-0.9.28.zip](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-WindowsRework-0.9.28.zip)**（52 MB）|
-| **全部版本** | [Releases 页面](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/latest) |
 
 ### 联机服务器开放时间
 
@@ -116,6 +97,29 @@
 > | 经典版 | 零依赖（自带 Tkinter） | Tkinter 手绘 | 双击 `启动游戏.command` |
 >
 > 两个版本共享同一套 `core/` 引擎与同一份存档。
+
+---
+
+
+# ⚠️ 此游戏全部由 AI 生成 ⚠️
+
+<h2>🤖 <span style="color:#D32F2F">本项目 100% 由 AI（DeepSeek-V4.1-Flash）生成</span> 🤖</h2>
+
+**代码、卡牌、数值、美术、文案、翻译、测试、打包脚本 —— 一行一行，全部来自 AI。**
+
+人类只做了三件事：**提需求、点运行、报 Bug。**
+
+</div>
+
+---
+
+> ## 🔴 请注意
+> - **readme也是AI写的 除了这句话 有问题还是那句话：wiki
+> - **这是 AI 作品。** 它没有经过专业团队打磨，平衡性、代码质量、文案水准都可能有明显问题。
+> - **很可能存在尚未发现的 Bug。** 遇到问题欢迎到 [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki) 提交。
+> - **素材版权**：美术全部由**代码程序化生成**（没有一张图片文件），音乐**不附带**（避免版权问题，请自行添加）。
+> - **没有苹果签名**，macOS 首次打开会被拦一次，[点这里看怎么放行](#macos-首次运行通过审核隐私与安全性)。
+> - **不接受"AI 做的东西也配叫游戏"这类争论** —— 这本来就是个实验：看看现在 AI 能独立做出什么。
 
 ---
 
