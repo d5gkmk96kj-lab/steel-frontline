@@ -24,14 +24,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.28 测试版** · *Current version: 0.9.28 Beta*
+**当前版本：v0.9.29 测试版** · *Current version: 0.9.29 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 点此直接下载 · 钢铁战线 v0.9.28 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.28/SteelFrontline-Public-v0.9.28-beta.dmg)**
+**[⬇️ 点此直接下载 · 钢铁战线 v0.9.29 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西** —— 下载、双击、开玩。
 
@@ -39,7 +39,7 @@
 
 | 平台 | 直接下载 |
 |---|---|
-| **macOS** | **[⬇️ SteelFrontline-Public-v0.9.27-beta.dmg](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**（38 MB）|
+| **macOS** | **[⬇️ SteelFrontline-Public-v0.9.29-beta.dmg](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**（38 MB）|
 | **Windows** | **[⬇️ SteelFrontline-WindowsRework-0.9.28.zip](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-WindowsRework-0.9.28.zip)**（52 MB）|
 | **全部版本** | [Releases 页面](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/latest) |
 
@@ -64,7 +64,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.28 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.29 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -73,8 +73,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.28 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.28 测试版 · 完整版 | `钢铁战线-v0.9.28 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.29 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.29 测试版 · 完整版 | `钢铁战线-v0.9.29 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
@@ -731,11 +731,11 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 `钢铁战线` 用这样的版本号：
 
 ```
-0.9  →  0.9.28  →  0.9.28  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.29  →  0.9.29  →  ...  →  0.9.29  →  0.10  →  1.0
 ```
 
 - **每次推送 +0.01**（小更新）
-- 补零编号 `0.9.01 < 0.9.28 < ...`，到 `0.9.99` 自动进位成 `0.10`
+- 补零编号 `0.9.29 < 0.9.29 < ...`，到 `0.9.29` 自动进位成 `0.10`
 - **要上大版本就手动跳**，比如直接 `1.0` 或 `1.0.0.0`
 - 发版脚本：
 
@@ -881,7 +881,7 @@ The human did exactly three things: **asked for it, ran it, reported bugs.**
 > - **Arguments of the form "AI-made things are not real games" are not welcome
 >   here.** This is an experiment: let us see what AI can build on its own today.
 
-**Current version: 0.9.28 Beta**
+**Current version: 0.9.29 Beta**
 
 > Bilingual document. Chinese is above; English starts here.
 > [Back to top / 回到顶部](#钢铁战线-steel-frontline)
@@ -1477,11 +1477,11 @@ file cannot pollute your save list.
 ## Versioning
 
 ```
-0.9  →  0.9.28  →  0.9.28  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.29  →  0.9.29  →  ...  →  0.9.29  →  0.10  →  1.0
 ```
 
 - **Every push bumps +0.01**
-- Zero-padded numbers sort correctly (`0.9.01 < 0.9.28`), and `0.9.99`
+- Zero-padded numbers sort correctly (`0.9.29 < 0.9.29`), and `0.9.29`
   carries over to `0.10`
 - **Major versions are manual** — jump straight to `1.0` or `1.0.0.0`
 - Release script:
@@ -1584,7 +1584,7 @@ Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies 
 
 **I found a bug — where do I report it?**
 Please file it on the [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki).
-Include the version string (shown under the main menu title, e.g. `0.9.28 Beta`),
+Include the version string (shown under the main menu title, e.g. `0.9.29 Beta`),
 the exact steps to reproduce, and a screenshot if you have one. If the game
 crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
 
