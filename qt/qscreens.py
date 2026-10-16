@@ -268,6 +268,7 @@ class MenuScreen(QWidget):
     open_settings = pyqtSignal()
     open_stats = pyqtSignal()
     open_saves = pyqtSignal()
+    open_profile = pyqtSignal()
     open_versus = pyqtSignal()          # 联机对战（局域网 1v1）
     open_ai_versus = pyqtSignal(str)    # 人机 1v1（难度：easy/normal/hard）
 
@@ -375,6 +376,7 @@ class MenuScreen(QWidget):
                    ("成就", self.open_achievements.emit, "Ghost"),
                    ("战绩档案", self.open_stats.emit, "Ghost"),
                    ("存档管理", self.open_saves.emit, "Ghost"),
+                   ("我的资料", self.open_profile.emit, "Ghost"),
                    ("设置", self.open_settings.emit, "Ghost"))
         for i, (text, sig, obj) in enumerate(entries):
             b = QPushButton(text, left)

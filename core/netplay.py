@@ -29,6 +29,8 @@
     C -> H   play    {"t":"play","idx":2,"target":0}        只是意图
     C -> H   end     {"t":"end"}
     H <-> C  ping    {"t":"ping","ts":...} / pong {"t":"pong","ts":...}
+    both     chat    {"t":"chat","text":"..."}               对局内聊天
+    both     profile {"t":"profile","name":"...","title":"...","display":"..."}
     both     error   {"t":"error","msg":"..."}
     both     bye     {"t":"bye","reason":"对方已断开"}
 
@@ -481,6 +483,7 @@ def _check_peer_integrity(msg: dict, strict: bool = True):
 
 
 CLIENT_ALLOWED_TYPES = ("hello", "ready", "deck", "play", "end",
+                        "chat", "profile",
                         "ping", "pong", "bye", "error")
 # 其中真正携带"操作"、需要逐字段校验的：
 INTENT_TYPES = ("play", "end")
@@ -806,6 +809,88 @@ class _Conn:
         self._finished.set()
 
     # -- 完整性违规：记录 + 伪装超时 --------------------------------
+    # -- 聊天 / 档案 --------------------------------------------------
+    #: 单条聊天最大长度（防刷屏 / 防塞大段文本）
+    CHAT_MAX_LEN = 120
+    #: 每局最多发多少条（防轰炸）
+    CHAT_MAX_TOTAL = 60
+
+    def _on_peer_chat(self, msg: dict) -> None:
+        """收到对方的聊天。做长度/频率限制后抛给 UI。"""
+        try:
+            text = str(msg.get("text") or "").strip()
+        except Exception:
+            return
+        if not text:
+            return
+        if len(text) > self.CHAT_MAX_LEN:
+            text = text[:self.CHAT_MAX_LEN]
+        # 去掉控制字符（防终端转义 / 换行注入）
+        text = "".join(ch for ch in text if ord(ch) >= 32 or ch == " ")
+        try:
+            n = int(getattr(self, "_chat_count", 0))
+        except Exception:
+            n = 0
+        if n >= self.CHAT_MAX_TOTAL:
+            return
+        self._chat_count = n + 1
+        try:
+            self._emit({"type": "chat", "text": text,
+                        "name": self._peer_name or "对手",
+                        "title": getattr(self, "_peer_title", ""),
+                        "from": "peer"})
+        except Exception:
+            pass
+
+    def _on_peer_profile(self, msg: dict) -> None:
+        """收到对方的名字 / 头衔。"""
+        try:
+            name = _sanitize_name(msg.get("name"), "")
+            title = str(msg.get("title") or "")[:16]
+            disp = str(msg.get("display") or "")[:32]
+        except Exception:
+            return
+        if name:
+            self._peer_name = name
+        self._peer_title = title
+        try:
+            self._emit({"type": "profile", "name": self._peer_name,
+                        "title": title, "display": disp or self._peer_name})
+        except Exception:
+            pass
+
+    def send_chat(self, text: str) -> bool:
+        """发一条聊天给对方。"""
+        text = str(text or "").strip()[:self.CHAT_MAX_LEN]
+        if not text:
+            return False
+        text = "".join(ch for ch in text if ord(ch) >= 32 or ch == " ")
+        try:
+            n = int(getattr(self, "_chat_count", 0))
+        except Exception:
+            n = 0
+        if n >= self.CHAT_MAX_TOTAL:
+            return False
+        self._chat_count = n + 1
+        try:
+            self._send({"t": "chat", "text": text})
+            self._emit({"type": "chat", "text": text, "from": "me",
+                        "name": self.name})
+            return True
+        except Exception:
+            return False
+
+    def send_profile(self, name: str, title: str = "",
+                     display: str = "") -> bool:
+        """把自己的名字/头衔告诉对方。"""
+        try:
+            self._send({"t": "profile", "name": str(name or "")[:16],
+                        "title": str(title or "")[:16],
+                        "display": str(display or "")[:32]})
+            return True
+        except Exception:
+            return False
+
     def _record_integrity_violation(self, msg: dict, why: str) -> None:
         """把一次「代码校验失败」记录下来。
 
@@ -1412,6 +1497,12 @@ class Host(_Conn):
                             "name": self.name, "side": 1})
                 self._emit({"type": "peer", "name": self._peer_name, "side": 1})
             return
+        if t == "chat":
+            self._on_peer_chat(msg)
+            return
+        if t == "profile":
+            self._on_peer_profile(msg)
+            return
         if t in ("ready", "deck"):
             self._on_peer_ready(msg)
             return
@@ -1884,6 +1975,13 @@ class Client(_Conn):
                         "text": str(msg.get("text") or CHEAT_SHAME_TEXT),
                         "label": str(msg.get("label") or CHEAT_LABEL),
                         "reason": str(msg.get("reason") or "")})
+            return
+        if t == "chat":
+            # 房主发来的聊天 —— 合法，交给上层显示
+            self._on_peer_chat(msg)
+            return
+        if t == "profile":
+            self._on_peer_profile(msg)
             return
         if t in ("ready", "deck"):
             self._emit({"type": "peer_ready", "name": self._peer_name})

@@ -44,7 +44,8 @@ from core import run as run_mod      # noqa: E402
 
 from . import qtheme as T            # noqa: E402
 from . import qbattle, qmap, qscreens  # noqa: E402
-from . import qdeckbuild, qfx, qlobby, qsave, qupdate, qversus  # noqa: E402
+from . import (qaccount, qchat, qdeckbuild, qfx, qlobby, qsave,  # noqa: E402
+               qupdate, qversus)
 from .qconsole import ConsoleOverlay  # noqa: E402
 
 
@@ -94,6 +95,14 @@ class GameWindow(QMainWindow):
         self.run = None               # RunState
         self.battle = None            # BattleState
         self.meta = run_mod.MetaProgress.load()
+        # ---- 账号（离线优先：先读本地，拿不到再引导注册）----
+        self.account = None
+        try:
+            from core import account as _A
+            self.account = _A.auto_login()
+        except Exception as exc:
+            print(f"[qt.app] 账号加载失败：{exc!r}", flush=True)
+
         self.cfg: Dict = dict(DEFAULT_CFG)
         self._ready = False
         self._load_cfg()
@@ -432,6 +441,7 @@ class GameWindow(QMainWindow):
         m.open_versus.connect(self.open_lobby)
         m.open_ai_versus.connect(self.open_ai_versus)
         m.open_saves.connect(self.open_saves)
+        m.open_profile.connect(self.open_profile)
 
         # --- 联机 1v1 链路 ---
         lb = self.screens["lobby"]
@@ -692,6 +702,75 @@ class GameWindow(QMainWindow):
         except Exception:
             pass
         self.show_screen("deckbuild")
+
+    # =================================================================
+    # 账号
+    # =================================================================
+    def current_display_name(self) -> str:
+        """当前玩家的显示名（名字 + 头衔）。"""
+        try:
+            if self.account is not None:
+                return self.account.display()
+        except Exception:
+            pass
+        return "指挥官"
+
+    def ensure_account(self) -> None:
+        """进游戏时确保有账号：没有就引导注册，有密码就登录。
+
+        全程**不需要联网** —— 单机随时能玩。
+        """
+        from core import account as _A
+        if _A.exists() and self.account is None:
+            # 存在但要密码 / 设备不符
+            dlg = qaccount.LoginDialog(self)
+            dlg.done_ok.connect(self._on_account_ready)
+            dlg.exec()
+            return
+        if self.account is not None:
+            return                      # 自动登录成功
+        if _A.exists():
+            return
+        dlg = qaccount.RegisterDialog(self)
+        dlg.done_ok.connect(self._on_account_ready)
+        if dlg.exec():
+            code = getattr(dlg, "recovery_code", "")
+            if code:
+                qaccount.RecoveryDialog(code, self).exec()
+
+    def _on_account_ready(self, acc) -> None:
+        self.account = acc
+        print("[qt.app] 账号：%s" % (acc.display() if acc else "?"), flush=True)
+
+    def open_profile(self) -> None:
+        """打开「我的资料」。"""
+        if self.account is None:
+            self.ensure_account()
+        dlg = qaccount.ProfileDialog(self)
+        dlg.exec()
+        try:
+            from core import account as _A
+            self.account = _A.load()
+        except Exception:
+            pass
+
+    # =================================================================
+    # 聊天
+    # =================================================================
+    def _on_chat_received(self, entry: dict) -> None:
+        """收到一条聊天 -> 显示在聊天框里。"""
+        try:
+            vs = self.screens.get("versus")
+            chat = getattr(vs, "chat", None) if vs is not None else None
+            if chat is None:
+                return
+            chat.add(entry.get("name") or "对手",
+                     entry.get("text") or "",
+                     mine=(entry.get("from") == "me"))
+            if not chat.isVisible():
+                chat.show_panel()
+        except Exception:
+            pass
 
     def on_peer_reported(self) -> None:
         """玩家举报了对手 -> 打开严检模式。

@@ -1,22 +1,26 @@
 {
-  "version": "0.9.25",
-  "label": "0.9.25 测试版",
-  "label_en": "0.9.25 Beta",
+  "version": "0.9.26",
+  "label": "0.9.26 测试版",
+  "label_en": "0.9.26 Beta",
   "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：代码完整性校验（构建哈希 + 运行时自检 + 设备指纹）",
-    "新增：联机时校验双方代码哈希，不匹配则伪装成网络超时",
-    "新增：控制台 integrity/reports/clearlog 命令（显示违规 IP + 设备号）",
-    "新增：游戏内举报按钮，举报后对对手启用严检模式",
-    "新增：管理台客户端完整性违规面板（双击可直接封 IP）"
+    "新增：账号系统（设备锁定 + 恢复码 + 离线优先）",
+    "新增：注册/登录界面，首启引导取名",
+    "新增：头衔系统（作者大帝绑设备 / 测试玩家 / 老玩家）",
+    "新增：对局内聊天框（可互发消息）",
+    "新增：多人时对方可见你的名字与头衔",
+    "新增：战绩系统（战役 / 联机计入，AI 1v1 不计入）",
+    "新增：服务器账号哈希上报接口（上线后自动同步）"
   ],
   "notes_en": [
-    "New: code integrity verification (build hash + runtime self-check + device fingerprint)",
-    "New: online play verifies both sides' code hash; mismatches are disguised as a network timeout",
-    "New: console commands integrity / reports / clearlog (shows offending IP + device id)",
-    "New: in-game report button; reporting enables strict mode against that opponent",
-    "New: admin console panel for client integrity violations (double-click to ban the IP)"
+    "New: account system (device-locked + recovery code + offline-first)",
+    "New: register/login screens; first launch asks for a name",
+    "New: title system (Sovereign Author is device-bound / Playtester / Veteran)",
+    "New: in-match chat box",
+    "New: opponents can see your name and title",
+    "New: match record (campaign and online count; AI 1v1 does not)",
+    "New: server-side account hash endpoint (syncs once the server is live)"
   ]
 }

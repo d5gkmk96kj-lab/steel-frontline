@@ -49,6 +49,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy, QVBoxLayout, QWidget,
 )
 
+from . import qchat  # noqa: E402
 from . import qtheme as T
 from core import netplay as _np
 from . import qwidgets as W
@@ -984,6 +985,21 @@ class VersusScreen(QWidget):
         rv.addWidget(self.btn_leave)
 
         # 举报按钮：放在离开旁边，对局中随时可点
+        # 聊天面板（浮在右下角，默认收起）
+        try:
+            self.chat = qchat.ChatPanel(self)
+            self.chat.send_requested.connect(self._on_chat_send)
+            self.chat.hide()
+        except Exception as exc:
+            print(f"[qversus] 聊天面板创建失败：{exc!r}", flush=True)
+            self.chat = None
+
+        self.btn_chat = QPushButton("💬 聊天", right)
+        self.btn_chat.setObjectName("Ghost")
+        self.btn_chat.setFixedWidth(96)
+        self.btn_chat.clicked.connect(self._toggle_chat)
+        rv.addWidget(self.btn_chat)
+
         self.btn_report = QPushButton("举 报 对 手", right)
         self.btn_report.setObjectName("Ghost")
         self.btn_report.setFixedWidth(126)
@@ -1722,7 +1738,14 @@ class VersusScreen(QWidget):
                     break
                 if not isinstance(ev, dict):
                     continue
-                if ev.get("type") in ("integrity", "security", "timeout"):
+                et = ev.get("type")
+                if et == "chat":
+                    self._on_chat_event(ev)
+                    continue
+                if et == "profile":
+                    self._on_profile_event(ev)
+                    continue
+                if et in ("integrity", "security", "timeout"):
                     info = {
                         "device": ev.get("peer_device", ""),
                         "hash": ev.get("peer_hash", ""),
@@ -1734,6 +1757,68 @@ class VersusScreen(QWidget):
                         self.integrity_event.emit(ev)
                     except Exception:
                         pass
+        except Exception:
+            pass
+
+    def _send_my_profile(self) -> None:
+        """把自己的名字 + 头衔告诉对方（联机时）。"""
+        net = getattr(self, "net", None)
+        if net is None or not hasattr(net, "send_profile"):
+            return
+        try:
+            from core import account as _A
+            acc = _A.load()
+            if acc is None:
+                return
+            net.send_profile(acc.name, acc.title, acc.display())
+        except Exception:
+            pass
+
+    def _toggle_chat(self) -> None:
+        if getattr(self, "chat", None) is None:
+            return
+        self.chat.toggle()
+
+    def _on_chat_send(self, text: str) -> None:
+        """把聊天发出去（联机时走 netplay）。"""
+        net = getattr(self, "net", None)
+        if net is None or not hasattr(net, "send_chat"):
+            if getattr(self, "chat", None) is not None:
+                self.chat.system("当前不是联机对局，无法发送。")
+            return
+        try:
+            if net.send_chat(text):
+                if getattr(self, "chat", None) is not None:
+                    self.chat.add("我", text, mine=True)
+            else:
+                if getattr(self, "chat", None) is not None:
+                    self.chat.system("发送失败（可能已达条数上限）。")
+        except Exception as exc:
+            if getattr(self, "chat", None) is not None:
+                self.chat.system("发送出错：%r" % (exc,))
+
+    def _on_chat_event(self, entry: dict) -> None:
+        """收到对方的聊天。"""
+        if getattr(self, "chat", None) is None:
+            return
+        self.chat.add(entry.get("name") or "对手",
+                      entry.get("text") or "", mine=False)
+
+    def _on_profile_event(self, entry: dict) -> None:
+        """收到对方的档案（名字 / 头衔）。"""
+        try:
+            disp = entry.get("display") or entry.get("name") or ""
+            if disp:
+                self._names = list(getattr(self, "_names", ["我方", "对手"]))
+                # 对手恒为 side 1
+                if len(self._names) > 1:
+                    self._names[1] = disp
+                self._peer_display = disp
+                # 刷新标题栏
+                try:
+                    self.tb.set_subtitle("对手：%s" % disp)
+                except Exception:
+                    pass
         except Exception:
             pass
 

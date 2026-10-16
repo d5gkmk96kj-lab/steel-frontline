@@ -412,3 +412,60 @@ def join_via_relay(room_code: str, host: str = "", port: int = 0):
         pass
     c._send(_hello)
     return c, rs
+
+
+def sync_account(host: str = "", port: int = 0,
+                 timeout: float = 8.0) -> tuple:
+    """把本机账号哈希上报给服务器（注册时调用一次）。
+
+    **离线优先**：连不上就直接返回失败，调用方忽略即可 —— 
+    绝不能因为同步失败就挡住玩家进游戏。
+
+    返回 (是否成功, 说明)。
+    """
+    import json as _j
+    import socket as _s
+    try:
+        from core import account as _A
+    except Exception:
+        return False, "账号模块不可用"
+
+    payload = _A.sync_payload()
+    if not payload:
+        return False, "本机还没有账号"
+
+    h = host or DEFAULT_RELAY_HOST
+    p = int(port or DEFAULT_RELAY_PORT)
+    if not h:
+        return False, "还没有配置服务器"
+
+    try:
+        sock = _s.create_connection((h, p), timeout=timeout)
+    except Exception as exc:
+        return False, "连不上服务器：%r" % (exc,)
+    try:
+        sock.settimeout(timeout)
+        line = _j.dumps({"t": "account", "data": payload},
+                        ensure_ascii=False) + "\n"
+        sock.sendall(line.encode("utf-8"))
+        raw = sock.recv(4096).decode("utf-8", "replace").strip()
+        if not raw:
+            return False, "服务器没有响应"
+        try:
+            msg = _j.loads(raw.split("\n")[0])
+        except Exception:
+            return False, "服务器返回无法解析"
+        if msg.get("t") == "account_ok":
+            try:
+                _A.mark_synced(True)
+            except Exception:
+                pass
+            return True, "已同步"
+        return False, str(msg.get("msg") or "服务器拒绝")
+    except Exception as exc:
+        return False, "同步出错：%r" % (exc,)
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
