@@ -3,6 +3,8 @@ build/
 dist/
 build_dist_public/
 build_dist_full/
+build_dist_admin/
+dist_admin/
 dist_public/
 dist_full/
 *.spec
@@ -42,3 +44,15 @@ Thumbs.db
 .idea/
 *.swp
 cheat_flavor.txt
+
+# ---- 私有：不上传 ----
+# 服务器防护实现、运维脚本、后台管理台，以及反作弊测试。
+# 这些是"防御细节"—— 公开等于把图交给攻击者。
+# 文件仍然在本地，部署服务器和管理后台照常使用。
+server/
+admin/
+tests/test_anticheat.py
+tests/test_relay_guard.py
+钢铁战线-私有备份/
+tests/test_admin.py
+packaging/build_admin.sh

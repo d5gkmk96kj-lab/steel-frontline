@@ -21,12 +21,26 @@ echo "=== 组装 DMG ==="
 rm -rf "$STAGE"; mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 
+# 后台管理台（如果打包过就一起放进去）
+ADMIN_APP="$ROOT/dist_admin/钢铁战线管理台.app"
+if [ -d "$ADMIN_APP" ]; then
+  cp -R "$ADMIN_APP" "$STAGE/"
+  echo "  ✅ 已加入后台管理台"
+else
+  echo "  （没有后台管理台，跳过。要一起打包先跑 build_admin.sh）"
+fi
+
 # 关键：在 /tmp 里重新签名。
 # 项目目录在 ~/Documents 下，文件同步服务会不断给 .app 加回
 # com.apple.FinderInfo，导致 codesign 失败；挪到 /tmp 就没这个问题。
 echo "=== 签名 ==="
 python3 "$ROOT/packaging/_sign_app.py" "$STAGE/$NAME.app" || \
   echo "  ⚠️ 签名未通过（不影响功能，但用户放行会更麻烦）"
+
+if [ -d "$STAGE/钢铁战线管理台.app" ]; then
+  python3 "$ROOT/packaging/_sign_app.py" "$STAGE/钢铁战线管理台.app" || \
+    echo "  ⚠️ 管理台签名未通过"
+fi
 
 # 音乐与存档放包外，用户可见可改
 mkdir -p "$STAGE/music" "$STAGE/data"

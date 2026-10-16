@@ -1,20 +1,24 @@
 {
-  "version": "0.9.23",
-  "label": "0.9.23 测试版",
-  "label_en": "0.9.23 Beta",
-  "released": "2026-10-15",
+  "version": "0.9.24",
+  "label": "0.9.24 测试版",
+  "label_en": "0.9.24 Beta",
+  "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：中继服务器七层防护（输入校验/心跳超时/单IP限连/房间上限/频率限制/异常日志/一键关服）",
-    "新增：server/ban.sh 封 IP 工具（报告/封禁/解封/排行）",
-    "新增：server/SECURITY.md 防护文档（双语，含调参与应急）",
-    "新增：tests/test_relay_guard.py 真实打服务器的防护测试（16 项）"
+    "新增：后台管理台（Mac 桌面程序，SSH 管理服务器 + 管理游戏本体）",
+    "新增：服务器面板（实时指标/服务控制/紧急关服）",
+    "新增：封 IP 界面（攻击排行、双击解封）",
+    "新增：实时日志跟随、图形化配置调参",
+    "新增：游戏本体管理（存档/成就/战绩/备份）",
+    "新增：relay.py --status / --check（给管理台读的机器可读输出）"
   ],
   "notes_en": [
-    "New: seven-layer relay server hardening (input validation / heartbeat timeout / per-IP connection cap / room cap / rate limit / abuse logging / kill switch)",
-    "New: server/ban.sh IP banning tool (report / ban / unban / top talkers)",
-    "New: server/SECURITY.md hardening guide (bilingual, with tuning and incident response)",
-    "New: tests/test_relay_guard.py attacks a real server over sockets (16 checks)"
+    "New: admin console (Mac desktop app; manages the server over SSH and the game itself)",
+    "New: server panel (live metrics / service control / emergency shutdown)",
+    "New: IP banning UI (attacker ranking, double-click to unban)",
+    "New: live log tailing and graphical config tuning",
+    "New: game management (saves / achievements / stats / backup)",
+    "New: relay.py --status and --check for machine-readable output"
   ]
 }

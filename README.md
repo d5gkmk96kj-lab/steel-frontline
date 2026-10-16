@@ -24,14 +24,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.23 测试版** · *Current version: 0.9.23 Beta*
+**当前版本：v0.9.24 测试版** · *Current version: 0.9.24 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 钢铁战线 v0.9.23 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.23-beta.dmg)**
+**[⬇️ 钢铁战线 v0.9.24 测试版 · 公开版（38 MB，即下即玩）](releases/SteelFrontline-Public-v0.9.24-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西**。
 安装方法见 [下载说明](releases/README.md)。
@@ -44,7 +44,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.23 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.24 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -53,8 +53,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.23 测试版 · 公开版** | `SteelFrontline-Public-v0.9.23-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.23 测试版 · 完整版 | `钢铁战线-v0.9.23 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.24 测试版 · 公开版** | `SteelFrontline-Public-v0.9.24-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.24 测试版 · 完整版 | `钢铁战线-v0.9.24 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
@@ -369,7 +369,7 @@ macOS 用户也可以直接双击 **`启动游戏.command`**。
 
 ### 作弊被抓会怎样（彩蛋）
 
-系统会实时检测作弊发包行为。一旦命中：
+联机对局中，异常发包会被系统拦截，并当场标记：
 
 1. **作弊者的屏幕上弹出一行巨大的红字**：
 
@@ -379,29 +379,11 @@ macOS 用户也可以直接双击 **`启动游戏.command`**。
 
    > ## 作弊者
 
-对手会在战报里同时看到检测原因（例如「对手试图作弊（伪造房主专属消息），已拒绝并标记」）。
+对手会在战报里同时看到这次拦截的记录。
 
-> **说明**：完整版（自用）保留了一句更直白的措辞；公开版与仓库版本
-> 使用上面这套文明文案。两者逻辑完全相同，只是提示语不同。
-
-### 会被判定为作弊的行为
-
-| 行为 | 说明 |
-|---|---|
-| 伪造 `state` / `snapshot` / `start` / `over` | 冒充房主广播，试图改血量或直接判胜 |
-| 冒充作弊指令（`cheat` / `redeem` / `god_mode` / `hp` / `win`…） | 客户端根本没有这些接口，只能是手搓的包 |
-| 出牌序号越界（`999` / `-1` / 字符串 / `true`） | 正常 UI 只会点手上存在的牌 |
-| 发送协议外的消息类型 | 正常客户端不会发明协议 |
-
-### **不会**被判定为作弊的行为
-
-这些是操作失误，只走普通拒绝，不会挂标签：
-
-- 不是自己的回合出牌
-- 补给不够出牌
-- 出牌目标字段格式不对
-
-> 也就是说：**手滑不会被冤枉，只有蓄意发包才会被标记。**
+> **说明**：具体判定规则不公开 —— 说清楚了就等于告诉别人怎么绕。
+> 正常操作（手滑、点错、网络抖动）不会被误伤，只有蓄意伪造协议才会被标记。
+> 完整版（自用）保留了一句更直白的措辞；公开版使用上面这套文明文案。
 
 ---
 
@@ -687,7 +669,7 @@ F1 控制台输入 `music` 可以查看当前后端、正在播的曲子和识�
 
 > **看不到「仍要打开」按钮？**
 >
-> 那说明你下载的是**旧版本**（v0.9.23 之前的包签名是坏的）。
+> 那说明你下载的是**旧版本**（v0.9.24 之前的包签名是坏的）。
 > 旧包的签名有缺陷，macOS 无法识别它，所以**不提供放行按钮** ——
 > 这种情况只能用下面的命令行方法。
 >
@@ -834,11 +816,11 @@ xattr -dr com.apple.quarantine /Applications/钢铁战线.app
 `钢铁战线` 用这样的版本号：
 
 ```
-0.9  →  0.9.23  →  0.9.23  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.24  →  0.9.24  →  ...  →  0.9.99  →  0.10  →  1.0
 ```
 
 - **每次推送 +0.01**（小更新）
-- 补零编号 `0.9.01 < 0.9.23 < ...`，到 `0.9.99` 自动进位成 `0.10`
+- 补零编号 `0.9.01 < 0.9.24 < ...`，到 `0.9.99` 自动进位成 `0.10`
 - **要上大版本就手动跳**，比如直接 `1.0` 或 `1.0.0.0`
 - 发版脚本：
 
@@ -859,9 +841,6 @@ python3 packaging/bump_version.py --set 1.0.0.0 "正式版发布"
 
 ```
 whale-card-battle/
-├── server/           relay server for online play
-│   ├── relay.py      the relay itself (stdlib only)
-│   └── deploy.sh     one-command VPS deploy
 ├── main.py              # 启动器
 ├── 启动游戏.command      # macOS 双击启动
 ├── ARCHITECTURE.md      # 架构契约（冻结接口 / 附录 A / 附录 B）
@@ -987,7 +966,7 @@ The human did exactly three things: **asked for it, ran it, reported bugs.**
 > - **Arguments of the form "AI-made things are not real games" are not welcome
 >   here.** This is an experiment: let us see what AI can build on its own today.
 
-**Current version: 0.9.23 Beta**
+**Current version: 0.9.24 Beta**
 
 > Bilingual document. Chinese is above; English starts here.
 > [Back to top / 回到顶部](#钢铁战线-steel-frontline)
@@ -1682,11 +1661,11 @@ file cannot pollute your save list.
 ## Versioning
 
 ```
-0.9  →  0.9.23  →  0.9.23  →  ...  →  0.9.99  →  0.10  →  1.0
+0.9  →  0.9.24  →  0.9.24  →  ...  →  0.9.99  →  0.10  →  1.0
 ```
 
 - **Every push bumps +0.01**
-- Zero-padded numbers sort correctly (`0.9.01 < 0.9.23`), and `0.9.99`
+- Zero-padded numbers sort correctly (`0.9.01 < 0.9.24`), and `0.9.99`
   carries over to `0.10`
 - **Major versions are manual** — jump straight to `1.0` or `1.0.0.0`
 - Release script:
@@ -1789,7 +1768,7 @@ Yes — everything is plain Python. Card data lives in `core/cards.py`, enemies 
 
 **I found a bug — where do I report it?**
 Please file it on the [Wiki](https://github.com/d5gkmk96kj-lab/steel-frontline/wiki).
-Include the version string (shown under the main menu title, e.g. `0.9.23 Beta`),
+Include the version string (shown under the main menu title, e.g. `0.9.24 Beta`),
 the exact steps to reproduce, and a screenshot if you have one. If the game
 crashed, paste the contents of `~/Documents/钢铁战线/data/crash.log`.
 
