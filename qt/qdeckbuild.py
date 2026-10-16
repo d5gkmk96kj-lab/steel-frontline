@@ -33,12 +33,14 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from core import presets as PRESETS  # noqa: E402
 from PyQt6.QtCore import (
     QPointF, QRectF, Qt, QTimer, pyqtSignal,
 )
 from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPen
 from PyQt6.QtWidgets import (
-    QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QComboBox, QDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
+    QListWidget, QMessageBox, QPushButton, QSizePolicy,
     QVBoxLayout, QWidget,
 )
 
@@ -91,7 +93,7 @@ MAX_COPIES_EXEMPT = {"strike": 3, "defend": 3}
 def _deckbuild_mod():
     """尝试拿到 core.deckbuild；拿不到返回 None。"""
     try:
-        from core import deckbuild as DB      # type: ignore
+        from core import deckbuild as DB
         return DB
     except Exception:
         return None
@@ -507,6 +509,106 @@ class PickedList(QFrame):
 # =====================================================================
 
 
+class PresetDialog(QDialog):
+    """卡组预设：选一套套用 / 改名 / 删除 / 复制。"""
+
+    def __init__(self, parent=None, items=None):
+        super().__init__(parent)
+        self.setWindowTitle("我的卡组预设")
+        self.setMinimumSize(460, 420)
+        self.chosen = None
+
+        lay = QVBoxLayout(self)
+        lay.setSpacing(9)
+
+        tip = QLabel("选一套直接套用。双击也能套用。")
+        tip.setStyleSheet(f"color:{T.TEXT_DIM};font-size:{T.FONT_SMALL}px;")
+        lay.addWidget(tip)
+
+        self.lst = QListWidget(self)
+        self.lst.itemDoubleClicked.connect(lambda _it: self._use())
+        lay.addWidget(self.lst, 1)
+
+        row = QHBoxLayout()
+        for text, fn in (("套 用", self._use),
+                         ("改 名", self._rename),
+                         ("复 制", self._dup),
+                         ("删 除", self._del)):
+            b = QPushButton(text, self)
+            b.setObjectName("Primary" if text == "套 用" else "Ghost")
+            b.clicked.connect(fn)
+            row.addWidget(b)
+        row.addStretch(1)
+        b_close = QPushButton("关闭", self)
+        b_close.setObjectName("Ghost")
+        b_close.clicked.connect(self.reject)
+        row.addWidget(b_close)
+        lay.addLayout(row)
+
+        self._reload(items)
+
+    def _reload(self, items=None):
+        self.items = list(items if items is not None else PRESETS.load_all())
+        self.lst.clear()
+        for x in self.items:
+            n = len(x.get("cards") or [])
+            self.lst.addItem("%s    （%d 张）" % (x.get("name", "?"), n))
+        if not self.items:
+            self.lst.addItem("（还没有预设）")
+
+    def _current(self):
+        i = self.lst.currentRow()
+        if i < 0 or i >= len(self.items):
+            return None
+        return self.items[i]
+
+    def _use(self):
+        it = self._current()
+        if it is None:
+            return
+        self.chosen = it
+        self.accept()
+
+    def _rename(self):
+        from PyQt6.QtWidgets import QInputDialog, QMessageBox
+        it = self._current()
+        if it is None:
+            return
+        name, ok = QInputDialog.getText(self, "改名", "新名字：",
+                                        text=it.get("name", ""))
+        if not ok or not name.strip():
+            return
+        ok2, msg = PRESETS.rename(it["name"], name.strip())
+        if not ok2:
+            QMessageBox.warning(self, "失败", msg)
+            return
+        self._reload()
+
+    def _dup(self):
+        from PyQt6.QtWidgets import QMessageBox
+        it = self._current()
+        if it is None:
+            return
+        ok, msg = PRESETS.duplicate(it["name"])
+        if not ok:
+            QMessageBox.warning(self, "失败", msg)
+        self._reload()
+
+    def _del(self):
+        from PyQt6.QtWidgets import QMessageBox
+        it = self._current()
+        if it is None:
+            return
+        r = QMessageBox.question(
+            self, "删除预设",
+            "确认删除「%s」？" % it.get("name", ""),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if r != QMessageBox.StandardButton.Yes:
+            return
+        PRESETS.delete(it["name"])
+        self._reload()
+
+
 class DeckBuildScreen(QWidget):
     """卡组构筑界面。
 
@@ -587,6 +689,20 @@ class DeckBuildScreen(QWidget):
             f"color:{T.GOLD}; font-size:{T.FONT_H2}px; font-weight:800;"
             f"background:transparent;")
         bar.addWidget(self.lbl_selected)
+
+        self.btn_preset = QPushButton("我 的 预 设", self)
+        self.btn_preset.setObjectName("Ghost")
+        self.btn_preset.setToolTip(
+            "保存 / 读取你预设好的卡组。\n"
+            "以后开局直接选一套，不用重配。")
+        self.btn_preset.clicked.connect(self.open_presets)
+        bar.addWidget(self.btn_preset)
+
+        self.btn_save_preset = QPushButton("存 为 预 设", self)
+        self.btn_save_preset.setObjectName("Ghost")
+        self.btn_save_preset.setToolTip("把当前卡组存下来，下次一键选用")
+        self.btn_save_preset.clicked.connect(self.save_as_preset)
+        bar.addWidget(self.btn_save_preset)
 
         self.btn_random = QPushButton("随 机 一 套", self)
         self.btn_random.setObjectName("Ghost")
@@ -919,6 +1035,48 @@ class DeckBuildScreen(QWidget):
     def on_clear(self) -> None:
         self.picked = []
         self._refresh()
+
+    # =================================================================
+    # 卡组预设
+    # =================================================================
+    def save_as_preset(self) -> None:
+        """把当前卡组存成预设。"""
+        from PyQt6.QtWidgets import QInputDialog, QMessageBox
+        if not self.picked:
+            QMessageBox.information(self, "提示", "还没选卡呢。")
+            return
+        default = "卡组 %d" % (len(PRESETS.load_all()) + 1)
+        name, ok = QInputDialog.getText(self, "保存预设",
+                                        "给这套卡组起个名字：",
+                                        text=default)
+        if not ok or not name.strip():
+            return
+        ok2, msg = PRESETS.add(name.strip(), list(self.picked))
+        # 同名就问是否覆盖
+        if not ok2 and "同名" in msg:
+            r = QMessageBox.question(
+                self, "已存在",
+                "「%s」已经存在，要覆盖吗？" % name.strip(),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if r == QMessageBox.StandardButton.Yes:
+                ok2, msg = PRESETS.overwrite(name.strip(), list(self.picked))
+        QMessageBox.information(self, "结果", msg)
+
+    def open_presets(self) -> None:
+        """打开预设列表：选一套直接套用。"""
+        from PyQt6.QtWidgets import QMessageBox
+        items = PRESETS.load_all()
+        if not items:
+            QMessageBox.information(
+                self, "还没有预设",
+                "你还没有保存过卡组预设。\n\n"
+                "配好一套卡后，点「存为预设」就能存下来。")
+            return
+        dlg = PresetDialog(self, items)
+        dlg.exec()
+        if dlg.chosen is not None:
+            self.set_deck(list(dlg.chosen.get("cards") or []))
+            self._flash_hint("已套用预设「%s」" % dlg.chosen.get("name", ""))
 
     def on_random(self) -> None:
         try:

@@ -812,8 +812,26 @@ class GameWindow(QMainWindow):
         print("[qt.app] 完整性事件：%s" % entry.get("reason"), flush=True)
 
     def on_versus_over(self, result: str) -> None:
-        """对战结束：不自动退出，让玩家看到结算横幅。"""
+        """对战结束：**自动关掉房间连接**，不一直挂着。
+
+        用户反馈：打完之后房间一直挂着占着服务器。现在延迟几秒
+        （让玩家看到结算横幅）就自动断开 + 通知中继服务器释放房间。
+        """
         print(f"[qt.app] versus over: {result}", flush=True)
+        try:
+            vs = self.screens.get("versus")
+            if vs is None:
+                return
+            # 用 QTimer 延迟关闭，先让结算横幅显示出来
+            from PyQt6.QtCore import QTimer
+            def _close_room():
+                try:
+                    vs._close_room_after_match()
+                except Exception as exc:
+                    print(f"[qt.app] 关房间失败：{exc!r}", flush=True)
+            QTimer.singleShot(6000, _close_room)   # 6 秒后关
+        except Exception as exc:
+            print(f"[qt.app] 安排关房间失败：{exc!r}", flush=True)
 
     def on_versus_left(self, reason: str) -> None:
         self._cleanup_net()

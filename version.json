@@ -1,16 +1,28 @@
 {
-  "version": "0.9.29",
-  "label": "0.9.29 测试版",
-  "label_en": "0.9.29 Beta",
+  "version": "0.9.30",
+  "label": "0.9.30 测试版",
+  "label_en": "0.9.30 Beta",
   "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：Windows 版自动构建（GitHub Actions，push 即出包）",
-    "新增：README 直接下载链接（macOS + Windows）"
+    "修复：聊天面板定位错（右上角不显示）",
+    "修复：人机对局也显示聊天（没有真人可聊）",
+    "修复：选卡界面文字模糊（字号没跟着缩放）",
+    "修复：选中的卡没有明显高光",
+    "新增：对局结束自动关房间，不再一直挂着",
+    "新增：聊天防刷屏（冷却 + 重复抑制 + 折叠）",
+    "新增：卡组预设（存下来，开局一键套用）",
+    "新增：README 写服务器开放时间 12:00～24:00"
   ],
   "notes_en": [
-    "New: Windows builds are now automatic via GitHub Actions (a package is produced on every push)",
-    "New: direct download links in the README (macOS + Windows)"
+    "Fix: chat panel was positioned wrong (invisible in the corner)",
+    "Fix: vs-CPU matches showed a chat box (there is no human to chat with)",
+    "Fix: deck-building card text was blurry (fonts did not scale with the card)",
+    "Fix: selected cards had no visible highlight",
+    "New: the room closes automatically after a match instead of lingering",
+    "New: chat anti-spam (cooldown + duplicate suppression + collapsing)",
+    "New: deck presets (save a deck, apply it in one click next time)",
+    "New: README documents server hours 12:00-24:00"
   ]
 }

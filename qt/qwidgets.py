@@ -1642,11 +1642,31 @@ class CardView(QWidget):
             return
         # 悬停/选中/闪光：缓存打底 + 实时叠加高光
         p.drawPixmap(0, 0, self._card_pixmap())
-        if self._selected or self._lift > 0.004:
+        if self._selected:
+            # 选中高光：**金色粗描边 + 外发光**，一眼看得出选没选上。
+            # 用户反馈"选中的没有高光"，之前只画了一圈和稀有度同色的
+            # 细线（而且和稀有度边框撞色，根本看不出来）。
+            rect = QRectF(1.5, 1.5, self.width() - 3, self.height() - 3)
+            # 外发光（三层由粗到细）
+            for width, alpha in ((6.0, 55), (4.0, 95), (2.6, 190)):
+                p.setPen(QPen(T.a(T.GOLD, alpha), width))
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawPath(T.round_path(rect, T.CARD_RADIUS * k))
+            # 四角标记（更明确）
+            p.setPen(QPen(T.a(T.GOLD, 235), 2.0))
+            L = 12
+            for cx, cy, dx, dy in (
+                    (rect.left(), rect.top(), 1, 1),
+                    (rect.right(), rect.top(), -1, 1),
+                    (rect.left(), rect.bottom(), 1, -1),
+                    (rect.right(), rect.bottom(), -1, -1)):
+                p.drawLine(QPointF(cx, cy), QPointF(cx + L * dx, cy))
+                p.drawLine(QPointF(cx, cy), QPointF(cx, cy + L * dy))
+            return
+        if self._lift > 0.004:
             rect = QRectF(2, 2, self.width() - 4, self.height() - 4)
             rcol = T.rarity_color(c.get("rarity", "common"))
-            pen = QPen(T.a(rcol, int(120 + 110 * max(self._lift, 1.0 if self._selected else 0))),
-                       2.2 + 1.4 * self._lift)
+            pen = QPen(T.a(rcol, int(120 + 110 * self._lift)), 2.2 + 1.4 * self._lift)
             p.setPen(pen)
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawPath(T.round_path(rect, T.CARD_RADIUS * k))
@@ -1708,7 +1728,7 @@ class CardView(QWidget):
         name = str(c.get("name", ""))
         if c.get("upgraded"):
             name += "+"
-        nf = T.font(max(11, int(15 * k)), True)
+        nf = T.font(max(6, int(15 * k)), True)
         nmrect = QRectF(rect.left() + 8 * k, band.top() + 3 * k,
                         rect.width() - 16 * k, band.height() - 4 * k)
         T.text_c(p, nmrect.center().x(), nmrect.center().y(),
@@ -1736,7 +1756,7 @@ class CardView(QWidget):
                        rad, T.a(T.Q_BLACK, 170), 1.2)
         cost_txt = "X" if int(cost) < 0 else str(int(cost))
         T.text_c(p, cc.x(), cc.y() + 0.5, cost_txt,
-                 T.font(max(10, int(14 * k)), True),
+                 T.font(max(6, int(14 * k)), True),
                  T.Q_BLACK if cost_ok else T.Q_TEXT, shadow=False)
 
         # 插图区
@@ -1750,7 +1770,7 @@ class CardView(QWidget):
         dark_card = rar in ("rare",) or c.get("type") in ("attack", "power")
         txt_col = T.Q_TEXT if dark_card else T.qc("#2A2419")
         draw_text_block(p, body, T.tr(str(c.get("text", ""))),
-                        T.font(max(9, int(11.5 * k))), txt_col,
+                        T.font(max(5, int(11.5 * k))), txt_col,
                         align=Qt.AlignmentFlag.AlignHCenter,
                         max_lines=6, center_v=True)
 
@@ -1769,7 +1789,7 @@ class CardView(QWidget):
         if c.get("retain"):
             label += " · 保留"
         T.text_c(p, foot.center().x(), foot.center().y(), label,
-                 T.font(max(8, int(9.5 * k)), True), T.Q_TEXT)
+                 T.font(max(5, int(9.5 * k)), True), T.Q_TEXT)
 
         # 稀有度角标
         if rar in ("rare", "boss"):

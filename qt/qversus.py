@@ -994,10 +994,13 @@ class VersusScreen(QWidget):
             print(f"[qversus] 聊天面板创建失败：{exc!r}", flush=True)
             self.chat = None
 
+        # 聊天按钮：只在对**真人**时才显示。
+        # 人机对局没有对手可聊，显示出来只会让人困惑（用户反馈）。
         self.btn_chat = QPushButton("💬 聊天", right)
         self.btn_chat.setObjectName("Ghost")
         self.btn_chat.setFixedWidth(96)
         self.btn_chat.clicked.connect(self._toggle_chat)
+        self.btn_chat.hide()
         rv.addWidget(self.btn_chat)
 
         self.btn_report = QPushButton("举 报 对 手", right)
@@ -1094,6 +1097,8 @@ class VersusScreen(QWidget):
                 self.battle.start_battle()
             except Exception:
                 pass
+        # 人机对局不显示聊天 —— 没有真人可聊
+        self._set_chat_available(not bool(ai_difficulty))
         self._timer.start()
         self._sync(animate=False)
 
@@ -1108,6 +1113,7 @@ class VersusScreen(QWidget):
         self._names = list(names or (["房主", "加入者"] if my_side == 0
                                      else ["房主", "加入者"]))
         self._reset()
+        self._set_chat_available(True)      # 联机 -> 有真人对手
         self._timer.start()
         # 立刻拉一次快照，避免空白
         try:
@@ -1777,7 +1783,46 @@ class VersusScreen(QWidget):
     def _toggle_chat(self) -> None:
         if getattr(self, "chat", None) is None:
             return
-        self.chat.toggle()
+        c = self.chat
+        if c.isVisible():
+            c.hide_panel()
+        else:
+            self._place_chat()
+            c.show_panel()
+
+    def _set_chat_available(self, on: bool) -> None:
+        """开关聊天功能（人机对局关掉）。"""
+        try:
+            if on:
+                self.btn_chat.show()
+            else:
+                self.btn_chat.hide()
+                c = getattr(self, "chat", None)
+                if c is not None:
+                    c.hide_panel()
+        except Exception:
+            pass
+
+    def _place_chat(self) -> None:
+        """把聊天面板放到右下角。
+
+        修 bug：之前在 __init__ 里 setFixedWidth 后没定位，
+        面板尺寸还没算出来，move 到的是错误位置（看起来"不显示"）。
+        这里在每次显示前重新算一次。
+        """
+        c = getattr(self, "chat", None)
+        if c is None:
+            return
+        try:
+            c.adjustSize()
+            w = max(c.width(), 320)
+            h = max(c.height(), 240)
+            x = max(8, self.width() - w - 20)
+            y = max(8, self.height() - h - 20)
+            c.move(x, y)
+            c.raise_()
+        except Exception:
+            pass
 
     def _on_chat_send(self, text: str) -> None:
         """把聊天发出去（联机时走 netplay）。"""
@@ -1873,6 +1918,32 @@ class VersusScreen(QWidget):
             self.hint.setText("已提交举报，正在对这名对手加强检测…")
         except Exception:
             pass
+
+    def _close_room_after_match(self) -> None:
+        """对局结束后释放房间（不退出界面，只断连接）。
+
+        为什么要做：打完之后连接一直挂着，服务器那边房间也一直占着。
+        """
+        net = getattr(self, "net", None)
+        if net is None:
+            return
+        try:
+            # 通知服务器我要走了
+            if hasattr(net, "send_bye"):
+                net.send_bye("对局结束")
+            elif hasattr(net, "close"):
+                net.close()
+        except Exception:
+            pass
+        try:
+            self.net = None
+        except Exception:
+            pass
+        try:
+            self.hint.setText("对局已结束，房间已关闭。")
+        except Exception:
+            pass
+        print("[qversus] 房间已自动关闭", flush=True)
 
     def _leave(self, code: str) -> None:
         self._timer.stop()

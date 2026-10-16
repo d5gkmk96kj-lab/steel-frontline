@@ -24,14 +24,14 @@
 
 # 钢铁战线 Steel Frontline
 
-**当前版本：v0.9.29 测试版** · *Current version: 0.9.29 Beta*
+**当前版本：v0.9.30 测试版** · *Current version: 0.9.29 Beta*
 
 > **中文** | [English below ↓](#english) — 本文档中英对照，中文章节在上，英文在下。
 > *Bilingual document: Chinese sections first, English starts at [English ↓](#english).*
 
 ## 📥 下载 / Download
 
-**[⬇️ 点此直接下载 · 钢铁战线 v0.9.29 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**
+**[⬇️ 点此直接下载 · 钢铁战线 v0.9.30 测试版（38 MB，即下即玩）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**
 
 打包版自带 Python 与 Qt，**不需要安装任何东西** —— 下载、双击、开玩。
 
@@ -42,6 +42,13 @@
 | **macOS** | **[⬇️ SteelFrontline-Public-v0.9.29-beta.dmg](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)**（38 MB）|
 | **Windows** | **[⬇️ SteelFrontline-WindowsRework-0.9.28.zip](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-WindowsRework-0.9.28.zip)**（52 MB）|
 | **全部版本** | [Releases 页面](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/latest) |
+
+### 联机服务器开放时间
+
+> **每天 12:00 ～ 24:00** 开放（其余时间服务器关闭）。
+>
+> 服务器关闭时，「联机对战」按钮会置灰并提示。
+> 单机内容任何时间都能玩，不受影响。
 
 ### macOS 首次打开
 
@@ -64,7 +71,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v0.9.29 测试版` |
+> | **版本号** | 主菜单副标题，例如 `v0.9.30 测试版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -73,8 +80,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.29 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | 0.9.29 测试版 · 完整版 | `钢铁战线-v0.9.29 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **0.9.30 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | 0.9.30 测试版 · 完整版 | `钢铁战线-v0.9.30 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。

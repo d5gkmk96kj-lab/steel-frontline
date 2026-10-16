@@ -84,8 +84,57 @@ class ChatPanel(QWidget):
         text = self.edit.text().strip()
         if not text:
             return
+        ok, why = self._can_send()
+        if not ok:
+            self.system(why)
+            return
+        if self._is_duplicate(text):
+            self.system("刚发过一样的话")
+            return
+        import time as _t
+        self._last_send = _t.time()
+        # 连续相同的消息折叠（防刷屏）
+        n = self.log.count()
+        if n >= self.MAX_REPEAT:
+            last = [self.log.item(i).text() for i in range(n - self.MAX_REPEAT, n)]
+            if len(set(last)) == 1 and text in last[0]:
+                self.system("（消息已折叠）")
+                self.edit.clear()
+                return
         self.edit.clear()
         self.send_requested.emit(text)
+
+    #: 两条消息之间最短间隔（秒）—— 防连点刷屏
+    MIN_INTERVAL = 1.2
+    #: 完全相同的消息在这么多秒内不重复显示
+    DEDUP_WINDOW = 8.0
+    #: 连续消息最多显示多少条相同前缀（超过就折叠）
+    MAX_REPEAT = 3
+
+    def _can_send(self) -> tuple:
+        """冷却检查。返回 (能否发送, 提示)。"""
+        import time as _t
+        now = _t.time()
+        last = getattr(self, "_last_send", 0.0)
+        if now - last < self.MIN_INTERVAL:
+            left = self.MIN_INTERVAL - (now - last)
+            return False, "发太快了，等 %.1f 秒" % left
+        return True, ""
+
+    def _is_duplicate(self, text: str) -> bool:
+        """短时间内重复发同一句 -> 抑制。"""
+        import time as _t
+        now = _t.time()
+        rec = getattr(self, "_recent", None)
+        if rec is None:
+            self._recent = rec = {}
+        # 清理过期
+        for k in [k for k, t in rec.items() if now - t > self.DEDUP_WINDOW]:
+            rec.pop(k, None)
+        if text in rec:
+            return True
+        rec[text] = now
+        return False
 
     def add(self, name: str, text: str, mine: bool = False) -> None:
         """加一条消息。"""
