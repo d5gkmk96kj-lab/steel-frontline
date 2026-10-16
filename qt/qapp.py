@@ -444,6 +444,14 @@ class GameWindow(QMainWindow):
         db.closed.connect(self.on_deckbuild_closed)
 
         vs = self.screens["versus"]
+        # 完整性/安全事件 -> App 记录
+        try:
+            for sig in ("security_event", "integrity_event"):
+                sg = getattr(vs, sig, None)
+                if sg is not None and hasattr(sg, "connect"):
+                    sg.connect(self.on_integrity_event)
+        except Exception:
+            pass
         vs.battle_over.connect(self.on_versus_over)
         vs.left_match.connect(self.on_versus_left)
 
@@ -684,6 +692,45 @@ class GameWindow(QMainWindow):
         except Exception:
             pass
         self.show_screen("deckbuild")
+
+    def on_peer_reported(self) -> None:
+        """玩家举报了对手 -> 打开严检模式。
+
+        之后这名对手的每条消息都会走额外校验
+        （netplay 侧读 self.strict_watch）。
+        """
+        try:
+            vs = self.screens.get("versus")
+            if vs is not None:
+                vs.strict_watch = True
+        except Exception:
+            pass
+        print("[qt.app] 已开启严检模式（玩家举报）", flush=True)
+
+    def on_integrity_event(self, entry: dict) -> None:
+        """收到一条完整性违规（来自 netplay）。
+
+        记下来，控制台 reports 和管理台都能看到。
+        """
+        try:
+            from core import integrity as I
+            # 尽量补上 IP（局域网内由 netplay 提供）
+            I.record_violation(entry)
+        except Exception:
+            pass
+        try:
+            vs = self.screens.get("versus")
+            if vs is not None:
+                info = {
+                    "device": entry.get("peer_device", ""),
+                    "hash": entry.get("peer_hash", ""),
+                    "ip": entry.get("peer_ip", ""),
+                    "name": entry.get("peer_name", ""),
+                }
+                vs._last_peer_info = info
+        except Exception:
+            pass
+        print("[qt.app] 完整性事件：%s" % entry.get("reason"), flush=True)
 
     def on_versus_over(self, result: str) -> None:
         """对战结束：不自动退出，让玩家看到结算横幅。"""

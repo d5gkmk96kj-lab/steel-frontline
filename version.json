@@ -1,24 +1,22 @@
 {
-  "version": "0.9.24",
-  "label": "0.9.24 测试版",
-  "label_en": "0.9.24 Beta",
+  "version": "0.9.25",
+  "label": "0.9.25 测试版",
+  "label_en": "0.9.25 Beta",
   "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：后台管理台（Mac 桌面程序，SSH 管理服务器 + 管理游戏本体）",
-    "新增：服务器面板（实时指标/服务控制/紧急关服）",
-    "新增：封 IP 界面（攻击排行、双击解封）",
-    "新增：实时日志跟随、图形化配置调参",
-    "新增：游戏本体管理（存档/成就/战绩/备份）",
-    "新增：relay.py --status / --check（给管理台读的机器可读输出）"
+    "新增：代码完整性校验（构建哈希 + 运行时自检 + 设备指纹）",
+    "新增：联机时校验双方代码哈希，不匹配则伪装成网络超时",
+    "新增：控制台 integrity/reports/clearlog 命令（显示违规 IP + 设备号）",
+    "新增：游戏内举报按钮，举报后对对手启用严检模式",
+    "新增：管理台客户端完整性违规面板（双击可直接封 IP）"
   ],
   "notes_en": [
-    "New: admin console (Mac desktop app; manages the server over SSH and the game itself)",
-    "New: server panel (live metrics / service control / emergency shutdown)",
-    "New: IP banning UI (attacker ranking, double-click to unban)",
-    "New: live log tailing and graphical config tuning",
-    "New: game management (saves / achievements / stats / backup)",
-    "New: relay.py --status and --check for machine-readable output"
+    "New: code integrity verification (build hash + runtime self-check + device fingerprint)",
+    "New: online play verifies both sides' code hash; mismatches are disguised as a network timeout",
+    "New: console commands integrity / reports / clearlog (shows offending IP + device id)",
+    "New: in-game report button; reporting enables strict mode against that opponent",
+    "New: admin console panel for client integrity violations (double-click to ban the IP)"
   ]
 }

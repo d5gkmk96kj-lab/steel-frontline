@@ -397,6 +397,18 @@ def join_via_relay(room_code: str, host: str = "", port: int = 0):
         c._emit({"type": "connected", "host": rs.host, "port": rs.port})
     except Exception:
         pass
-    c._send({"t": "hello", "ver": _np.PROTOCOL_VERSION,
-             "name": c.name})
+    # 注意：走中继的 hello 也要带代码完整性信息，否则房主会
+    # 判成"对方未提供校验信息"并伪装超时（真踩过：
+    # 这里自己拼了一个 hello，漏了 hash/did/problems，
+    # 导致所有中继对局全部连不上）。
+    _hello = {"t": "hello", "ver": _np.PROTOCOL_VERSION, "name": c.name}
+    try:
+        _snap = _np._integrity_snapshot()
+        if _snap.get("hash"):
+            _hello["hash"] = _snap["hash"]
+            _hello["did"] = _snap.get("did", "")
+            _hello["problems"] = _snap.get("problems", [])
+    except Exception:
+        pass
+    c._send(_hello)
     return c, rs

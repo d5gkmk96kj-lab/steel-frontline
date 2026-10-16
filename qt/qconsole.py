@@ -260,6 +260,10 @@ class ConsoleOverlay(QWidget):
                 "music            显示 BGM 状态与曲库",
                 "music on/off     开关背景音乐",
                 "status           显示当前战役状态",
+                "integrity        代码完整性自检（哈希/设备号/异常）",
+                "reports          查看违规设备记录（IP + 设备号）",
+                "clearlog         清空违禁记录",
+                "report           举报当前对手（加强检测）",
             ):
                 self._say("  " + ln, "dim")
             self._say("也可直接输入兑换码（见 list）", "gold")
@@ -269,6 +273,79 @@ class ConsoleOverlay(QWidget):
             self._say("可用兑换码：", "gold")
             for d in CH.all_codes():
                 self._say("  %-14s %s" % (d.code, d.name), "dim")
+            return
+
+        # ---- 完整性 / 反作弊相关 ----------------------------------
+        if cmd in ("integrity", "hash", "verify"):
+            try:
+                from core import integrity as I
+                ok, rep = I.self_check()
+                self._say("代码完整性自检：%s" % ("通过" if ok else "异常"),
+                          "text" if ok else "bad")
+                self._say("  构建哈希：%s" % rep.get("short_hash", "?"), "dim")
+                self._say("  完整哈希：%s" % (rep.get("build_hash", "")[:32] or "?"),
+                          "dim")
+                self._say("  设备号：  %s" % rep.get("short_device", "?"), "dim")
+                self._say("  打包运行：%s" % rep.get("frozen"), "dim")
+                probs = rep.get("problems") or []
+                if probs:
+                    self._say("  ⚠ 检测到 %d 项异常：" % len(probs), "bad")
+                    for x in probs[:8]:
+                        self._say("     " + str(x), "bad")
+                else:
+                    self._say("  ✓ 未检测到调试器 / 注入 / 补丁", "dim")
+            except Exception as exc:
+                self._say("自检失败：%r" % (exc,), "bad")
+            return
+
+        if cmd in ("reports", "violations", "suspects"):
+            try:
+                from core import integrity as I
+                vs = I.violations(limit=40)
+                if not vs:
+                    self._say("暂无违规记录。", "dim")
+                    return
+                self._say("违规记录（最近 %d 条）：" % len(vs), "bad")
+                for v in vs[:20]:
+                    ts = v.get("ts") or 0
+                    try:
+                        import time as _t
+                        when = _t.strftime("%m-%d %H:%M", _t.localtime(ts))
+                    except Exception:
+                        when = "?"
+                    self._say("  [%s] 设备 %s  IP %s"
+                              % (when,
+                                 str(v.get("peer_device") or "?")[:16],
+                                 str(v.get("peer_ip") or "局域网/未知")[:15]),
+                              "bad")
+                    self._say("        原因：%s  哈希：%s"
+                              % (str(v.get("reason") or "?")[:24],
+                                 str(v.get("peer_hash") or "?")[:12]), "dim")
+                self._say("提示：clearlog 可清空记录", "dim")
+            except Exception as exc:
+                self._say("读取失败：%r" % (exc,), "bad")
+            return
+
+        if cmd in ("clearlog", "clearreports"):
+            try:
+                from core import integrity as I
+                I.clear_violations()
+                self._say("违规记录已清空。", "gold")
+            except Exception as exc:
+                self._say("清空失败：%r" % (exc,), "bad")
+            return
+
+        if cmd in ("report", "举报"):
+            try:
+                a = self._app()
+                fn = getattr(a, "report_peer", None)
+                if callable(fn):
+                    fn()
+                    self._say("已提交举报，正在加强检测…", "gold")
+                else:
+                    self._say("当前不在对局中，无法举报。", "dim")
+            except Exception as exc:
+                self._say("举报失败：%r" % (exc,), "bad")
             return
 
         if cmd == "clear":

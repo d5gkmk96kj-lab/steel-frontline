@@ -800,6 +800,8 @@ class VersusScreen(QWidget):
 
     battle_over = pyqtSignal(str)
     left_match = pyqtSignal(str)
+    #: 收到一条完整性/安全事件（字典）—— App 记录并回传管理台
+    integrity_event = pyqtSignal(dict)
 
     TICK_MS = 250          # 倒计时刷新间隔（不阻塞 UI）
 
@@ -981,6 +983,16 @@ class VersusScreen(QWidget):
         self.btn_leave.clicked.connect(lambda: self._leave("left"))
         rv.addWidget(self.btn_leave)
 
+        # 举报按钮：放在离开旁边，对局中随时可点
+        self.btn_report = QPushButton("举 报 对 手", right)
+        self.btn_report.setObjectName("Ghost")
+        self.btn_report.setFixedWidth(126)
+        self.btn_report.setToolTip(
+            "遇到疑似改代码 / 作弊的对手，点这里举报。\n"
+            "举报后会对他启用更严格的检测。")
+        self.btn_report.clicked.connect(self._do_report)
+        rv.addWidget(self.btn_report)
+
         # ---- 房主作弊开关（仅房主可见；客户端永远没有这个面板）----
         self.cheat_box = QWidget(right)
         cb = QVBoxLayout(self.cheat_box)
@@ -1126,6 +1138,7 @@ class VersusScreen(QWidget):
             except Exception as exc:
                 print(f"[qt.versus] event {ev.get('type')!r} failed: {exc!r}",
                       flush=True)
+        self._drain_security_events()
 
     def _on_net_event(self, ev: Dict) -> None:
         t = str((ev or {}).get("type", ""))
@@ -1689,6 +1702,92 @@ class VersusScreen(QWidget):
         else:
             self.hint.setText("现在不能结束回合。")
         return ok
+
+    def _drain_security_events(self) -> None:
+        """把 netplay 抛出的安全/完整性事件转成 Qt 信号。"""
+        net = getattr(self, "net", None)
+        if net is None:
+            return
+        try:
+            q = getattr(net, "_events", None)
+            if q is None:
+                return
+            import queue as _q
+            for _ in range(20):
+                try:
+                    ev = q.get_nowait()
+                except _q.Empty:
+                    break
+                except Exception:
+                    break
+                if not isinstance(ev, dict):
+                    continue
+                if ev.get("type") in ("integrity", "security", "timeout"):
+                    info = {
+                        "device": ev.get("peer_device", ""),
+                        "hash": ev.get("peer_hash", ""),
+                        "ip": ev.get("peer_ip", ""),
+                        "name": ev.get("peer_name", ""),
+                    }
+                    self._last_peer_info = info
+                    try:
+                        self.integrity_event.emit(ev)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    def _do_report(self) -> None:
+        """举报当前对手。
+
+        举报后：
+          1. 本地记一条举报（尽量带上对方设备号 / 哈希）
+          2. 通知 App 打开「严检模式」—— 之后对这名对手逐条额外校验
+        """
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            r = QMessageBox.question(
+                self, "举报对手",
+                "确定要举报这名对手吗？\n\n"
+                "举报后系统会对他启用更严格的检测。\n"
+                "恶意举报同样会被记录。",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if r != QMessageBox.StandardButton.Yes:
+                return
+        except Exception:
+            pass
+
+        try:
+            import time as _t
+            from core import integrity as I
+            info = getattr(self, "_last_peer_info", {}) or {}
+            I.record_violation({
+                "type": "report",
+                "reason": "玩家举报",
+                "peer_device": info.get("device", ""),
+                "peer_hash": info.get("hash", ""),
+                "peer_ip": info.get("ip", ""),
+                "peer_name": info.get("name", ""),
+                "ts": _t.time(),
+            })
+        except Exception:
+            pass
+
+        try:
+            self.strict_watch = True
+        except Exception:
+            pass
+        try:
+            app = self.window()
+            fn = getattr(app, "on_peer_reported", None)
+            if callable(fn):
+                fn()
+        except Exception:
+            pass
+        try:
+            self.hint.setText("已提交举报，正在对这名对手加强检测…")
+        except Exception:
+            pass
 
     def _leave(self, code: str) -> None:
         self._timer.stop()

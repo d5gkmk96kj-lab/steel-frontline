@@ -21,7 +21,7 @@
 ------------------------------------------------------------
 ::
 
-    C -> H   hello   {"t":"hello","ver":1,"name":"玩家名"}
+    C -> H   hello   {"t":"hello","ver":1,"name":"玩家名","hash":"...","did":"..."}
     H -> C   hello   {"t":"hello","ver":1,"name":"玩家名","side":1}
     C -> H   ready   {"t":"ready","cards":["strike",...]}   双方都 ready 才开局
     H -> C   start   {"t":"start","your_side":1,"names":[...]}
@@ -437,6 +437,49 @@ def _battle_time_left(battle) -> Optional[float]:
 # 客户端**允许**发给房主的全部消息类型（已知协议白名单）。
 # 其余一律拒绝：包括 `state`（那是房主专属广播，客户端发就是伪造）、
 # `hp` / `win` / 任何未知类型（越权改状态）。
+# --------------------------------------------------------------------------
+# 代码完整性校验（联机时确认双方跑的是同一份代码）
+# --------------------------------------------------------------------------
+def _integrity_snapshot() -> dict:
+    """取本机的完整性信息。失败时返回空 dict（不阻断游戏）。"""
+    try:
+        from core import integrity as _I
+        ok, rep = _I.self_check()
+        return {
+            "hash": rep.get("build_hash", ""),
+            "problems": rep.get("problems", []),
+            "did": rep.get("device_id", ""),
+            "clean": bool(ok),
+        }
+    except Exception:
+        return {}
+
+
+def _check_peer_integrity(msg: dict, strict: bool = True):
+    """校验对方 hello 里带的哈希。返回 (ok, 原因)。
+
+    strict=True 时任何不一致都拒绝；strict=False 只记录不拒绝
+    （给「举报后严检」用）。
+    """
+    try:
+        from core import integrity as _I
+    except Exception:
+        return True, ""
+    expect = str(msg.get("hash") or "")
+    mine = _I.build_hash()
+    if not expect:
+        return False, "对方未提供代码校验信息。"
+    if not mine:
+        return True, ""            # 本机算不出来就不拦
+    if expect != mine:
+        return False, "代码校验失败。"
+    # 对方自报的运行时问题（调试器/注入）也要看
+    probs = msg.get("problems") or []
+    if isinstance(probs, list) and probs:
+        return False, "代码校验失败。"
+    return True, ""
+
+
 CLIENT_ALLOWED_TYPES = ("hello", "ready", "deck", "play", "end",
                         "ping", "pong", "bye", "error")
 # 其中真正携带"操作"、需要逐字段校验的：
@@ -761,6 +804,67 @@ class _Conn:
                 raw, self._buf = self._buf.split(b"\n", 1)
                 self._handle_raw(raw)
         self._finished.set()
+
+    # -- 完整性违规：记录 + 伪装超时 --------------------------------
+    def _record_integrity_violation(self, msg: dict, why: str) -> None:
+        """把一次「代码校验失败」记录下来。
+
+        记录内容：对方自报的设备号、哈希、原因、时间。
+        通过 security 事件抛给上层（大厅/控制台会存下来并回传管理台）。
+        """
+        try:
+            from core import integrity as _I
+            # 尽量取到对方的 IP（局域网直连时从 socket 拿）
+            peer_ip = ""
+            try:
+                sk = getattr(self, "_sock", None) or getattr(self, "sock", None)
+                pa = sk.getpeername() if sk is not None else None
+                if isinstance(pa, (tuple, list)) and pa:
+                    peer_ip = str(pa[0])
+            except Exception:
+                peer_ip = ""
+            entry = {
+                "type": "integrity",
+                "peer_ip": peer_ip,
+                "reason": str(why),
+                "peer_hash": str(msg.get("hash") or "")[:64],
+                "peer_device": str(msg.get("did") or "")[:32],
+                "peer_problems": list(msg.get("problems") or [])[:8],
+                "my_hash": _I.short_hash(),
+                "my_device": _I.short_device(),
+                "ts": time.time(),
+                "peer_name": _sanitize_name(msg.get("name"), "对手"),
+            }
+            self._emit(entry)
+            # 累计一份，供举报/管理台读取
+            try:
+                from core import integrity as _I2
+                _I2.record_violation(entry)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _fake_timeout(self) -> None:
+        """对违规方伪装成「网络超时」。
+
+        为什么要伪装：直接告诉对方"你被检测到改代码了"，
+        等于告诉他哪一层被发现了，方便针对性绕过。
+        对外一律表现为连不上/掉线。
+        """
+        try:
+            self._emit({"type": "timeout",
+                        "msg": "连接超时，请检查网络后重试。"})
+        except Exception:
+            pass
+        try:
+            self._send_bye("连接超时。")
+        except Exception:
+            pass
+        try:
+            self._teardown(notify=False)
+        except Exception:
+            pass
 
     def _security_reject(self, why: str) -> None:
         """票据/签名校验失败：记一次并拒绝。
@@ -1291,6 +1395,18 @@ class Host(_Conn):
                     self._send_bye("协议版本不兼容")
                     self._teardown(notify=False)
                     return
+                # 代码完整性校验：双方必须跑同一份未改动的代码。
+                # 不匹配就**伪装成网络超时**（不告诉对方真实原因，
+                # 免得被针对性绕过）。
+                try:
+                    _ok, _why = _check_peer_integrity(msg)
+                except Exception:
+                    _ok, _why = True, ""
+                if not _ok:
+                    self._record_integrity_violation(msg, _why)
+                    self._fake_timeout()
+                    return
+
                 self._peer_name = _sanitize_name(msg.get("name"), "对手")
                 self._send({"t": "hello", "ver": PROTOCOL_VERSION,
                             "name": self.name, "side": 1})
@@ -1704,8 +1820,16 @@ class Client(_Conn):
             name="netplay-client-recv", daemon=True)
         self._reader.start()
         self._start_heartbeat()
-        # 自报家门
+        # 自报家门（附带代码完整性信息，房主会校验）
         hello = {"t": "hello", "ver": PROTOCOL_VERSION, "name": self.name}
+        try:
+            _info = _integrity_snapshot()
+            if _info.get("hash"):
+                hello["hash"] = _info["hash"]
+                hello["did"] = _info.get("did", "")
+                hello["problems"] = _info.get("problems", [])
+        except Exception:
+            pass
         # 把「我输入的码」告诉房主 —— 房主用它验签（前缀匹配也行）
         try:
             tk = getattr(self, "_ticket", None)
