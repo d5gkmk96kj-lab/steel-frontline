@@ -314,14 +314,16 @@ class MenuScreen(QWidget):
             f"background:transparent;")
         lv.addWidget(self.lbl_sub)
 
-        # 提示行（内容来自项目根的 tips.txt，每次进菜单随机一条）
+        # 提示行保留在左栏（很小一行，不抢视线）
         self.lbl_tip = QLabel("", left)
         self.lbl_tip.setWordWrap(True)
         self.lbl_tip.setStyleSheet(
             f"color:{T.TEXT_MUTED};font-size:{T.FONT_TINY}px;"
             f"background:transparent;")
         lv.addWidget(self.lbl_tip)
-        self._refresh_tip()
+        # 注意：这里**不能**调 _refresh_tip() —— 右栏的提示卡还没创建，
+        # 会被 except 静默吞掉，导致卡片一直是空的（真踩过）。
+        # 只先填左栏小字，等右栏建好后再统一刷新一次。
 
         lv.addSpacing(26)
         self.btn_new = QPushButton("开 始 新 战 役", left)
@@ -338,11 +340,13 @@ class MenuScreen(QWidget):
         lv.addWidget(self.btn_cont)
 
         # 联机对战入口：放在主按钮正下方，比次级网格更显眼
-        self.btn_versus = QPushButton("联 机 对 战  (局域网 1v1)", left)
+        self.btn_versus = QPushButton("联 机 对 战  (1v1)", left)
         self.btn_versus.setObjectName("Primary")
         self.btn_versus.setMinimumHeight(46)
         self.btn_versus.setFixedWidth(340)
-        self.btn_versus.setToolTip("与同一个 WiFi 下的同学 1v1 对战")
+        self.btn_versus.setToolTip(
+            "跨网络 1v1：建房得到 4 位房间号，发给对方即可。\n"
+            "服务器每天 12:00～24:00 开放。")
         self.btn_versus.clicked.connect(self.open_versus.emit)
         lv.addWidget(self.btn_versus)
 
@@ -448,6 +452,36 @@ class MenuScreen(QWidget):
         rv.addLayout(seed_row)
 
         rv.addStretch(1)
+
+        # ---- 提示卡：像 MC 主菜单那样侧着放，字号偏大但不抢视线 ----
+        # 放右栏最下面，不挡按钮也不压标题。
+        self.tip_card = QFrame(right)
+        self.tip_card.setStyleSheet(
+            f"QFrame{{background:{T.PANEL_LO};"
+            f"border:1px solid {T.BORDER};border-radius:8px;}}")
+        tv = QVBoxLayout(self.tip_card)
+        tv.setContentsMargins(14, 12, 14, 14)
+        tv.setSpacing(6)
+
+        self.tip_head = QLabel("💡 小 提 示", self.tip_card)
+        self.tip_head.setStyleSheet(
+            f"color:{T.GOLD};font-size:{T.FONT_SMALL}px;"
+            f"font-weight:bold;background:transparent;")
+        tv.addWidget(self.tip_head)
+
+        self.lbl_tip_card = QLabel("", self.tip_card)
+        self.lbl_tip_card.setWordWrap(True)
+        self.lbl_tip_card.setMinimumHeight(76)
+        self.lbl_tip_card.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.lbl_tip_card.setStyleSheet(
+            f"color:{T.TEXT};font-size:{T.FONT_H2-1}px;"
+            f"line-height:150%;background:transparent;")
+        tv.addWidget(self.lbl_tip_card)
+        rv.addWidget(self.tip_card)
+
+        # 到这里左栏和右栏都齐了，统一刷新一次提示
+        self._refresh_tip()
         self.lbl_hint = QLabel(
             "提示：战役难度每提升一档，敌人生命与伤害都会真实增加。", right)
         self.lbl_hint.setWordWrap(True)
@@ -636,10 +670,22 @@ class MenuScreen(QWidget):
 
 
     def _refresh_tip(self, scene: str = "menu") -> None:
-        """刷新提示行。tips.txt 改了内容后重启即可生效。"""
+        """刷新提示。tips.txt 改了内容后重启即可生效。
+
+        左栏留一行小字，右栏放一张大一点的卡片
+        （像 MC 主菜单那样侧着 —— 看得清但不抢主视线）。
+        """
         try:
             from core import tips as _tips
-            self.lbl_tip.setText("💡 " + _tips.random_tip(scene))
+            text = _tips.random_tip(scene)
+        except Exception:
+            return
+        try:
+            self.lbl_tip.setText("💡 " + text)
+        except Exception:
+            pass
+        try:
+            self.lbl_tip_card.setText(text)
         except Exception:
             pass
 

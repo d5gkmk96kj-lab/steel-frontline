@@ -624,9 +624,10 @@ class LobbyScreen(QWidget):
         if configured:
             self.lbl_net_srv.setText("服务器：%s" % _rc.relay_address())
         else:
+            # 服务器还没开 —— 给一句明确、不吓人的提示。
+            # 每天 12:00~24:00 开放。
             self.lbl_net_srv.setText(
-                "⚠ 还没有配置联机服务器。这一版先保留入口，"
-                "服务器就绪后即可使用。")
+                "服务器未开放，请等待 12:00～24:00 开放服务器")
 
         if mode == "net_host":
             self.lbl_net_title.setText("公网建房")
@@ -648,7 +649,7 @@ class LobbyScreen(QWidget):
             self.lbl_room.hide()
         self.btn_net_go.setEnabled(configured)
         self._status("跨网络联机 —— 用房间号匹配。" if configured
-                     else "联机服务器还没配置，暂时不可用。",
+                     else "服务器未开放，请等待服务器开放",
                      T.TEXT_DIM if configured else T.Q_ORANGE)
 
     def start_net(self) -> None:

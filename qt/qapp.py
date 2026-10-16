@@ -716,27 +716,27 @@ class GameWindow(QMainWindow):
         return "指挥官"
 
     def ensure_account(self) -> None:
-        """进游戏时确保有账号：没有就引导注册，有密码就登录。
+        """账号目前**不是必须的**。
 
-        全程**不需要联网** —— 单机随时能玩。
+        玩家先不用登录：没有账号就用默认名字直接玩。
+        想设名字/头衔的话，自己去「我的资料」里建。
+
+        之所以改成这样：登录界面挡在开局前很烦，
+        而且单机内容根本不需要账号。
         """
-        from core import account as _A
-        if _A.exists() and self.account is None:
-            # 存在但要密码 / 设备不符
-            dlg = qaccount.LoginDialog(self)
-            dlg.done_ok.connect(self._on_account_ready)
-            dlg.exec()
-            return
         if self.account is not None:
-            return                      # 自动登录成功
-        if _A.exists():
             return
-        dlg = qaccount.RegisterDialog(self)
-        dlg.done_ok.connect(self._on_account_ready)
-        if dlg.exec():
-            code = getattr(dlg, "recovery_code", "")
-            if code:
-                qaccount.RecoveryDialog(code, self).exec()
+        try:
+            from core import account as _A
+            # 已经有账号、且不需要密码 -> 静默进入
+            acc = _A.auto_login()
+            if acc is not None:
+                self.account = acc
+                return
+        except Exception:
+            pass
+        # 没有账号（或需要密码）也**不弹窗**，静默跳过。
+        # 玩家想建账号时走「我的资料」。
 
     def _on_account_ready(self, acc) -> None:
         self.account = acc

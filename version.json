@@ -1,26 +1,20 @@
 {
-  "version": "0.9.26",
-  "label": "0.9.26 测试版",
-  "label_en": "0.9.26 Beta",
+  "version": "0.9.27",
+  "label": "0.9.27 测试版",
+  "label_en": "0.9.27 Beta",
   "released": "2026-10-16",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：账号系统（设备锁定 + 恢复码 + 离线优先）",
-    "新增：注册/登录界面，首启引导取名",
-    "新增：头衔系统（作者大帝绑设备 / 测试玩家 / 老玩家）",
-    "新增：对局内聊天框（可互发消息）",
-    "新增：多人时对方可见你的名字与头衔",
-    "新增：战绩系统（战役 / 联机计入，AI 1v1 不计入）",
-    "新增：服务器账号哈希上报接口（上线后自动同步）"
+    "调整：账号不再是必须的，玩家先不用登录（想设名字/头衔走「我的资料」）",
+    "调整：服务器未开放时提示「请等待 12:00～24:00 开放服务器」",
+    "调整：主菜单提示改成侧边卡片（像 MC 主页，看得清但不抢视线）",
+    "调整：主菜单按钮不再写「局域网」"
   ],
   "notes_en": [
-    "New: account system (device-locked + recovery code + offline-first)",
-    "New: register/login screens; first launch asks for a name",
-    "New: title system (Sovereign Author is device-bound / Playtester / Veteran)",
-    "New: in-match chat box",
-    "New: opponents can see your name and title",
-    "New: match record (campaign and online count; AI 1v1 does not)",
-    "New: server-side account hash endpoint (syncs once the server is live)"
+    "Change: accounts are optional now -- no login prompt (set name/title via My Profile)",
+    "Change: when the server is closed, the lobby says it opens 12:00-24:00",
+    "Change: main-menu tip is now a side card (MC-style: readable but not intrusive)",
+    "Change: the versus button no longer says LAN"
   ]
 }
