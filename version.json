@@ -1,18 +1,26 @@
 {
-  "version": "0.9.41",
-  "label": "0.9.41 测试版",
-  "label_en": "0.9.41 Beta",
+  "version": "1.0.0",
+  "label": "1.0.0 正式版",
+  "label_en": "1.0.0",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "联机服务器已上线：96.126.179.64:9000（香港），开游戏即可匹配",
-    "去掉 12:00～24:00 开放时间限制（服务器常在线）",
-    "修复：test_relay 污染后续测试（改的配置没还原）"
+    "🎉 正式版 1.0 发布",
+    "联机服务器上线（香港 96.126.179.64:9000），开游戏点「一键匹配」就能玩",
+    "新增 30 位辅助角色（指挥官），开局选一位，各带全局被动",
+    "卡面全部重绘：202 张卡各自独立的矢量插图",
+    "攻击特效：子弹拖尾 / 火焰爆开 / 冲击波 / 毒气 / 核爆",
+    "卡组预设、版本不一致拒绝联机、对局结束自动关房间",
+    "反外挂加强：对局中持续校验、快照合理性检测、请求速率检测"
   ],
   "notes_en": [
-    "Online server is LIVE at 96.126.179.64:9000 (Hong Kong) — just open the game and match",
-    "Removed the 12:00-24:00 opening-hours restriction (the server stays online)",
-    "Fix: test_relay leaked config changes into later tests"
+    "🎉 Version 1.0 is here",
+    "Online relay is LIVE (Hong Kong 96.126.179.64:9000) — open the game and hit Quick Match",
+    "30 commanders: pick one before each run, each grants a global passive",
+    "All card art redrawn: 202 cards with individual vector illustrations",
+    "Attack effects: bullet trails / fire bursts / shockwaves / gas / nukes",
+    "Deck presets, version-mismatch rejection, auto-closing rooms",
+    "Hardened anticheat: continuous verification, snapshot sanity, intent rate limiting"
   ]
 }

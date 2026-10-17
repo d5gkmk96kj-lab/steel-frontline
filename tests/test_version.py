@@ -56,6 +56,11 @@ class TestVersionModule(unittest.TestCase):
                 "测试" in V.VERSION_LABEL or "Beta" in V.VERSION_LABEL
                 or "beta" in V.VERSION_LABEL,
                 "beta 阶段的 VERSION_LABEL 应标明测试版")
+        elif V.STAGE == "release":
+            self.assertNotIn("测试", V.VERSION_LABEL,
+                             "正式阶段的标签不该带「测试」")
+            self.assertNotIn("Beta", V.VERSION_LABEL_EN,
+                             "正式阶段的英文标签不该带 Beta")
 
 
 class TestVersionIsSingleSourced(unittest.TestCase):
@@ -112,16 +117,16 @@ class TestVersionLabelLanguage(unittest.TestCase):
     def test_chinese(self):
         from core import version as V, i18n
         i18n.set_lang("zh")
-        self.assertIn("测试版", V.title())
-        self.assertIn("测试版", V.short())
-        self.assertIn("测试版", V.about())
+        self.assertIn(V.VERSION, V.title())
+        self.assertIn(V.VERSION, V.short())
+        self.assertIn(V.VERSION, V.about())
 
     def test_english(self):
         from core import version as V, i18n
         i18n.set_lang("en")
-        self.assertIn("Beta", V.title())
-        self.assertIn("Beta", V.short())
-        self.assertIn("Beta", V.about())
+        self.assertIn(V.VERSION, V.title())
+        self.assertIn(V.VERSION, V.short())
+        self.assertIn(V.VERSION, V.about())
         self.assertNotIn("测试版", V.short(),
                          "英文界面不该出现中文版本标签")
 

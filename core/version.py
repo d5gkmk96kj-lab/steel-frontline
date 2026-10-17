@@ -10,12 +10,12 @@ from __future__ import annotations
 # --------------------------------------------------------------------------
 # 版本
 # --------------------------------------------------------------------------
-VERSION = "0.9.41"
-VERSION_LABEL = "0.9.41 测试版"
-VERSION_LABEL_EN = "0.9.41 Beta"
+VERSION = "1.0.0"
+VERSION_LABEL = "1.0.0 正式版"
+VERSION_LABEL_EN = "1.0.0"
 
 # 版本阶段：alpha / beta / rc / stable
-STAGE = "beta"
+STAGE = "release"
 
 # 构建号（同版本多次出包时递增；打包脚本会读它）
 BUILD = 1
@@ -86,12 +86,12 @@ def _is_en() -> bool:
 
 
 def _label() -> str:
-    """当前语言下的版本标签（0.9.02 测试版 / 0.9.02 Beta）。"""
+    """当前语言下的版本标签（1.0.0 正式版 / 1.0.0）。"""
     return VERSION_LABEL_EN if _is_en() else VERSION_LABEL
 
 
 def title() -> str:
-    """窗口标题：钢铁战线 Steel Frontline · v0.9.02 测试版
+    """窗口标题：钢铁战线 Steel Frontline · v1.0.0 正式版
 
     Windows 版会在名字后加 "Windows Rework"。
     """
@@ -101,7 +101,7 @@ def title() -> str:
 
 
 def short() -> str:
-    """短版本：v0.9.02 测试版 / v0.9.02 Beta"""
+    """短版本：v1.0.0 正式版 / v1.0.0"""
     return "v" + _label()
 
 

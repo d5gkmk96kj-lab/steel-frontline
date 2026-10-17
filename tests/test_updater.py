@@ -116,14 +116,14 @@ class TestManifest(unittest.TestCase):
 
     def test_parse_full(self):
         raw = json.dumps({
-            "version": "0.10", "label": "0.10 测试版",
-            "label_en": "0.10 Beta", "released": "2026-10-15",
+            "version": "99.99.99", "label": "99.99.99 测试版",
+            "label_en": "99.99.99 Beta", "released": "2026-10-15",
             "url": "https://example.com/x.dmg",
             "notes": ["修复 A", "新增 B"], "notes_en": ["Fix A", "New B"],
         }, ensure_ascii=False)
         info = U.parse_manifest(raw)
         self.assertIsNotNone(info)
-        self.assertEqual(info.version, "0.10")
+        self.assertEqual(info.version, "99.99.99")
         self.assertEqual(len(info.notes), 2)
         self.assertTrue(U.is_newer(info.version))
 

@@ -463,6 +463,50 @@ VER_MISMATCH = "mismatch"      # 版本不一致（对局相关代码不同）�
 VER_TAMPER = "tamper"          # 疑似篡改 —— 伪装超时，不告诉原因
 
 
+#: 客户端请求速率上限（次/秒）。真人操作远达不到这个速度。
+MAX_INTENT_PER_SEC = 12
+#: 超过这个次数就判定为自动化/脚本
+INTENT_BURST_LIMIT = 40
+
+#: 对局中每隔多少秒重查一次本机完整性（运行中代码被改也要发现）
+REVERIFY_INTERVAL = 20.0
+#: 单人快照里这些字段的合理上限（超出即判定异常）
+SANE_LIMITS = {
+    "hp": 5000,
+    "block": 5000,
+    "energy": 99,
+}
+
+
+def _snapshot_sane(snap: dict) -> list:
+    """检查一份快照的数值是否在合理范围内。
+
+    返回问题列表。作弊者常改动血量/护甲/能量来速胜，
+    这些值有明确上限，超了就说明被改过。
+    """
+    problems = []
+    if not isinstance(snap, dict):
+        return ["bad-snapshot"]
+    for side_key in ("me", "opponent", "you", "foe"):
+        d = snap.get(side_key)
+        if not isinstance(d, dict):
+            continue
+        for field_name, cap in SANE_LIMITS.items():
+            v = d.get(field_name)
+            if v is None:
+                continue
+            try:
+                if int(v) > int(cap) or int(v) < -1:
+                    problems.append("%s.%s=%r" % (side_key, field_name, v))
+            except (TypeError, ValueError):
+                problems.append("%s.%s-bad-type" % (side_key, field_name))
+    # 手牌数量也有上限
+    hand = snap.get("my_hand") or snap.get("hand") or []
+    if isinstance(hand, list) and len(hand) > 30:
+        problems.append("hand=%d" % len(hand))
+    return problems
+
+
 def _check_peer_integrity(msg: dict, strict: bool = True):
     """校验对方 hello 里带的哈希。
 
@@ -1148,6 +1192,7 @@ class _Conn:
 
     # ---------------- 心跳 ----------------
     def _heartbeat_loop(self) -> None:
+        last_verify = 0.0
         while not self._closing.is_set():
             if self._closing.wait(PING_INTERVAL):
                 return
@@ -1157,9 +1202,62 @@ class _Conn:
                 self._emit({"type": "ping_timeout", "msg": ERR_HEARTBEAT})
                 self._drop_peer(ERR_HEARTBEAT)
                 return
+            # 对局中持续校验本机完整性（不只在握手时查一次）
+            try:
+                if (_now() - last_verify) >= REVERIFY_INTERVAL:
+                    last_verify = _now()
+                    self._reverify_self()
+            except Exception:
+                pass
             self._sent_ping_at = _now()
             if not self._send({"t": "ping", "ts": int(time.time())}):
                 return
+
+    def _rate_ok(self) -> bool:
+        """检查客户端请求速率是否正常（防脚本连发）。
+
+        记录最近 1 秒内的请求时间戳；超过上限判定为异常。
+        """
+        try:
+            now = _now()
+            stamps = getattr(self, "_intent_stamps", None)
+            if stamps is None:
+                stamps = []
+                self._intent_stamps = stamps
+            # 只保留最近 1 秒
+            stamps[:] = [t for t in stamps if now - t < 1.0]
+            stamps.append(now)
+            if len(stamps) > MAX_INTENT_PER_SEC:
+                return False
+            total = int(getattr(self, "_intent_total", 0)) + 1
+            self._intent_total = total
+            if total > INTENT_BURST_LIMIT and len(stamps) > MAX_INTENT_PER_SEC * 0.8:
+                return False
+            return True
+        except Exception:
+            return True
+
+    def _reverify_self(self) -> None:
+        """对局中重查本机完整性：运行中代码被改也要能发现。
+
+        发现异常时**不主动断开**（免得误伤），但会：
+          * 记录一条违规
+          * 在下次发出去的 ping 里带上 problems
+          * 房主侧收到后按既有逻辑标记对方
+        """
+        try:
+            from core import integrity as _I
+            probs = _I.check_runtime()
+            h = _I.build_hash(refresh=True)   # 强制重算，防缓存掩盖改动
+        except Exception:
+            return
+        if h:
+            self._live_hash = h
+        if probs:
+            try:
+                self._self_problems = list(probs)[:8]
+            except Exception:
+                pass
 
     def _start_heartbeat(self) -> None:
         if self._heart is not None and self._heart.is_alive():
@@ -1665,6 +1763,14 @@ class Host(_Conn):
         if self._battle is None:
             self._send({"t": "error", "msg": "对战还没开始。"})
             return
+        # 速率检测：机器人/脚本会在极短时间内狂发请求
+        try:
+            if not self._rate_ok():
+                self._flag_cheater("请求速率异常（疑似脚本）")
+                self._send({"t": "error", "msg": "操作太频繁。"})
+                return
+        except Exception:
+            pass
         if t == "play":
             idx = int(msg.get("idx"))
             tgt = msg.get("target")
@@ -2032,6 +2138,13 @@ class Client(_Conn):
         if t == "state":
             snap = msg.get("payload")
             if isinstance(snap, dict):
+                # 快照可信度：房主报来的数值超出合理范围 -> 标记异常
+                try:
+                    bad = _snapshot_sane(snap)
+                    if bad:
+                        self._self_snapshot_flags = bad[:8]
+                except Exception:
+                    pass
                 self._last_snap = snap
                 self._emit({"type": "state", "payload": snap})
             return

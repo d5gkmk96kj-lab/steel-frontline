@@ -181,12 +181,24 @@ GUARDED_CALLABLES = (
 
 #: 可疑的模块名（常见的内存修改/注入工具）
 SUSPICIOUS_MODULES = (
-    "pydevd",            # PyCharm 调试器
-    "pdb",               # 标准调试器
-    "frida",             # 注入框架
-    "cheatengine",
-    "pymem",
-    "memory_profiler",
+    # 调试器
+    "pydevd", "pdb", "pdbpp", "ipdb", "rpdb", "pudb", "wingdbstub",
+    "debugpy", "ptvsd",
+    # 注入 / 内存修改
+    "frida", "cheatengine", "pymem", "memory_profiler", "win32process",
+    "ctypes",            # 用 ctypes 改内存很常见（但很多库也依赖它，见下）
+    # 动态执行 / 反射重写
+    "exec_wrapper", "bytecode", "uncompyle6", "decompyle3",
+)
+
+#: 这些模块**允许存在**（很多正常库依赖它们）。
+#: ctypes / bytecode 之类只记录不判定 —— 单独出现不代表作弊。
+_BENIGN_MODULES = {"ctypes", "exec_wrapper"}
+
+#: 常见注入器的进程名（通过 /proc 或 psutil 检测；没有就跳过）
+SUSPICIOUS_PROCESS_NAMES = (
+    "frida-server", "frida-helper", "cheatengine", "x64dbg",
+    "ollydbg", "ida64", "ida32", "ghidra",
 )
 
 
@@ -224,12 +236,51 @@ def check_runtime() -> List[str]:
 
     # a) 调试器 / 注入工具
     for name in SUSPICIOUS_MODULES:
+        if name in _BENIGN_MODULES:
+            continue
         if name in sys.modules:
             problems.append("debugger:%s" % name)
 
     try:
         if sys.gettrace() is not None:
             problems.append("trace-hook")
+    except Exception:
+        pass
+
+    # a2) 性能分析器挂钩（作弊者常用来观察内部状态）
+    try:
+        if sys.getprofile() is not None:
+            problems.append("profile-hook")
+    except Exception:
+        pass
+
+    # a3) 异常钩子被替换（常用于拦截/篡改流程）
+    try:
+        if sys.excepthook is not sys.__excepthook__:
+            problems.append("excepthook-hooked")
+    except Exception:
+        pass
+
+    # a4) 可疑注入进程（能读到 /proc 才查，读不到就跳过）
+    try:
+        import os as _os
+        if _os.path.isdir("/proc"):
+            names = []
+            for pid in _os.listdir("/proc"):
+                if not pid.isdigit():
+                    continue
+                try:
+                    with open("/proc/%s/cmdline" % pid, "rb") as f:
+                        cmd = f.read().decode("utf-8", "ignore").lower()
+                    if cmd:
+                        names.append(cmd)
+                except Exception:
+                    continue
+            blob = " ".join(names)
+            for pname in SUSPICIOUS_PROCESS_NAMES:
+                if pname in blob:
+                    problems.append("injector:%s" % pname)
+                    break
     except Exception:
         pass
 

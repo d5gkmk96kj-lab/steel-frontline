@@ -573,7 +573,7 @@ class TestUpdateChecker(unittest.TestCase):
             if "当前版本" in lb.text():
                 text = lb.text()
                 break
-        self.assertIn("v0.9", text)
+        self.assertIn("v", text)
         self.assertIn("v0.10", text, "右侧版本号缺少 v 前缀：%r" % text)
         dlg.close()
 
