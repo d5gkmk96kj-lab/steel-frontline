@@ -1,28 +1,18 @@
 {
-  "version": "0.9.28",
-  "label": "0.9.28 测试版",
-  "label_en": "0.9.28 Beta",
+  "version": "0.9.29",
+  "label": "0.9.29 测试版",
+  "label_en": "0.9.29 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "版本不一致拒绝联机（改战斗/卡牌才挡）",
-    "卡组预设：存一套下次一键套用",
-    "聊天改成右侧固定面板（之前是悬空小方块）",
-    "人机对局不再显示举报/聊天按钮",
-    "对局结束自动关房间",
-    "选卡界面文字清晰 + 选中高光",
-    "选卡界面改成等条件（修 Windows 假失败）",
-    "修复：多窗口下更新弹窗无限递归（会把程序卡死）"
+    "重做卡面插图：5 个流派各有专属图案（步枪/沙袋/油桶/火焰/电台）",
+    "新增 15 种装饰件（弹孔、铁丝网、齿轮、辐射标、天线…），卡牌不再千篇一律",
+    "修复卡面把 {damage} 这类占位符直接印出来的 bug"
   ],
   "notes_en": [
-    "Version mismatch blocks online play (only battle/card changes count)",
-    "Deck presets: save once, apply with one click",
-    "Chat is now a fixed right-side panel (was a floating square)",
-    "vs-CPU matches no longer show report/chat buttons",
-    "The room closes automatically after a match",
-    "Deck-building text is crisp; selected cards glow",
-    "Deck-building test now waits for the condition (fixes Windows flake)",
-    "Fix: update dialog recursed infinitely with multiple windows (could freeze the app)"
+    "Rebuilt card art: each of the 5 archetypes gets its own motif (rifle/sandbags/fuel drum/flame/radio)",
+    "Added 15 decoration types (bullet holes, barbed wire, gears, radiation marks, antennas...); cards no longer look identical",
+    "Fix: the card face printed raw placeholders like {damage}"
   ]
 }

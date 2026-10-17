@@ -1440,6 +1440,42 @@ class UnitArt(QWidget):
 # =====================================================================
 
 
+def _card_text(c: dict) -> str:
+    """卡面描述：填好数值再翻译。
+
+    卡牌数据里 text 是模板（``造成 {damage} 点伤害。``）。
+    之前这里只做了 T.tr()，没把 {damage} 换成数字 ——
+    卡面上直接印着字面的 ``{damage}``（真 bug）。
+    """
+    raw = str(c.get("text") or "")
+    # 先填数值
+    try:
+        from core.cards import resolve_text as _resolve
+        from core.cards import CARD_DB as _DB
+        defn = _DB.get(str(c.get("def_id") or c.get("id") or ""))
+        if defn is not None:
+            outp = _resolve(defn, translate=False)
+            # 数值填完后，再对整句做翻译查找（译文里通常不含占位符）
+            try:
+                from core import i18n as _i18n
+                outp = _i18n.t(outp)
+            except Exception:
+                pass
+            return outp
+    except Exception:
+        pass
+    # 兜底：至少把已知占位符替换掉
+    for key, field in (("{damage}", "damage"), ("{block}", "block"),
+                       ("{magic}", "magic"), ("{magic2}", "magic2"),
+                       ("{hits}", "hits")):
+        if key in raw:
+            raw = raw.replace(key, str(c.get(field, "")))
+    try:
+        return T.tr(raw)
+    except Exception:
+        return raw
+
+
 class CardView(QWidget):
     """卡牌控件：做旧纸张 / 铆接钢板 + 稀有度发光 + 悬停上浮放大。
 
@@ -1761,7 +1797,7 @@ class CardView(QWidget):
 
         # 插图区
         art = QRectF(rect.left() + 9 * k, band.bottom() + 7 * k,
-                     rect.width() - 18 * k, 62 * k)
+                     rect.width() - 18 * k, 76 * k)
         self._art(p, art, c, tcol, k)
 
         # 描述文字
@@ -1769,7 +1805,7 @@ class CardView(QWidget):
                       rect.width() - 20 * k, rect.bottom() - art.bottom() - 30 * k)
         dark_card = rar in ("rare",) or c.get("type") in ("attack", "power")
         txt_col = T.Q_TEXT if dark_card else T.qc("#2A2419")
-        draw_text_block(p, body, T.tr(str(c.get("text", ""))),
+        draw_text_block(p, body, _card_text(c),
                         T.font(max(5, int(11.5 * k))), txt_col,
                         align=Qt.AlignmentFlag.AlignHCenter,
                         max_lines=6, center_v=True)
@@ -1816,35 +1852,22 @@ class CardView(QWidget):
             p.drawPath(T.round_path(rect, T.CARD_RADIUS * k))
 
     def _art(self, p: QPainter, rect: QRectF, c: dict, tcol: QColor, k: float) -> None:
-        """卡面插图：按类型画对应军事符号。"""
-        # 插图底
-        T.fill_round(p, rect, 5 * k, T.a(T.Q_BLACK, 60))
-        t = c.get("type", "skill")
-        # 类型图标
-        cx, cy = rect.center().x(), rect.center().y()
-        s = min(rect.width(), rect.height()) * 0.30
-        col = T.f(tcol, 1.25)
-        if t == "attack":
-            IntentBadge._icon(p, QPointF(cx, cy), "attack", col)
-            for i in (-1, 1):
-                p.setPen(QPen(T.a(col, 150), 2.0 * k))
-                p.drawLine(QPointF(cx + i * s * 1.25, cy - s * 1.5),
-                           QPointF(cx + i * s * 2.0, cy + s * 1.5))
-        elif t == "power":
-            IntentBadge._icon(p, QPointF(cx, cy), "buff", col)
-            T.chevron(p, cx, cy + s * 1.5, s * 0.9, T.a(col, 170), up=True, width=2.2 * k)
-        else:
-            CoverBar._cover_icon(p, QPointF(cx, cy), s * 1.05, col)
-            p.setPen(QPen(T.a(col, 130), 1.6 * k))
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawEllipse(QPointF(cx, cy), s * 1.7, s * 1.7)
-        # 铆钉点缀
-        for (dx, dy) in ((6, 6), (-6, 6), (6, -6), (-6, -6)):
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QBrush(T.a(T.Q_BLACK, 70)))
-            p.drawEllipse(QPointF(rect.center().x() + dx * k, rect.center().y() + dy * k),
-                          1.6 * k, 1.6 * k)
-        T.stroke_round(p, rect, 5 * k, T.a(T.Q_BLACK, 80), 1.0)
+        """卡面插图。
+
+        现在走 ``qt.qcardart``：按 流派 x 稀有度 x 数值 画出
+        带军事蚀刻风的主图案 + 装饰件，199 张卡互不相同。
+        （原来是"按类型画个图标"，攻击牌全长一样 —— 太简陋。）
+        """
+        try:
+            from . import qcardart as _CA
+            _CA.paint(p, rect, c, tcol, k)
+        except Exception:
+            # 插图失败不能让整张卡画不出来 —— 退回纯底色
+            try:
+                T.fill_round(p, rect, 5 * k, T.a(T.Q_BLACK, 60))
+                T.stroke_round(p, rect, 5 * k, T.a(T.Q_BLACK, 80), 1.0)
+            except Exception:
+                pass
 
 
 class CardRow(QWidget):
