@@ -1,18 +1,18 @@
 {
-  "version": "1.0.3",
-  "label": "1.0.3 正式版",
-  "label_en": "1.0.3",
+  "version": "1.0.4",
+  "label": "1.0.4 正式版",
+  "label_en": "1.0.4",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修正：昭和天皇改为裕仁（昭和是年号，不是名字）",
-    "修正：README 里「服务器每天只开 12 小时」的过时说明",
-    "修正：README 目录树里不存在的 releases/ 文件夹"
+    "修复：公网/匹配模式显示局域网教程（「怎么玩」面板现在按模式切换）",
+    "修复：对局界面永远卡在「准备中…」—— 对方不交卡组时没有任何提示",
+    "服务器：心跳超时 30→60 秒，减少误判断线"
   ],
   "notes_en": [
-    "Fix: Emperor Showa renamed to Hirohito (Showa is an era name, not a personal name)",
-    "Fix: outdated \"server opens 12h/day\" note in README",
-    "Fix: non-existent releases/ folder listed in README"
+    "Fix: online/quick-match modes showed the LAN tutorial (\"How to play\" now switches by mode)",
+    "Fix: versus screen stuck on \"Preparing...\" forever when the opponent never sends a deck",
+    "Server: heartbeat timeout raised 30s -> 60s to reduce false disconnects"
   ]
 }

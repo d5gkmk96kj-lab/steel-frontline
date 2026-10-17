@@ -627,8 +627,10 @@ class LobbyScreen(QWidget):
             f"color:{T.GOLD}; font-size:{T.FONT_BODY}px; font-weight:800;"
             f"background:transparent;")
         iv.addWidget(ttl)
-        _tips_zh = (
-            "1. 两台设备连**同一个 WiFi**。\n"
+        # 教程按**当前模式**切换 —— 局域网和公网的步骤完全不同，
+        # 之前只写了一份局域网说明，在公网/匹配模式下会误导玩家。
+        self._tips_lan = (
+            "1. 两台设备连同一个 WiFi。\n"
             "2. 房主点「开始等待对手」，把大字号 IP 念给同学。\n"
             "3. 加入方输入 IP → 「连接房主」。\n"
             "4. 连上后各自构筑卡组（20–40 张）。\n"
@@ -637,7 +639,19 @@ class LobbyScreen(QWidget):
             "  一切判定由房主执行，改血量改不动。\n"
             "· 对手手牌永远是背面，看不到内容。"
         )
-        tips = QLabel(T.tr(_tips_zh), info)
+        self._tips_net = (
+            "· 一键匹配：点一个按钮，服务器自动给你找对手。\n"
+            "· 公网建房：得到 4 位房间号，发给对方。\n"
+            "· 公网加入：输入对方给的 4 位房间号。\n\n"
+            "1. 双方各自构筑卡组（20–40 张）。\n"
+            "2. 都点「开始对战」后自动开战。\n"
+            "3. 不需要在同一个 WiFi，也不用知道对方 IP。\n\n"
+            "· 出牌只发「我要出第几张」的意图，\n"
+            "  一切判定由房主执行，改血量改不动。\n"
+            "· 对手手牌永远是背面，看不到内容。"
+        )
+        tips = QLabel(T.tr(self._tips_lan), info)
+        self.lbl_tips = tips
         tips.setWordWrap(True)
         tips.setStyleSheet(
             f"color:{T.TEXT_DIM}; font-size:{T.FONT_TINY}px;"
@@ -693,6 +707,13 @@ class LobbyScreen(QWidget):
         self.host_box.setVisible(mode == "host")
         self.join_box.setVisible(mode == "join")
         self.match_box.setVisible(mode == "match")
+        # 教程跟着模式切换：局域网 vs 公网
+        try:
+            is_net = mode in ("net_host", "net_join", "match")
+            txt = self._tips_net if is_net else self._tips_lan
+            self.lbl_tips.setText(T.tr(txt))
+        except Exception:
+            pass
         # match 走自己的面板，不显示旧的房间号面板
         # （两个都显示会挤在一起，而且房间号匹配对玩家没意义）
         is_net = mode in ("net_host", "net_join", "match")

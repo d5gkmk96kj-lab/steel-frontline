@@ -1131,8 +1131,15 @@ class VersusScreen(QWidget):
         self._sync_cheat_ui()          # 房主才显示作弊面板
         self._sync(animate=False)
 
+    #: 「准备中」最多等多久（秒）。对方一直不交卡组就提示可以重开。
+    READY_TIMEOUT = 20.0
+    #: 超时后每隔多久再提醒一次
+    READY_WARN_EVERY = 20.0
+
     def _reset(self) -> None:
         self._ended = False
+        self._ready_since = 0.0
+        self._ready_warned = 0
         self._busy = False
         self._peer_lost = False
         self._hand_sig = ()
@@ -1144,6 +1151,10 @@ class VersusScreen(QWidget):
         self.hand.clear()
         self.foe_backs.set_count(0)
         self.lbl_phase.setText("准备中…")
+        # 开始计时：对方可能永远不交卡组（掉线 / 挂机 / 根本没在）
+        import time as _t
+        self._ready_since = _t.time()
+        self._ready_warned = 0
 
     def stop(self) -> None:
         self._timer.stop()
@@ -1363,9 +1374,44 @@ class VersusScreen(QWidget):
                     pass
         return {}
 
+    def _check_ready_timeout(self) -> None:
+        """对方迟迟不交卡组时，给玩家明确的说明和退路。"""
+        if getattr(self, "_ended", False) or getattr(self, "_peer_lost", False):
+            return
+        import time as _t
+        since = getattr(self, "_ready_since", 0.0)
+        if not since:
+            return
+        waited = _t.time() - since
+        if waited < self.READY_TIMEOUT:
+            return
+        warned = getattr(self, "_ready_warned", 0)
+        rounds = int((waited - self.READY_TIMEOUT) // self.READY_WARN_EVERY) + 1
+        if rounds <= warned:
+            return
+        self._ready_warned = rounds
+        mins = int(waited // 60)
+        secs = int(waited % 60)
+        self.lbl_phase.setText(
+            "对方还没准备好（已等 %d:%02d）" % (mins, secs)
+            if mins else "对方还没准备好（已等 %d 秒）" % secs)
+        self.lbl_phase.setStyleSheet(
+            f"color:{T.ORANGE}; font-size:{T.FONT_H2}px;"
+            f"font-weight:800; background:transparent;")
+        try:
+            self.banner_sub.setText(
+                "对方可能掉线或挂机了。可以点「离开对战」重开一局。")
+            self.banner_sub.show()
+        except Exception:
+            pass
+
     def _sync(self, animate: bool = True) -> None:
         snap = self._snap if self._mode == "net" else self._local_snapshot()
         if not snap:
+            # 还没有第一份快照 = 对方还没交卡组。
+            # 之前这里直接 return，界面上就永远停在「准备中…」，
+            # 玩家完全不知道发生了什么（真 bug：很多人以为游戏卡死）。
+            self._check_ready_timeout()
             return
         self._snap = snap
 

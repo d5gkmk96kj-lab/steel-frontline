@@ -2458,5 +2458,10 @@
  "我们决不投降": "We Shall Never Surrender",
  "总部耐久 +18；伤害 ×1.05。": "HQ durability +18; damage x1.05.",
  "掩体 ×1.25。": "Armor x1.25.",
- "裕仁": "Hirohito"
+ "裕仁": "Hirohito",
+ "1. 两台设备连同一个 WiFi。\n2. 房主点「开始等待对手」，把大字号 IP 念给同学。\n3. 加入方输入 IP → 「连接房主」。\n4. 连上后各自构筑卡组（20–40 张）。\n5. 双方都确认后自动开战。\n\n· 出牌只发「我要出第几张」的意图，\n  一切判定由房主执行，改血量改不动。\n· 对手手牌永远是背面，看不到内容。": "1. Both devices on the same WiFi.\n2. The host presses Start Waiting and reads the big IP aloud.\n3. The joiner types the IP and presses Connect.\n4. Both build a deck (20-40 cards).\n5. The match starts once both confirm.\n\n· A play only sends which card you want to play;\n  the host adjudicates everything, HP cannot be tampered with.\n· The opponent's hand is always face down.",
+ "· 一键匹配：点一个按钮，服务器自动给你找对手。\n· 公网建房：得到 4 位房间号，发给对方。\n· 公网加入：输入对方给的 4 位房间号。\n\n1. 双方各自构筑卡组（20–40 张）。\n2. 都点「开始对战」后自动开战。\n3. 不需要在同一个 WiFi，也不用知道对方 IP。\n\n· 出牌只发「我要出第几张」的意图，\n  一切判定由房主执行，改血量改不动。\n· 对手手牌永远是背面，看不到内容。": "· Quick Match: press one button and the server finds an opponent.\n· Create Online: get a 4-digit room code and send it over.\n· Join Online: type the 4-digit room code you were given.\n\n1. Both players build a deck (20-40 cards).\n2. The match starts once both press Start.\n3. No need to share a WiFi or know each other's IP.\n\n· A play only sends which card you want to play;\n  the host adjudicates everything.\n· The opponent's hand is always face down.",
+ "对方还没准备好（已等 %d:%02d）": "Opponent is not ready yet (%d:%02d)",
+ "对方还没准备好（已等 %d 秒）": "Opponent is not ready yet (%d s)",
+ "对方可能掉线或挂机了。可以点「离开对战」重开一局。": "Your opponent may have disconnected. You can press Leave Match and try again."
 }
