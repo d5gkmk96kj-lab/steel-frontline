@@ -96,6 +96,10 @@ class RelaySocket:
         self.room = ""
         self.peer_left = False
         self._handshake_done = threading.Event()
+        #: 快速匹配分到的一边（0/1）
+        self.matched_side = 0
+        self._queue_cb = None
+        self._queue_cancelled = False
         self._handshake_error = ""
         self._rx_buf = b""
         self._timeout = None
@@ -144,6 +148,38 @@ class RelaySocket:
             raise RelayError("房间号是 4 位数字。")
         self._send_msg({"t": "join", "room": rid})
         return self._await_handshake()
+
+    # -- 快速匹配 -------------------------------------------------------
+    def quick_match(self, on_queue=None, timeout: float = 60.0) -> str:
+        """一键匹配：进队列等配对，配上了返回房间号。
+
+        ``on_queue`` 是一个回调（排队位置, 队列人数），用于 UI 显示
+        「正在搜索对手…（第 N 位）」。可以不传。
+
+        返回房间号；拿 ``side`` 用 :attr:`matched_side`。
+        """
+        self._queue_cb = on_queue
+        self._send_msg({"t": "quick_match"})
+        deadline = time.time() + max(5.0, float(timeout))
+        while time.time() < deadline:
+            if self.room:
+                return self.room
+            if self._handshake_error:
+                raise RelayError(self._handshake_error)
+            time.sleep(0.12)
+        # 超时 -> 主动取消，别把服务器队列占着
+        try:
+            self.cancel_match()
+        except Exception:
+            pass
+        raise RelayError("没有找到对手，请稍后再试。")
+
+    def cancel_match(self) -> None:
+        """退出匹配队列。"""
+        try:
+            self._send_msg({"t": "cancel_match"})
+        except Exception:
+            pass
 
     def _await_handshake(self) -> str:
         if not self._handshake_done.wait(HANDSHAKE_TIMEOUT):
@@ -209,6 +245,33 @@ class RelaySocket:
             return
         if t == "joined":
             self.room = str(msg.get("room") or self.room)
+            self._handshake_done.set()
+            return
+        if t == "matched":
+            # 快速匹配成功：room + side 一起给
+            self.room = str(msg.get("room") or "")
+            try:
+                self.matched_side = int(msg.get("side") or 0)
+            except (TypeError, ValueError):
+                self.matched_side = 0
+            self._handshake_done.set()
+            return
+        if t == "queued":
+            # 排队中：回调给 UI 显示「第 N 位」
+            cb = getattr(self, "_queue_cb", None)
+            if cb is not None:
+                try:
+                    cb(int(msg.get("pos") or 0), int(msg.get("waiting") or 0))
+                except Exception:
+                    pass
+            return
+        if t == "match_cancelled":
+            self._queue_cancelled = True
+            self._handshake_error = "已取消匹配。"
+            self._handshake_done.set()
+            return
+        if t == "match_timeout":
+            self._handshake_error = "等待超时，请重新匹配。"
             self._handshake_done.set()
             return
         if t == "error":
@@ -340,9 +403,88 @@ def join(room: str, host: str = "", port: int = 0) -> RelaySocket:
     return rs
 
 
+def match_via_relay(host: str = "", port: int = 0,
+                    on_queue=None, timeout: float = 60.0):
+    """一键匹配，并**自动**决定自己是房主还是挑战者。
+
+    返回 ``(net_object, room, is_host)``：
+
+      * 分到 side=0 -> 当房主（netplay.Host）
+      * 分到 side=1 -> 当挑战者（netplay.Client）
+
+    两边都主动连上服务器并配对，之后行为与普通建房/加入完全一致
+    （因为中继只是透传，房间里的两个连接是对等的）。
+    """
+    from . import netplay as _np
+
+    rs, room, side = quick_match_room(host, port, on_queue=on_queue,
+                                      timeout=timeout)
+    is_host = (side == 0)
+    if is_host:
+        obj = _np.Host(name="房主")
+        obj._sock = rs
+        obj._peer = rs
+        obj._connected = True
+        obj._ticket = None
+        obj._reader = threading.Thread(
+            target=obj._reader_loop, args=(rs,),
+            name="relay-match-host", daemon=True)
+        obj._reader.start()
+        obj._announce_connected()
+        obj._start_heartbeat()
+        return obj, room, True
+
+    obj = _np.Client(name="挑战者")
+    obj._sock = rs
+    obj._connected = True
+    obj._connected_once = True
+    obj._ticket = None
+    obj._reader = threading.Thread(
+        target=obj._reader_loop, args=(rs,),
+        name="relay-match-client", daemon=True)
+    obj._reader.start()
+    obj._start_heartbeat()
+    hello = {"t": "hello", "ver": _np.PROTOCOL_VERSION, "name": obj.name}
+    try:
+        snap = _np._integrity_snapshot()
+        if snap.get("hash"):
+            hello["hash"] = snap["hash"]
+            hello["did"] = snap.get("did", "")
+            hello["problems"] = snap.get("problems", [])
+        try:
+            from core import version as _V
+            hello["label"] = _V.VERSION_LABEL
+        except Exception:
+            pass
+    except Exception:
+        pass
+    try:
+        obj._send(hello)
+    except Exception:
+        pass
+    return obj, room, False
+
+
+def quick_match_room(host: str = "", port: int = 0,
+                     on_queue=None, timeout: float = 60.0):
+    """一键匹配：返回 ``(socket, room, side)``。
+
+    进服务器匹配队列，配上就返回房间号和分到的一边（0=房主位 / 1=挑战者位）。
+    配不上抛 RelayError。
+    """
+    h = (host or DEFAULT_RELAY_HOST).strip()
+    if not h:
+        raise RelayError("没有配置联机服务器地址。")
+    rs = RelaySocket(h, port or DEFAULT_RELAY_PORT)
+    rs.connect()
+    room = rs.quick_match(on_queue=on_queue, timeout=timeout)
+    return rs, room, int(getattr(rs, "matched_side", 0) or 0)
+
+
 __all__ = [
     "DEFAULT_RELAY_HOST", "DEFAULT_RELAY_PORT", "RelayError", "RelaySocket",
     "relay_configured", "relay_address", "make_room", "join",
+    "quick_match_room", "match_via_relay",
 ]
 
 

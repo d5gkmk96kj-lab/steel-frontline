@@ -1,16 +1,20 @@
 {
-  "version": "0.9.32",
-  "label": "0.9.32 测试版",
-  "label_en": "0.9.32 Beta",
+  "version": "0.9.33",
+  "label": "0.9.33 测试版",
+  "label_en": "0.9.33 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "把剩余 43 个线稿图元全部改成有体积的（手枪/冲锋枪/狙击枪/手雷/燃烧瓶/扳手/钢管/望远镜/地图/信号弹/医疗箱/军旗）",
-    "每个物体加金属渐变、投影和高光点"
+    "新增：一键匹配（点一个按钮自动找对手，不用交换房间号）",
+    "新增：匹配队列（先到先配、掉线自动移除、超时踢出）",
+    "新增：匹配界面（搜索中显示排队位置、可取消）",
+    "修复：服务器建房时持有锁再取锁导致死锁（第二个玩家匹配会卡死）"
   ],
   "notes_en": [
-    "Converted the last 43 flat/line-art primitives to shaded volumes (pistol/SMG/sniper/grenade/molotov/wrench/pipe/binoculars/map/flare/medkit/flag)",
-    "Every object now has metal gradients, cast shadows and specular highlights"
+    "New: one-click quick match (press one button, the server finds an opponent -- no room codes)",
+    "New: matchmaking queue (first come first served; disconnects are dropped; stale entries time out)",
+    "New: matchmaking screen (shows queue position, cancellable)",
+    "Fix: building a room while holding the server lock deadlocked (the second player's match would hang)"
   ]
 }

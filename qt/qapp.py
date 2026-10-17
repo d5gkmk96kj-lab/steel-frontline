@@ -468,6 +468,8 @@ class GameWindow(QMainWindow):
         lb = self.screens["lobby"]
         lb.connected.connect(self.on_lobby_connected)
         lb.closed.connect(self.on_lobby_closed)
+        # 一键匹配：配上了直接进卡组界面
+        lb.match_ready.connect(self.on_match_ready)
 
         db = self.screens["deckbuild"]
         db.deck_confirmed.connect(self.on_deck_confirmed)
@@ -646,6 +648,13 @@ class GameWindow(QMainWindow):
         except Exception:
             pass
         self.show_screen("deckbuild")
+
+    def on_match_ready(self, net, room: str, is_host: bool) -> None:
+        """一键匹配成功 -> 直接进入卡组构筑（和手工连上走同一条路）。"""
+        try:
+            self.on_lobby_connected(0 if is_host else 1, net)
+        except Exception as exc:
+            print(f"[qt.app] on_match_ready failed: {exc!r}", flush=True)
 
     def on_lobby_closed(self) -> None:
         self._cleanup_net()

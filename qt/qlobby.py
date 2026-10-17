@@ -208,6 +208,16 @@ class LobbyScreen(QWidget):
     connected = pyqtSignal(int, object)
     closed = pyqtSignal()
 
+    # -- 一键匹配 --
+    #: 排队位置更新（pos, waiting）
+    queue_update = pyqtSignal(int, int)
+    #: 匹配成功（net 对象, 房间号, 是否是房主）
+    match_found = pyqtSignal(object, str, bool)
+    #: 匹配成功且已准备好进入对战
+    match_ready = pyqtSignal(object, str, bool)
+    #: 匹配失败（原因）
+    match_failed = pyqtSignal(str)
+
     POLL_MS = 120
 
     def __init__(self, parent=None, player_name: str = "指挥官"):
@@ -257,6 +267,16 @@ class LobbyScreen(QWidget):
         self.btn_join.clicked.connect(lambda: self.set_mode("join"))
         tabrow.addWidget(self.btn_join)
 
+        # -- 一键匹配（最好用，放最前面）--
+        self.btn_match = QPushButton("⚡ 一 键 匹 配", self)
+        self.btn_match.setObjectName("Tab")
+        self.btn_match.setCheckable(True)
+        self.btn_match.setMinimumWidth(190)
+        self.btn_match.setMinimumHeight(42)
+        self.btn_match.setToolTip("自动找对手，不用交换房间号")
+        self.btn_match.clicked.connect(lambda: self.set_mode("match"))
+        tabrow.addWidget(self.btn_match)
+
         # -- 公网（中继）两个模式 --
         self.btn_net_host = QPushButton("公 网 建 房", self)
         self.btn_net_host.setObjectName("Tab")
@@ -289,6 +309,61 @@ class LobbyScreen(QWidget):
         pv = QVBoxLayout(self.panel)
         pv.setContentsMargins(18, 16, 18, 16)
         pv.setSpacing(12)
+
+        # -- 一键匹配区 --
+        self.match_box = QWidget(self.panel)
+        self.match_box.setObjectName("LobbyPane")
+        self.match_box.setStyleSheet("QWidget#LobbyPane{background:transparent;}")
+        mv = QVBoxLayout(self.match_box)
+        mv.setContentsMargins(0, 0, 0, 0)
+        mv.setSpacing(14)
+
+        self.lbl_match_title = QLabel("快速匹配", self.match_box)
+        self.lbl_match_title.setStyleSheet(
+            f"color:{T.GOLD};font-size:{T.FONT_H1}px;font-weight:800;"
+            f"background:transparent;")
+        mv.addWidget(self.lbl_match_title)
+
+        self.lbl_match_hint = QLabel(
+            "点下面的按钮，服务器会**自动帮你找一个对手**。\n"
+            "不用交换房间号，不用知道对方 IP。", self.match_box)
+        self.lbl_match_hint.setWordWrap(True)
+        self.lbl_match_hint.setStyleSheet(
+            f"color:{T.TEXT_DIM};font-size:{T.FONT_SMALL}px;"
+            f"background:transparent;")
+        mv.addWidget(self.lbl_match_hint)
+
+        # 搜索中的动画文字
+        self.lbl_match_state = QLabel("", self.match_box)
+        self.lbl_match_state.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_match_state.setMinimumHeight(64)
+        self.lbl_match_state.setStyleSheet(
+            f"color:{T.TEXT};font-size:{T.FONT_H1}px;font-weight:700;"
+            f"background:{T.PANEL_LO};border:1px solid {T.BORDER};"
+            f"border-radius:8px;")
+        self.lbl_match_state.hide()
+        mv.addWidget(self.lbl_match_state)
+
+        self.btn_match_go = QPushButton("开 始 匹 配", self.match_box)
+        self.btn_match_go.setObjectName("Primary")
+        self.btn_match_go.setMinimumHeight(52)
+        self.btn_match_go.clicked.connect(self.start_match)
+        mv.addWidget(self.btn_match_go)
+
+        self.btn_match_cancel = QPushButton("取 消 匹 配", self.match_box)
+        self.btn_match_cancel.setObjectName("Ghost")
+        self.btn_match_cancel.setMinimumHeight(42)
+        self.btn_match_cancel.clicked.connect(self.cancel_match)
+        self.btn_match_cancel.hide()
+        mv.addWidget(self.btn_match_cancel)
+
+        mv.addStretch(1)
+        self.match_box.hide()
+
+        # 匹配信号连接（后台线程 -> UI 线程）
+        self.queue_update.connect(self.on_queue_update)
+        self.match_found.connect(self.on_match_found)
+        self.match_failed.connect(self.on_match_failed)
 
         # -- 房主区 --
         self.host_box = QWidget(self.panel)
@@ -430,6 +505,7 @@ class LobbyScreen(QWidget):
         self.net_box.hide()
         pv.addWidget(self.net_box, 1)
 
+        pv.addWidget(self.match_box, 1)
         pv.addWidget(self.host_box, 1)
 
         # -- 加入区 --
@@ -585,7 +661,7 @@ class LobbyScreen(QWidget):
     # =================================================================
     def set_mode(self, mode: str) -> None:
         mode = str(mode)
-        if mode not in ("host", "join", "net_host", "net_join"):
+        if mode not in ("host", "join", "net_host", "net_join", "match"):
             mode = "host"
         if mode != self._mode:
             self.stop_all()
@@ -594,20 +670,29 @@ class LobbyScreen(QWidget):
         self.btn_join.setChecked(mode == "join")
         self.btn_net_host.setChecked(mode == "net_host")
         self.btn_net_join.setChecked(mode == "net_join")
+        self.btn_match.setChecked(mode == "match")
         self.host_box.setVisible(mode == "host")
         self.join_box.setVisible(mode == "join")
-        is_net = mode in ("net_host", "net_join")
-        self.net_box.setVisible(is_net)
+        self.match_box.setVisible(mode == "match")
+        # match 走自己的面板，不显示旧的房间号面板
+        # （两个都显示会挤在一起，而且房间号匹配对玩家没意义）
+        is_net = mode in ("net_host", "net_join", "match")
+        self.net_box.setVisible(mode in ("net_host", "net_join"))
         self.radar.set_live(False)
         # 副标题跟着模式走，避免"局域网"字样出现在公网模式里
         try:
-            if is_net:
+            if mode == "match":
+                self.tb.set_subtitle("一键匹配 · 自动找对手 · 跨网络可用")
+            elif is_net:
                 self.tb.set_subtitle("公网联机 · 用房间号匹配 · 跨网络可用")
             else:
                 self.tb.set_subtitle("局域网 1v1 · 双方各带一套卡组")
         except Exception:
             pass
 
+        if mode == "match":
+            self._prepare_match()
+            return
         if is_net:
             self._prepare_net(mode)
             return
@@ -617,6 +702,112 @@ class LobbyScreen(QWidget):
                          T.TEXT_DIM)
         else:
             self._status("输入房主的 IP，然后点「连接房主」。", T.TEXT_DIM)
+
+    def _prepare_match(self) -> None:
+        """切到匹配模式：按服务器是否开放来决定按钮可用性。"""
+        try:
+            from core import relay_client as _rc
+            configured = bool(_rc.relay_configured())
+            srv = (_rc.relay_address() if configured else "")
+        except Exception:
+            configured = False
+            srv = ""
+        self.btn_match_go.setEnabled(configured)
+        if configured:
+            self._status("点「开始匹配」自动找对手（服务器：%s）" % srv,
+                         T.TEXT_DIM)
+        else:
+            self._status("服务器未开放，请等待 12:00～24:00 开放服务器",
+                         T.Q_ORANGE)
+
+    # ------------------------------------------------------------------
+    # 一键匹配
+    # ------------------------------------------------------------------
+    def start_match(self) -> None:
+        """点「开始匹配」：进服务器队列找对手。"""
+        try:
+            from core import relay_client as _rc
+        except Exception as exc:
+            self._status("缺少联机模块：%s" % exc, T.Q_RED)
+            return
+        if not _rc.relay_configured():
+            self._status("服务器未开放，请等待 12:00～24:00 开放服务器",
+                         T.Q_ORANGE)
+            return
+        if getattr(self, "_matching", False):
+            return
+        self._matching = True
+        self._match_cancel = False
+        self.btn_match_go.setEnabled(False)
+        self.btn_match_cancel.show()
+        self.lbl_match_state.show()
+        self.lbl_match_state.setText("正在搜索对手…")
+        self.lbl_match_state.setStyleSheet(
+            f"color:{T.GOLD};font-size:{T.FONT_H1}px;font-weight:700;"
+            f"background:{T.PANEL_LO};border:1px solid {T.BORDER};"
+            f"border-radius:8px;")
+        self._status("已进入匹配队列，正在寻找对手…", T.GOLD)
+
+        # 后台线程匹配（不能卡 UI）
+        import threading
+
+        def _worker():
+            try:
+                obj, room, is_host = _rc.match_via_relay(
+                    on_queue=self._on_queue_update, timeout=90.0)
+            except Exception as exc:
+                self.match_failed.emit(str(exc))
+                return
+            self.match_found.emit(obj, room, bool(is_host))
+
+        t = threading.Thread(target=_worker, name="sf-match", daemon=True)
+        t.start()
+
+    def _on_queue_update(self, pos: int, waiting: int) -> None:
+        """排队位置回调（可能来自后台线程 -> 用信号转回 UI 线程）。"""
+        self.queue_update.emit(int(pos), int(waiting))
+
+    def on_queue_update(self, pos: int, waiting: int) -> None:
+        """UI 线程里更新「搜索中…（第 N 位）」。"""
+        if not getattr(self, "_matching", False):
+            return
+        dots = "." * ((pos + waiting) % 4)
+        if waiting <= 1:
+            self.lbl_match_state.setText("正在搜索对手" + dots)
+        else:
+            self.lbl_match_state.setText(
+                "正在搜索对手" + dots + "\n前面还有 %d 人" % max(0, waiting - 1))
+
+    def on_match_found(self, obj, room, is_host: bool) -> None:
+        """匹配成功：直接进对战。"""
+        self._matching = False
+        self.btn_match_go.setEnabled(True)
+        self.btn_match_cancel.hide()
+        self.lbl_match_state.setText("已找到对手！")
+        self.lbl_match_state.setStyleSheet(
+            f"color:{T.GREEN};font-size:{T.FONT_H1}px;font-weight:700;"
+            f"background:{T.PANEL_LO};border:1px solid {T.GREEN};"
+            f"border-radius:8px;")
+        self._status("匹配成功，房间 %s" % room, T.GREEN)
+        self.match_ready.emit(obj, str(room), bool(is_host))
+
+    def on_match_failed(self, msg: str) -> None:
+        self._matching = False
+        self.btn_match_go.setEnabled(True)
+        self.btn_match_cancel.hide()
+        self.lbl_match_state.hide()
+        self._status("匹配失败：%s" % msg, T.Q_RED)
+
+    def cancel_match(self) -> None:
+        """取消匹配。"""
+        if not getattr(self, "_matching", False):
+            return
+        self._matching = False
+        self._match_cancel = True
+        self.btn_match_go.setEnabled(True)
+        self.btn_match_cancel.hide()
+        self.lbl_match_state.hide()
+        self._status("已取消匹配。", T.TEXT_DIM)
 
     # ------------------------------------------------------------------
     # 公网（中继）
