@@ -11,9 +11,9 @@
 
 <h2>
 
-[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-Public-v0.9.27-beta.dmg)
+[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.28/SteelFrontline-Public-v0.9.28-beta.dmg)
 
-[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.27/SteelFrontline-WindowsRework-0.9.28.zip)
+[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.28/SteelFrontline-WindowsRework-0.9.28.zip)
 
 </h2>
 
