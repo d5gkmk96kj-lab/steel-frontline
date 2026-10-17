@@ -46,28 +46,136 @@ import threading
 import time
 from typing import Any, Dict, Optional
 
-# 中继服务器地址。**部署后改这里**（或设环境变量覆盖，方便测试）。
+# --------------------------------------------------------------------
+# 中继服务器地址 —— **支持多个，自动故障转移**
+# --------------------------------------------------------------------
+# 主服务器挂了就自动试下一个，玩家完全无感。
+#
+# 配置方式（优先级从高到低）：
+#   1. 环境变量 SF_RELAY_HOSTS="ip1:9000,ip2:9000"
+#   2. 下面的 RELAY_HOSTS 列表（**部署后改这里**）
+#   3. 老的单地址环境变量 SF_RELAY_HOST
+#
 # 建议用域名而不是 IP：以后换服务器只要改 DNS，老客户端自动跟着走。
-DEFAULT_RELAY_HOST = os.environ.get("SF_RELAY_HOST", "")
+RELAY_HOSTS = [
+    # (主机, 端口)
+    # 部署后把这里换成你自己的服务器。
+    # 第一个是主力（香港），第二个是备用（美国）。
+    # 例如：
+    #   ("hk.example.com", 9000),
+    #   ("us.example.com", 9000),
+]
+
 DEFAULT_RELAY_PORT = int(os.environ.get("SF_RELAY_PORT", "9000"))
+
+#: 兼容旧代码：第一台服务器
+DEFAULT_RELAY_HOST = ""
+
+
+def _parse_hosts() -> list:
+    """把配置解析成 [(host, port), ...]，按优先级排好。"""
+    out = []
+    raw = os.environ.get("SF_RELAY_HOSTS", "").strip()
+    if raw:
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if ":" in part:
+                h, _, p = part.rpartition(":")
+                try:
+                    out.append((h.strip(), int(p)))
+                except ValueError:
+                    out.append((part, DEFAULT_RELAY_PORT))
+            else:
+                out.append((part, DEFAULT_RELAY_PORT))
+        return out
+    for item in RELAY_HOSTS:
+        try:
+            h, p = item
+        except (TypeError, ValueError):
+            continue
+        h = str(h or "").strip()
+        if h:
+            try:
+                out.append((h, int(p)))
+            except (TypeError, ValueError):
+                out.append((h, DEFAULT_RELAY_PORT))
+    if out:
+        return out
+    # 老的单地址
+    one = os.environ.get("SF_RELAY_HOST", "").strip()
+    if one:
+        if ":" in one:
+            h, _, p = one.rpartition(":")
+            try:
+                return [(h.strip(), int(p))]
+            except ValueError:
+                return [(one, DEFAULT_RELAY_PORT)]
+        return [(one, DEFAULT_RELAY_PORT)]
+    # 最后回落到模块级变量（测试里会直接改它）
+    mod = str(globals().get("DEFAULT_RELAY_HOST") or "").strip()
+    if mod:
+        if ":" in mod:
+            h, _, p = mod.rpartition(":")
+            try:
+                return [(h.strip(), int(p))]
+            except ValueError:
+                return [(mod, DEFAULT_RELAY_PORT)]
+        return [(mod, DEFAULT_RELAY_PORT)]
+    return []
+
+
+def relay_endpoints() -> list:
+    """当前配置的全部服务器地址（按优先级）。"""
+    return _parse_hosts()
+
+
+def relay_configured() -> bool:
+    """有没有配置中继服务器（没配就隐藏「公网」入口）。"""
+    return bool(_parse_hosts())
+
+
+def relay_address() -> str:
+    """给界面显示的服务器地址（只显示主服务器）。"""
+    eps = _parse_hosts()
+    if not eps:
+        return ""
+    h, p = eps[0]
+    text = h if ":" in h else ("%s:%d" % (h, p))
+    if len(eps) > 1:
+        text += "（+%d 备用）" % (len(eps) - 1)
+    return text
+
+
+def connect_any(timeout: float = 0.0):
+    """依次尝试配置里的每一台服务器，返回第一个连上的 RelaySocket。
+
+    全连不上就抛 RelayError，里面带上每一台的失败原因 ——
+    玩家能看出是"服务器没开"还是"自己网络问题"。
+    """
+    eps = _parse_hosts()
+    if not eps:
+        raise RelayError("没有配置联机服务器地址。")
+    errors = []
+    for h, p in eps:
+        rs = RelaySocket(h, p)
+        try:
+            rs.connect()
+            return rs
+        except Exception as exc:
+            errors.append("%s:%d -> %s" % (h, p, exc))
+            try:
+                rs.close()
+            except Exception:
+                pass
+    raise RelayError("所有服务器都连不上。\n" + "\n".join(errors))
+
 
 # 连中继的超时
 CONNECT_TIMEOUT = 10.0
 # 等待房间创建/加入结果的超时
 HANDSHAKE_TIMEOUT = 12.0
-
-
-def relay_configured() -> bool:
-    """有没有配置中继服务器（没配就隐藏「公网」入口）。"""
-    return bool(DEFAULT_RELAY_HOST.strip())
-
-
-def relay_address() -> str:
-    """给界面显示的服务器地址。"""
-    h = DEFAULT_RELAY_HOST.strip()
-    if not h:
-        return ""
-    return h if ":" in h else ("%s:%d" % (h, DEFAULT_RELAY_PORT))
 
 
 class RelayError(Exception):
@@ -381,24 +489,26 @@ class RelaySocket:
 # --------------------------------------------------------------------------
 # 便捷入口：建一个「已经在房里」的 RelaySocket
 # --------------------------------------------------------------------------
+def _connect_with_failover(host: str = "", port: int = 0) -> RelaySocket:
+    """连服务器：显式指定地址就直连，否则按配置依次试（故障转移）。"""
+    h = (host or "").strip()
+    if h:
+        rs = RelaySocket(h, port or DEFAULT_RELAY_PORT)
+        rs.connect()
+        return rs
+    return connect_any()
+
+
 def make_room(host: str = "", port: int = 0) -> RelaySocket:
     """建房并返回已连接的 socket（房主用）。"""
-    h = (host or DEFAULT_RELAY_HOST).strip()
-    if not h:
-        raise RelayError("没有配置联机服务器地址。")
-    rs = RelaySocket(h, port or DEFAULT_RELAY_PORT)
-    rs.connect()
+    rs = _connect_with_failover(host, port)
     rs.host_room()
     return rs
 
 
 def join(room: str, host: str = "", port: int = 0) -> RelaySocket:
     """加入房间并返回已连接的 socket（玩家用）。"""
-    h = (host or DEFAULT_RELAY_HOST).strip()
-    if not h:
-        raise RelayError("没有配置联机服务器地址。")
-    rs = RelaySocket(h, port or DEFAULT_RELAY_PORT)
-    rs.connect()
+    rs = _connect_with_failover(host, port)
     rs.join_room(room)
     return rs
 
@@ -472,11 +582,7 @@ def quick_match_room(host: str = "", port: int = 0,
     进服务器匹配队列，配上就返回房间号和分到的一边（0=房主位 / 1=挑战者位）。
     配不上抛 RelayError。
     """
-    h = (host or DEFAULT_RELAY_HOST).strip()
-    if not h:
-        raise RelayError("没有配置联机服务器地址。")
-    rs = RelaySocket(h, port or DEFAULT_RELAY_PORT)
-    rs.connect()
+    rs = _connect_with_failover(host, port)
     room = rs.quick_match(on_queue=on_queue, timeout=timeout)
     return rs, room, int(getattr(rs, "matched_side", 0) or 0)
 

@@ -1,20 +1,18 @@
 {
-  "version": "0.9.33",
-  "label": "0.9.33 测试版",
-  "label_en": "0.9.33 Beta",
+  "version": "0.9.34",
+  "label": "0.9.34 测试版",
+  "label_en": "0.9.34 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：一键匹配（点一个按钮自动找对手，不用交换房间号）",
-    "新增：匹配队列（先到先配、掉线自动移除、超时踢出）",
-    "新增：匹配界面（搜索中显示排队位置、可取消）",
-    "修复：服务器建房时持有锁再取锁导致死锁（第二个玩家匹配会卡死）"
+    "新增：中继服务器多地址自动故障转移（主服务器挂了自动切备用）",
+    "配置：RELAY_HOSTS 列表可填多台（香港主力 + 美国备用）",
+    "界面会显示「主服务器（+N 备用）」"
   ],
   "notes_en": [
-    "New: one-click quick match (press one button, the server finds an opponent -- no room codes)",
-    "New: matchmaking queue (first come first served; disconnects are dropped; stale entries time out)",
-    "New: matchmaking screen (shows queue position, cancellable)",
-    "Fix: building a room while holding the server lock deadlocked (the second player's match would hang)"
+    "New: automatic relay failover across multiple server addresses (falls back when the primary is down)",
+    "Config: RELAY_HOSTS accepts several hosts (e.g. Hong Kong primary + US backup)",
+    "The lobby shows the primary server plus how many backups exist"
   ]
 }
