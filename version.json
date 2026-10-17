@@ -1,14 +1,16 @@
 {
-  "version": "0.9.27",
-  "label": "0.9.27 测试版",
-  "label_en": "0.9.27 Beta",
+  "version": "0.9.28",
+  "label": "0.9.28 测试版",
+  "label_en": "0.9.28 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "测试：只改文档"
+    "新增：版本不一致时拒绝联机（改了战斗/卡牌才挡，改文档/界面不挡）",
+    "新增：版本不一致明确提示双方更新（与「疑似篡改」区分开）"
   ],
   "notes_en": [
-    "测试：只改文档"
+    "New: mismatched versions cannot play together (only blocks battle/card changes, not docs/UI)",
+    "New: version mismatch clearly tells both sides to update (distinct from suspected tampering)"
   ]
 }

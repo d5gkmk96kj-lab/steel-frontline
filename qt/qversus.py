@@ -1751,6 +1751,20 @@ class VersusScreen(QWidget):
                 if et == "profile":
                     self._on_profile_event(ev)
                     continue
+                if et == "version_mismatch":
+                    # 版本不一致：弹一个明确提示，告诉双方去更新
+                    try:
+                        from PyQt6.QtWidgets import QMessageBox
+                        QMessageBox.warning(
+                            self, "版本不一致",
+                            ev.get("msg") or "版本不一致，请更新到最新版。")
+                    except Exception:
+                        pass
+                    try:
+                        self.hint.setText("版本不一致，无法联机。")
+                    except Exception:
+                        pass
+                    continue
                 if et in ("integrity", "security", "timeout"):
                     info = {
                         "device": ev.get("peer_device", ""),

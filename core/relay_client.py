@@ -408,6 +408,12 @@ def join_via_relay(room_code: str, host: str = "", port: int = 0):
             _hello["hash"] = _snap["hash"]
             _hello["did"] = _snap.get("did", "")
             _hello["problems"] = _snap.get("problems", [])
+        # 版本标签：版本不一致时对方能看到具体版本
+        try:
+            from core import version as _V
+            _hello["label"] = _V.VERSION_LABEL
+        except Exception:
+            pass
     except Exception:
         pass
     c._send(_hello)

@@ -457,29 +457,65 @@ def _integrity_snapshot() -> dict:
         return {}
 
 
-def _check_peer_integrity(msg: dict, strict: bool = True):
-    """校验对方 hello 里带的哈希。返回 (ok, 原因)。
+#: 校验结果类型
+VER_OK = "ok"
+VER_MISMATCH = "mismatch"      # 版本不一致（对局相关代码不同）—— 可以明确告诉玩家
+VER_TAMPER = "tamper"          # 疑似篡改 —— 伪装超时，不告诉原因
 
-    strict=True 时任何不一致都拒绝；strict=False 只记录不拒绝
-    （给「举报后严检」用）。
+
+def _check_peer_integrity(msg: dict, strict: bool = True):
+    """校验对方 hello 里带的哈希。
+
+    返回 ``(ok, kind, 说明)``，其中 ``kind`` 是：
+
+      * ``VER_OK``       —— 通过
+      * ``VER_MISMATCH`` —— **版本不一致**。
+        双方的战斗 / 卡牌代码不同，联机必然出问题（同步错乱、崩溃）。
+        这种情况**明确告诉玩家**「版本不一致，请更新」，因为对方多半
+        只是没更新，不是恶意。
+      * ``VER_TAMPER``   —— 疑似**篡改**。
+        对方自报了调试器、注入之类的东西。这种**伪装成网络超时**，
+        不告诉真实原因（免得被针对性绕过）。
+
+    怎么区分「版本不同」和「被改过」：
+      哈希只覆盖 engine / cards / versus / netplay 这些**对局相关**的模块。
+      正常更新 -> 哈希变，但对方自检是干净的 -> 判成「版本不一致」。
+      自己改代码 -> 通常还会带调试器 / 补丁痕迹 -> 判成「篡改」。
     """
     try:
         from core import integrity as _I
     except Exception:
-        return True, ""
+        return True, VER_OK, ""
     expect = str(msg.get("hash") or "")
     mine = _I.build_hash()
     if not expect:
-        return False, "对方未提供代码校验信息。"
+        # 老客户端没有这个字段 —— 放行（不能因为对方版本旧就连不上）
+        return True, VER_OK, ""
     if not mine:
-        return True, ""            # 本机算不出来就不拦
-    if expect != mine:
-        return False, "代码校验失败。"
-    # 对方自报的运行时问题（调试器/注入）也要看
+        return True, VER_OK, ""            # 本机算不出来就不拦
+
+    # 对方自报的运行时问题（调试器 / 注入 / 补丁）
     probs = msg.get("problems") or []
-    if isinstance(probs, list) and probs:
-        return False, "代码校验失败。"
-    return True, ""
+    has_problems = isinstance(probs, list) and bool(probs)
+
+    if expect != mine:
+        if has_problems:
+            return False, VER_TAMPER, "代码校验失败。"
+        # 纯粹是版本不同
+        theirs = str(msg.get("label") or "").strip()
+        mine_label = ""
+        try:
+            from core import version as _V
+            mine_label = _V.VERSION_LABEL
+        except Exception:
+            pass
+        detail = ("对方的版本：%s\n你的版本：%s" % (theirs, mine_label)
+                  if theirs else "")
+        return False, VER_MISMATCH, detail
+
+    if has_problems:
+        return False, VER_TAMPER, "代码校验失败。"
+    return True, VER_OK, ""
 
 
 CLIENT_ALLOWED_TYPES = ("hello", "ready", "deck", "play", "end",
@@ -927,6 +963,32 @@ class _Conn:
                 _I2.record_violation(entry)
             except Exception:
                 pass
+        except Exception:
+            pass
+
+    def _reject_version_mismatch(self, detail: str = "") -> None:
+        """版本不一致：明确告诉双方原因（不是篡改，只是没更新）。
+
+        对局相关代码（战斗/卡牌）不同的话，联机必然出同步问题，
+        所以直接拒绝 —— 但要说清原因，让对方知道去更新。
+        """
+        msg = "版本不一致，无法联机。\n请双方都更新到最新版后再试。"
+        if detail:
+            msg += "\n\n" + detail
+        try:
+            self._emit({"type": "version_mismatch", "msg": msg})
+        except Exception:
+            pass
+        try:
+            self._send({"t": "error", "msg": msg})
+        except Exception:
+            pass
+        try:
+            self._send_bye("版本不一致，请更新后再试。")
+        except Exception:
+            pass
+        try:
+            self._teardown(notify=False)
         except Exception:
             pass
 
@@ -1484,12 +1546,17 @@ class Host(_Conn):
                 # 不匹配就**伪装成网络超时**（不告诉对方真实原因，
                 # 免得被针对性绕过）。
                 try:
-                    _ok, _why = _check_peer_integrity(msg)
+                    _ok, _kind, _why = _check_peer_integrity(msg)
                 except Exception:
-                    _ok, _why = True, ""
+                    _ok, _kind, _why = True, VER_OK, ""
                 if not _ok:
-                    self._record_integrity_violation(msg, _why)
-                    self._fake_timeout()
+                    self._record_integrity_violation(msg, _why or _kind)
+                    if _kind == VER_MISMATCH:
+                        # 版本不一致 -> 明确告诉玩家去更新
+                        self._reject_version_mismatch(_why)
+                    else:
+                        # 疑似篡改 -> 伪装超时
+                        self._fake_timeout()
                     return
 
                 self._peer_name = _sanitize_name(msg.get("name"), "对手")
@@ -1919,6 +1986,12 @@ class Client(_Conn):
                 hello["hash"] = _info["hash"]
                 hello["did"] = _info.get("did", "")
                 hello["problems"] = _info.get("problems", [])
+            # 带上版本标签：版本不一致时能让对方看到「对方的版本：xxx」
+            try:
+                from core import version as _V
+                hello["label"] = _V.VERSION_LABEL
+            except Exception:
+                pass
         except Exception:
             pass
         # 把「我输入的码」告诉房主 —— 房主用它验签（前缀匹配也行）

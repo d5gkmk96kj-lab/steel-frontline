@@ -135,28 +135,48 @@ class TestDeviceId(unittest.TestCase):
 
 
 class TestPeerIntegrityCheck(unittest.TestCase):
-    """房主侧校验对方 hello 的逻辑。"""
+    """房主侧校验对方 hello 的逻辑。
+
+    返回 (ok, kind, 说明)，kind 区分「版本不一致」与「疑似篡改」——
+    两者的处理方式完全不同（前者明确提示，后者伪装超时）。
+    """
 
     def test_accepts_matching_hash(self):
-        ok, why = N._check_peer_integrity({"hash": I.build_hash()})
+        ok, kind, why = N._check_peer_integrity({"hash": I.build_hash()})
         self.assertTrue(ok, why)
+        self.assertEqual(kind, N.VER_OK)
 
-    def test_rejects_mismatched_hash(self):
-        ok, why = N._check_peer_integrity({"hash": "0" * 64})
-        self.assertFalse(ok, "哈希不匹配竟然通过了！")
+    def test_mismatch_is_version_mismatch(self):
+        """哈希不同、自检干净 -> 判成「版本不一致」（明确提示）。"""
+        ok, kind, why = N._check_peer_integrity(
+            {"hash": "0" * 64, "label": "0.9.20 测试版"})
+        self.assertFalse(ok)
+        self.assertEqual(kind, N.VER_MISMATCH)
+        self.assertIn("0.9.20", why, "应该告诉对方具体版本")
 
-    def test_rejects_missing_hash(self):
-        ok, why = N._check_peer_integrity({})
-        self.assertFalse(ok, "没带哈希竟然通过了！")
+    def test_mismatch_with_debugger_is_tamper(self):
+        """哈希不同 + 自报调试器 -> 判成「篡改」（伪装超时）。"""
+        ok, kind, why = N._check_peer_integrity(
+            {"hash": "0" * 64, "problems": ["debugger:pdb"]})
+        self.assertFalse(ok)
+        self.assertEqual(kind, N.VER_TAMPER)
+        self.assertNotIn("pdb", why, "不该泄露具体原因")
 
-    def test_rejects_peer_with_debugger(self):
-        ok, why = N._check_peer_integrity(
+    def test_matching_hash_with_debugger_is_tamper(self):
+        ok, kind, why = N._check_peer_integrity(
             {"hash": I.build_hash(), "problems": ["debugger:pdb"]})
-        self.assertFalse(ok, "对方自报有调试器竟然通过了！")
+        self.assertFalse(ok)
+        self.assertEqual(kind, N.VER_TAMPER)
+
+    def test_missing_hash_is_allowed(self):
+        """老客户端没有 hash 字段 —— 放行，不能因为对方旧就连不上。"""
+        ok, kind, why = N._check_peer_integrity({})
+        self.assertTrue(ok)
+        self.assertEqual(kind, N.VER_OK)
 
     def test_rejects_garbage_problems_type(self):
         """problems 字段类型不对也不能崩。"""
-        ok, why = N._check_peer_integrity(
+        ok, kind, why = N._check_peer_integrity(
             {"hash": I.build_hash(), "problems": "not-a-list"})
         self.assertTrue(ok)
 
@@ -164,8 +184,13 @@ class TestPeerIntegrityCheck(unittest.TestCase):
         for bad in ({"hash": None}, {"hash": 123}, {"hash": []},
                     {"hash": {"a": 1}}):
             with self.subTest(hash=bad.get("hash")):
-                ok, why = N._check_peer_integrity(bad)
-                self.assertFalse(ok)
+                ok, kind, why = N._check_peer_integrity(bad)
+                self.assertIsInstance(ok, bool)
+                self.assertIn(kind, (N.VER_OK, N.VER_MISMATCH, N.VER_TAMPER))
+
+    def test_kinds_are_distinct(self):
+        self.assertNotEqual(N.VER_OK, N.VER_MISMATCH)
+        self.assertNotEqual(N.VER_MISMATCH, N.VER_TAMPER)
 
 
 class TestViolationStore(unittest.TestCase):
