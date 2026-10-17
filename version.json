@@ -1,18 +1,16 @@
 {
-  "version": "0.9.34",
-  "label": "0.9.34 测试版",
-  "label_en": "0.9.34 Beta",
+  "version": "0.9.35",
+  "label": "0.9.35 测试版",
+  "label_en": "0.9.35 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：中继服务器多地址自动故障转移（主服务器挂了自动切备用）",
-    "配置：RELAY_HOSTS 列表可填多台（香港主力 + 美国备用）",
-    "界面会显示「主服务器（+N 备用）」"
+    "新增：鸣谢界面（主菜单可进）",
+    "鸣谢名单存本地 credits_local.json，不随仓库上传"
   ],
   "notes_en": [
-    "New: automatic relay failover across multiple server addresses (falls back when the primary is down)",
-    "Config: RELAY_HOSTS accepts several hosts (e.g. Hong Kong primary + US backup)",
-    "The lobby shows the primary server plus how many backups exist"
+    "New: credits screen (reachable from the main menu)",
+    "The credits list lives in the local credits_local.json and is not committed"
   ]
 }

@@ -55,7 +55,8 @@ from .qconsole import ConsoleOverlay  # noqa: E402
 
 SCREENS = ("menu", "map", "battle", "reward", "shop", "rest", "event",
            "deck", "gameover", "codex", "achievements", "settings",
-           "stats", "pile", "lobby", "deckbuild", "versus", "saves")
+           "stats", "pile", "lobby", "deckbuild", "versus", "saves",
+           "credits")
 
 DEFAULT_CFG: Dict = {
     "fullscreen": False,
@@ -305,6 +306,7 @@ class GameWindow(QMainWindow):
         self.screens["codex"] = qscreens.CodexScreen(self)
         self.screens["achievements"] = qscreens.AchievementScreen(self)
         self.screens["settings"] = qscreens.SettingsScreen(self, self.cfg)
+        self.screens["credits"] = qscreens.CreditsScreen(self)
         self.screens["stats"] = qscreens.StatsScreen(self)
         self.screens["saves"] = qsave.SaveScreen(self)
         self.screens["pile"] = qscreens.PileScreen(self)
@@ -458,6 +460,7 @@ class GameWindow(QMainWindow):
         m.open_codex.connect(lambda: self.show_screen("codex"))
         m.open_achievements.connect(lambda: self.show_screen("achievements"))
         m.open_settings.connect(lambda: self.show_screen("settings"))
+        m.open_credits.connect(self.open_credits)
         m.open_stats.connect(lambda: self.show_screen("stats"))
         m.open_versus.connect(self.open_lobby)
         m.open_ai_versus.connect(self.open_ai_versus)
@@ -523,6 +526,7 @@ class GameWindow(QMainWindow):
         self.screens["saves"].closed.connect(self._back_to)
         self.screens["saves"].load_run.connect(self._load_slot)
         self.screens["settings"].closed.connect(self.on_settings_closed)
+        self.screens["credits"].closed.connect(self._back_to)
         self.screens["settings"].wipe_meta.connect(self.on_wipe_meta)
         self.screens["settings"].wipe_save.connect(self.on_wipe_save)
         self.screens["gameover"].finished.connect(lambda: self.show_screen("menu"))
@@ -530,6 +534,16 @@ class GameWindow(QMainWindow):
     # =================================================================
     # 路由
     # =================================================================
+    def open_credits(self) -> None:
+        """打开鸣谢界面（每次都重读名单，玩家可能刚改过）。"""
+        scr = self.screens.get("credits")
+        if scr is not None:
+            try:
+                scr.refresh()
+            except Exception:
+                pass
+        self.show_screen("credits")
+
     def show_screen(self, name: str) -> None:
         if name not in self.screens:
             print(f"[qt.app] unknown screen: {name}", flush=True)
