@@ -2,7 +2,7 @@
 
 # 钢铁战线 Steel Frontline
 
-**二战装甲卡牌 Roguelike** · 当前版本 **v1.0.2 正式版**
+**二战装甲卡牌 Roguelike** · 当前版本 **v1.0.3 正式版**
 
 ---
 ---
@@ -11,9 +11,9 @@
 
 <h2>
 
-[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.2/SteelFrontline-Public-v1.0.2.dmg)
+[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.3/SteelFrontline-Public-v1.0.3.dmg)
 
-[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.2/SteelFrontline-WindowsRework-1.0.2.zip)
+[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.3/SteelFrontline-WindowsRework-1.0.3.zip)
 
 </h2>
 
@@ -31,7 +31,7 @@
 |---|---|---|
 | macOS 打不开，说「无法验证开发者」 | 没买苹果签名 | [看这里](#macos-首次打开) |
 | Windows 弹「已保护你的电脑」 | 没买微软签名 | [看这里](#windows-首次打开) |
-| 联机按钮点不动 | 服务器每天只开 12 小时 | [看这里](#联机服务器开放时间) |
+| 联机按钮点不动 | 服务器暂时连不上 | [看这里](#联机说明) |
 | 没声音 | 音乐不附带（版权原因） | [看这里](#音乐--bgm) |
 | 不知道干嘛 | 这是卡牌 Roguelike | [看这里](#这是什么游戏) |
 
@@ -43,12 +43,16 @@
 
 ---
 
-### 联机服务器开放时间
+### 联机说明
 
-> **每天 12:00 ～ 24:00** 开放（其余时间服务器关闭）。
+> **服务器 24 小时在线**，不用等开放时间。
 >
-> 服务器关闭时，「联机对战」按钮会置灰并提示。
-> 单机内容任何时间都能玩，不受影响。
+> 打开游戏 →「联机对战」→「一键匹配」，服务器会自动帮你找对手。
+> 对方也要装**同一个版本**（版本不一致会拒绝联机）。
+>
+> 连不上通常是网络问题，稍等重试即可。单机内容不受影响。
+>
+> 服务器地址已内置，**你不需要知道也不需要填**。
 
 ### macOS 首次打开
 
@@ -71,7 +75,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v1.0.2 正式版` |
+> | **版本号** | 主菜单副标题，例如 `v1.0.3 正式版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -80,8 +84,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **v1.0.2 正式版 · 公开版** | `SteelFrontline-Public-v1.0.2.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | v1.0.2 正式版 · 完整版 | `钢铁战线-v1.0.2 正式版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **v1.0.3 正式版 · 公开版** | `SteelFrontline-Public-v1.0.3.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | v1.0.3 正式版 · 完整版 | `钢铁战线-v1.0.3 正式版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。
@@ -1550,15 +1554,14 @@ whale-card-battle/
 ├── ui/              Classic edition (Tkinter)
 ├── qt/              Hi-Fi edition (PyQt6)
 ├── locales/         translation tables
-├── tests/           426 tests
+├── tests/           899 tests
 ├── packaging/       build scripts for .app / .dmg
-└── releases/        prebuilt downloads
 ```
 
 ## Development / Verification
 
 ```bash
-# all tests (516 cases)
+# all tests (899 cases)
 python3 -m unittest discover -s tests
 
 # engine + data smoke test

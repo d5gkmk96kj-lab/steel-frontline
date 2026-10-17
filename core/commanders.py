@@ -171,7 +171,7 @@ _reg(Commander("oppenheimer", "奥本海默", "Oppenheimer", "US",
                  "曼哈顿计划", "核弹额外 +12 伤害；每回合 +1 指挥点。", Modifiers(nuke=12, supply=1)))
 
 # ---- 日本 / Japan ----------------------------------------------------
-_reg(Commander("hirohito", "昭和天皇", "Emperor Showa", "JP",
+_reg(Commander("hirohito", "裕仁", "Hirohito", "JP",
                  "御前会议", "每回合 +1 指挥点；开局手牌 +1。", Modifiers(supply=1, hand=1)))
 _reg(Commander("tojo", "东条英机", "Tojo Hideki", "JP",
                  "战时内阁", "伤害 ×1.12；掩体 ×0.92。", Modifiers(damage=1.12, block=0.92)))

@@ -2432,7 +2432,6 @@
  "新政": "New Deal",
  "开局金币 +50；商店价格 ×0.88。": "Start with +50 gold; shop prices x0.88.",
  "每回合额外抽 1 张牌；掩体 ×1.08。": "Draw 1 extra card; armor x1.08.",
- "昭和天皇": "Emperor Showa",
  "御前会议": "Imperial Conference",
  "东条英机": "Tojo Hideki",
  "战时内阁": "Wartime Cabinet",
@@ -2458,5 +2457,6 @@
  "丘吉尔": "Churchill",
  "我们决不投降": "We Shall Never Surrender",
  "总部耐久 +18；伤害 ×1.05。": "HQ durability +18; damage x1.05.",
- "掩体 ×1.25。": "Armor x1.25."
+ "掩体 ×1.25。": "Armor x1.25.",
+ "裕仁": "Hirohito"
 }
