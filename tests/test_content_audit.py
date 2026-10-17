@@ -122,8 +122,11 @@ class TestNoOceanLeftovers(unittest.TestCase):
                     line = src[ls:le if le != -1 else len(src)].strip()
                     if line.startswith("#") or line.startswith('"""'):
                         continue
-                    if "吉祥物" in ctx or "梦到了一只鲸鱼" in ctx:
-                        continue        # 隐藏彩蛋卡的显示文本
+                    # 隐藏彩蛋卡整块放行（谜面故意用海洋意象）
+                    if ("CHEAT_CARD_WHALE" in ctx or "吉祥物" in ctx
+                            or "深海巨兽" in ctx or "鲸鱼・纸牌" in ctx
+                            or "彩蛋卡" in ctx):
+                        continue
                     bad.append((fn, w))
         self.assertEqual(bad, [], "海洋词残留：%s" % bad[:5])
 

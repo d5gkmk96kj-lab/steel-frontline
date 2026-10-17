@@ -1691,7 +1691,10 @@ class CodexScreen(QWidget):
 
         # 卡牌
         # 图鉴 134 张卡：横向滚动浏览（scale 调小，保证一屏能看到多张）
-        self.card_scroll = CardScroll(self, card_scale=0.52)
+        # 图鉴有 200 张卡，**必须**用多行网格 —— 横向单行会排成上万像素的长条，
+        # 玩家只能左右拖，根本看不过来（真 bug）。
+        self.card_scroll = CardScroll(self, card_scale=0.52, vertical=True,
+                                      cols=10)
         self.tabs.addTab(self.card_scroll, "卡 牌")
         # 勋章
         self.relic_list = QListWidget(self)
@@ -1730,6 +1733,22 @@ class CodexScreen(QWidget):
                 d["text"] = "尚未在战场上缴获过这张卡牌。"
                 d["playable"] = False
             dicts.append(d)
+
+        # ---- 隐藏彩蛋卡的「谜语」占位 ----
+        # 永远显示为未解锁，但**保留描述**，让细心的人能自己解出线索。
+        try:
+            from core import cheats as _CH
+            _CH._ensure_cheat_cards()
+            egg = C.CARD_DB.get(_CH.CHEAT_CARD_WHALE)
+            if egg is not None:
+                d = RewardScreen._card_dict(egg)
+                d["name"] = "？？？？"
+                d["playable"] = False
+                # 描述就是谜面，这里不隐藏
+                d["text"] = egg.text
+                dicts.append(d)
+        except Exception:
+            pass
         self.card_scroll.set_cards(dicts, footer=False)
 
         # 勋章

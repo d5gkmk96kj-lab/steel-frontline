@@ -125,7 +125,9 @@ class TestNoSeaWordsInUserFacingText(unittest.TestCase):
             clean = strip_comments_and_docstrings(raw)
             for i, line in enumerate(clean.split("\n"), 1):
                 # 隐藏彩蛋卡（致敬最初的鲸鱼企划）不算残留
-                if "吉祥物" in line or "梦到了一只鲸鱼" in line:
+                if any(x in line for x in (
+                        "吉祥物", "深海巨兽", "鲸鱼・纸牌", "CHEAT_CARD_WHALE",
+                        "彩蛋")):
                     continue
                 for w in STRICT_SEA:
                     if w in line:

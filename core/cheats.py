@@ -101,7 +101,10 @@ def _ensure_cheat_cards() -> None:
         # ---- 彩蛋：致敬最初的「鲸鱼卡牌」企划 ----
         dict(id=CHEAT_CARD_WHALE, name="鲸鱼吉祥物", cost=0, type="skill",
              rarity=C.RARITY_RARE, arch=C.ARCH_SUMMON, target="self",
-             text="在二战爆发前，指挥官梦到了一只鲸鱼。",
+             text="战火之前，我梦见深海巨兽。\n"
+                  "三个名字用下划线缝起：\n"
+                  "鲸鱼・纸牌・对抗\n"
+                  "唤醒它的门是 F1。",
              effect=fx_whale, keywords=("彩蛋",)),
         dict(id=CHEAT_CARD_STRAT_BOMB, name="战略轰炸", cost=0, type="attack",
              rarity=C.RARITY_RARE, arch=C.ARCH_ATTACK, target="all_enemies",

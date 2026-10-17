@@ -1,14 +1,14 @@
 {
-  "version": "0.9.38",
-  "label": "0.9.38 测试版",
-  "label_en": "0.9.38 Beta",
+  "version": "0.9.39",
+  "label": "0.9.39 测试版",
+  "label_en": "0.9.39 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "内部细节优化"
+    "图鉴改成网格布局（之前 200 张卡排成一行）"
   ],
   "notes_en": [
-    "Internal polish"
+    "Codex now uses a grid layout (200 cards used to be one long row)"
   ]
 }
