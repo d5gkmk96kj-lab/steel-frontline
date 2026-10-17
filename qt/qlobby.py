@@ -344,6 +344,25 @@ class LobbyScreen(QWidget):
         self.lbl_match_state.hide()
         mv.addWidget(self.lbl_match_state)
 
+        # 服务器地址（可手动改，存到本地 server.txt）
+        srv_row = QHBoxLayout()
+        srv_row.setSpacing(8)
+        lbl_srv = QLabel("服务器：", self.match_box)
+        lbl_srv.setStyleSheet(
+            f"color:{T.TEXT_DIM};font-size:{T.FONT_SMALL}px;"
+            f"background:transparent;")
+        srv_row.addWidget(lbl_srv)
+        self.ed_srv = QLineEdit(self.match_box)
+        self.ed_srv.setPlaceholderText("例如 45.123.45.67:9000")
+        self.ed_srv.setClearButtonEnabled(True)
+        srv_row.addWidget(self.ed_srv, 1)
+        self.btn_srv_save = QPushButton("保存", self.match_box)
+        self.btn_srv_save.setObjectName("Ghost")
+        self.btn_srv_save.setFixedWidth(76)
+        self.btn_srv_save.clicked.connect(self.save_server_address)
+        srv_row.addWidget(self.btn_srv_save)
+        mv.addLayout(srv_row)
+
         self.btn_match_go = QPushButton("开 始 匹 配", self.match_box)
         self.btn_match_go.setObjectName("Primary")
         self.btn_match_go.setMinimumHeight(52)
@@ -703,8 +722,37 @@ class LobbyScreen(QWidget):
         else:
             self._status("输入房主的 IP，然后点「连接房主」。", T.TEXT_DIM)
 
+    def save_server_address(self) -> None:
+        """保存玩家手填的服务器地址（存到本地 server.txt）。"""
+        try:
+            from core import relay_client as _rc
+        except Exception as exc:
+            self._status("缺少联机模块：%s" % exc, T.Q_RED)
+            return
+        ok, msg = _rc.save_endpoints(self.ed_srv.text())
+        if not ok:
+            self._status("保存失败：%s" % msg, T.Q_RED)
+            return
+        self._status(msg + " 可以开始匹配了。", T.GREEN)
+        self._prepare_match()          # 刷新按钮可用状态
+
+    def _load_server_address(self) -> None:
+        """把当前配置的地址填进输入框。"""
+        try:
+            from core import relay_client as _rc
+            eps = _rc.relay_endpoints()
+            if eps:
+                self.ed_srv.setText(",".join(
+                    "%s:%d" % (h, p) for h, p in eps))
+        except Exception:
+            pass
+
     def _prepare_match(self) -> None:
         """切到匹配模式：按服务器是否开放来决定按钮可用性。"""
+        try:
+            self._load_server_address()
+        except Exception:
+            pass
         try:
             from core import relay_client as _rc
             configured = bool(_rc.relay_configured())

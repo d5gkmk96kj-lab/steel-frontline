@@ -72,10 +72,67 @@ DEFAULT_RELAY_PORT = int(os.environ.get("SF_RELAY_PORT", "9000"))
 DEFAULT_RELAY_HOST = ""
 
 
+def _config_file() -> str:
+    """本地服务器配置文件的路径（优先于代码里的 RELAY_HOSTS）。"""
+    env = os.environ.get("SF_GAME_HOME")
+    if env:
+        return os.path.join(env, "server.txt")
+    return os.path.join(os.path.expanduser("~"), "Documents", "钢铁战线",
+                        "server.txt")
+
+
+def _read_config_file() -> str:
+    """读 server.txt：每行一个 host 或 host:port，# 开头是注释。"""
+    try:
+        with open(_config_file(), encoding="utf-8") as f:
+            lines = []
+            for ln in f:
+                ln = ln.split("#", 1)[0].strip()
+                if ln:
+                    lines.append(ln)
+            return ",".join(lines)
+    except Exception:
+        return ""
+
+
+def save_endpoints(text: str) -> tuple:
+    """把玩家填的地址写进 server.txt。返回 (是否成功, 说明)。
+
+    text 支持：
+      * 一个或多个地址，用逗号 / 空格 / 换行分隔
+      * 自动去掉协议前缀和路径
+      * 没写端口就用默认端口
+    """
+    raw = str(text or "").replace("\n", ",").replace(" ", ",")
+    parts = [x.strip() for x in raw.split(",") if x.strip()]
+    clean = []
+    for p in parts:
+        p = p.strip()
+        for pre in ("https://", "http://"):
+            if p.startswith(pre):
+                p = p[len(pre):]
+        p = p.split("/", 1)[0]
+        if p:
+            clean.append(p)
+    if not clean:
+        return False, "请填服务器地址。"
+    path = _config_file()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("# 钢铁战线 联机服务器地址（每行一个，第一行是主服务器）\n")
+            for c in clean:
+                f.write(c + "\n")
+    except Exception as exc:
+        return False, "写入失败：%s" % exc
+    return True, "已保存 %d 个地址。" % len(clean)
+
+
 def _parse_hosts() -> list:
     """把配置解析成 [(host, port), ...]，按优先级排好。"""
     out = []
-    raw = os.environ.get("SF_RELAY_HOSTS", "").strip()
+    # 优先级：环境变量 > 本地配置文件 > 代码里的 RELAY_HOSTS
+    raw = os.environ.get("SF_RELAY_HOSTS", "").strip() or _read_config_file()
     if raw:
         for part in raw.split(","):
             part = part.strip()

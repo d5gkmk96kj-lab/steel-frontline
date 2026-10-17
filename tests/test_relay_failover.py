@@ -189,3 +189,65 @@ class TestDefaults(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestConfigFile(unittest.TestCase):
+    """本地 server.txt 配置（不用改代码就能换服务器）。"""
+
+    def setUp(self):
+        import tempfile, shutil
+        self.tmp = tempfile.mkdtemp(prefix="sf_srv_")
+        self._old = os.environ.get("SF_GAME_HOME")
+        os.environ["SF_GAME_HOME"] = self.tmp
+
+    def tearDown(self):
+        import shutil
+        if self._old is None:
+            os.environ.pop("SF_GAME_HOME", None)
+        else:
+            os.environ["SF_GAME_HOME"] = self._old
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_save_and_load(self):
+        ok, msg = RC.save_endpoints("1.2.3.4:9000")
+        self.assertTrue(ok, msg)
+        self.assertEqual(RC.relay_endpoints(), [("1.2.3.4", 9000)])
+
+    def test_multiple_lines(self):
+        RC.save_endpoints("hk.test:9000\nus.test:9000")
+        self.assertEqual(RC.relay_endpoints(),
+                         [("hk.test", 9000), ("us.test", 9000)])
+
+    def test_strips_protocol_and_path(self):
+        RC.save_endpoints("https://example.com:9000/foo")
+        self.assertEqual(RC.relay_endpoints(), [("example.com", 9000)])
+
+    def test_default_port_when_missing(self):
+        RC.save_endpoints("example.com")
+        self.assertEqual(RC.relay_endpoints(),
+                         [("example.com", RC.DEFAULT_RELAY_PORT)])
+
+    def test_empty_rejected(self):
+        ok, msg = RC.save_endpoints("   ")
+        self.assertFalse(ok)
+        self.assertIn("请填", msg)
+
+    def test_comments_ignored(self):
+        RC.save_endpoints("1.2.3.4:9000")
+        # 手动追加注释行
+        p = RC._config_file()
+        with open(p, "a", encoding="utf-8") as f:
+            f.write("# 这是注释\n")
+        self.assertEqual(RC.relay_endpoints(), [("1.2.3.4", 9000)])
+
+    def test_missing_file_is_empty(self):
+        # 别的测试可能改过 DEFAULT_RELAY_HOST（向后兼容回落），要一起清
+        old_mod = RC.DEFAULT_RELAY_HOST
+        old_list = list(RC.RELAY_HOSTS)
+        RC.DEFAULT_RELAY_HOST = ""
+        RC.RELAY_HOSTS[:] = []
+        try:
+            self.assertEqual(RC.relay_endpoints(), [])
+        finally:
+            RC.DEFAULT_RELAY_HOST = old_mod
+            RC.RELAY_HOSTS[:] = old_list
