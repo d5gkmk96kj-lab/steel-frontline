@@ -94,6 +94,45 @@ def auto_next(cur: str) -> str:
     return ".".join(parts)
 
 
+#: 改了这些路径 -> 算「代码变了」，要升版本号
+CODE_PATHS = ("core/", "qt/", "ui/", "packaging/", "tests/",
+              "main.py", "server/", "admin/")
+
+#: 改了这些 -> 不算（文档 / 配置 / 素材）
+DOC_PATHS = ("README.md", "docs/", ".github/", ".gitignore",
+             ".gitattributes", "LICENSE", "releases/",
+             "version.json", "ARCHITECTURE.md", "tips.txt",
+             "locales/", "music/")
+
+
+def _changed_files() -> list:
+    """列出工作区里相对上次提交改动的文件（含暂存）。"""
+    import subprocess
+    out = []
+    for args in (["diff", "--cached", "--name-only"],
+                 ["diff", "--name-only"],
+                 ["ls-files", "--others", "--exclude-standard"]):
+        try:
+            r = subprocess.run(["git"] + args, capture_output=True,
+                               text=True, timeout=15)
+            out += [l.strip() for l in (r.stdout or "").split("\n") if l.strip()]
+        except Exception:
+            pass
+    return sorted(set(out))
+
+
+def _only_docs_changed():
+    """只改了文档/配置吗？返回 (是否只看文档, 说明)。"""
+    files = _changed_files()
+    if not files:
+        return False, "没有检测到改动"
+    code = [f for f in files if f.startswith(CODE_PATHS)]
+    if code:
+        return False, "、".join(code[:3])
+    docs = [f for f in files if f.startswith(DOC_PATHS)]
+    return True, "、".join(docs[:3]) or "、".join(files[:3])
+
+
 def main():
     argv = sys.argv[1:]
     auto_mode = False
@@ -109,6 +148,16 @@ def main():
 
     # --auto：自动在当前版本上 +0.01
     if not manual_set and argv and argv[0] in ("--auto", "-a", "auto"):
+        # 先看这次改动是不是**只有文档/仓库配置** —— 那种不该刷版本号。
+        # 背景：之前每提交一次就 +0.01，改个 README 也刷，
+        # 结果发行版还是 0.9.27，version.json 已经 0.9.31，
+        # 所有装了的玩家一启动就被提示"该更新了"（真踩过）。
+        only_docs, why = _only_docs_changed()
+        if only_docs and "--force" not in argv:
+            print("  这次只改了文档 / 仓库配置，不升版本号。")
+            print("    （涉及：%s）" % why)
+            print("  确实想升的话加 --force。")
+            return 0
         auto_mode = True
         cur = None
         # 直接读 core/version.py，避免依赖 import 路径

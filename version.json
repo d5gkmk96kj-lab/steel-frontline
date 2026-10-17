@@ -1,16 +1,14 @@
 {
-  "version": "0.9.31",
-  "label": "0.9.31 测试版",
-  "label_en": "0.9.31 Beta",
-  "released": "2026-10-16",
+  "version": "0.9.27",
+  "label": "0.9.27 测试版",
+  "label_en": "0.9.27 Beta",
+  "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：游戏内显示服务器开放时间（大厅 + 主菜单）",
-    "新增：README 顶部醒目提示（不看会遇到的 5 个问题 + 直达链接）"
+    "测试：只改文档"
   ],
   "notes_en": [
-    "New: server hours shown in game (lobby + main menu)",
-    "New: prominent README banner listing the 5 common problems and where to fix them"
+    "测试：只改文档"
   ]
 }
