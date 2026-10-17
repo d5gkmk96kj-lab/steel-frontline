@@ -984,12 +984,13 @@ class VersusScreen(QWidget):
         self.btn_leave.clicked.connect(lambda: self._leave("left"))
         rv.addWidget(self.btn_leave)
 
-        # 举报按钮：放在离开旁边，对局中随时可点
-        # 聊天面板（浮在右下角，默认收起）
+        # 聊天面板：**放进右侧栏布局**，跟着按钮列一起排。
+        # 之前 parent=self 又没 addWidget，结果是个悬在右上角
+        # 320x240 的小方块，玩家完全不知道那是什么（用户反馈）。
         try:
-            self.chat = qchat.ChatPanel(self)
+            self.chat = qchat.ChatPanel(right)
             self.chat.send_requested.connect(self._on_chat_send)
-            self.chat.hide()
+            self.chat.setVisible(False)
         except Exception as exc:
             print(f"[qversus] 聊天面板创建失败：{exc!r}", flush=True)
             self.chat = None
@@ -1010,7 +1011,12 @@ class VersusScreen(QWidget):
             "遇到疑似改代码 / 作弊的对手，点这里举报。\n"
             "举报后会对他启用更严格的检测。")
         self.btn_report.clicked.connect(self._do_report)
+        self.btn_report.hide()          # 默认不显示，开了真人局才显示
         rv.addWidget(self.btn_report)
+
+        # 聊天面板放在按钮下面，占满剩余高度（右侧栏里的一块）
+        if getattr(self, "chat", None) is not None:
+            rv.addWidget(self.chat, 1)
 
         # ---- 房主作弊开关（仅房主可见；客户端永远没有这个面板）----
         self.cheat_box = QWidget(right)
@@ -1801,40 +1807,24 @@ class VersusScreen(QWidget):
         if c.isVisible():
             c.hide_panel()
         else:
-            self._place_chat()
-            c.show_panel()
+            c.show_panel()      # 已经在右侧栏布局里，不需要手动定位
 
     def _set_chat_available(self, on: bool) -> None:
-        """开关聊天功能（人机对局关掉）。"""
+        """开关「只有真人对手才有意义」的功能。
+
+        人机对局没有对手可聊、也没人可举报 —— 这两个按钮都该隐藏。
+        （用户反馈：人机对战里冒出举报和聊天，很莫名其妙。）
+        """
         try:
             if on:
                 self.btn_chat.show()
+                self.btn_report.show()
             else:
                 self.btn_chat.hide()
+                self.btn_report.hide()
                 c = getattr(self, "chat", None)
                 if c is not None:
                     c.hide_panel()
-        except Exception:
-            pass
-
-    def _place_chat(self) -> None:
-        """把聊天面板放到右下角。
-
-        修 bug：之前在 __init__ 里 setFixedWidth 后没定位，
-        面板尺寸还没算出来，move 到的是错误位置（看起来"不显示"）。
-        这里在每次显示前重新算一次。
-        """
-        c = getattr(self, "chat", None)
-        if c is None:
-            return
-        try:
-            c.adjustSize()
-            w = max(c.width(), 320)
-            h = max(c.height(), 240)
-            x = max(8, self.width() - w - 20)
-            y = max(8, self.height() - h - 20)
-            c.move(x, y)
-            c.raise_()
         except Exception:
             pass
 

@@ -35,15 +35,18 @@ class ChatPanel(QWidget):
         self.setStyleSheet(
             "#ChatPanel{background:rgba(14,16,20,0.92);"
             "border:1px solid #333;border-radius:8px;}")
-        self.setFixedWidth(320)
-        self.setMaximumHeight(240)
+        # 尺寸由外部布局决定（做成右侧固定栏），不再是浮动小框。
+        # 之前写死 320x240 又没进布局，结果是个悬在右上角的小方块，
+        # 玩家根本不知道那是什么（用户反馈）。
+        self.setMinimumWidth(300)
+        self.setMinimumHeight(180)
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(8, 8, 8, 8)
         lay.setSpacing(6)
 
         head = QHBoxLayout()
-        self.lbl_title = QLabel("聊 天")
+        self.lbl_title = QLabel("💬 对 局 聊 天")
         f = QFont()
         f.setBold(True)
         self.lbl_title.setFont(f)
