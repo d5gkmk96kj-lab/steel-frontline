@@ -6,11 +6,9 @@
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：版本不一致时拒绝联机（改了战斗/卡牌才挡，改文档/界面不挡）",
-    "新增：版本不一致明确提示双方更新（与「疑似篡改」区分开）"
+    "fix: 测试改成等条件"
   ],
   "notes_en": [
-    "New: mismatched versions cannot play together (only blocks battle/card changes, not docs/UI)",
-    "New: version mismatch clearly tells both sides to update (distinct from suspected tampering)"
+    "fix: 测试改成等条件"
   ]
 }

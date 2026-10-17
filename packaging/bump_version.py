@@ -95,11 +95,11 @@ def auto_next(cur: str) -> str:
 
 
 #: 改了这些路径 -> 算「代码变了」，要升版本号
-CODE_PATHS = ("core/", "qt/", "ui/", "packaging/", "tests/",
+CODE_PATHS = ("core/", "qt/", "ui/", "packaging/",
               "main.py", "server/", "admin/")
 
 #: 改了这些 -> 不算（文档 / 配置 / 素材）
-DOC_PATHS = ("README.md", "docs/", ".github/", ".gitignore",
+DOC_PATHS = ("README.md", "docs/", "tests/", ".github/", ".gitignore",
              ".gitattributes", "LICENSE", "releases/",
              "version.json", "ARCHITECTURE.md", "tips.txt",
              "locales/", "music/")

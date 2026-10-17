@@ -275,15 +275,40 @@ class TestConsoleKillWin(unittest.TestCase):
         self._pump(500)
         return w
 
-    def _run_cmd(self, w, cmd):
+    def _run_cmd(self, w, cmd, wait_for=None, timeout_ms=6000):
+        """跑一条控制台命令。
+
+        ``wait_for`` 是一个无参函数：返回 True 表示条件已满足就提前退出。
+        为什么要这样：之前固定 pump 1600ms，在慢的 CI（Windows）上
+        界面切换还没完成就断言，导致假失败（真踩过：
+        "kill 之后仍卡在战斗界面" 但两个字符串其实一样）。
+        """
         w.console._run(cmd)
-        self._pump(1600)
+        if wait_for is None:
+            self._pump(1600)
+            return
+        step = 100
+        waited = 0
+        while waited < timeout_ms:
+            self._pump(step)
+            waited += step
+            try:
+                if wait_for():
+                    # 再多给一点时间让收尾动画走完
+                    self._pump(200)
+                    return
+            except Exception:
+                pass
 
     def test_kill_leaves_battle(self):
         w = self._battle_window()
         self.assertEqual(w.stack.currentWidget().__class__.__name__,
                          "BattleScreen", "没能进入战斗，测试前提不成立")
-        self._run_cmd(w, "kill")
+        # 等"真的离开战斗界面"这个条件，而不是死等固定时间
+        self._run_cmd(
+            w, "kill",
+            wait_for=lambda: w.stack.currentWidget().__class__.__name__
+            != "BattleScreen")
         cur = w.stack.currentWidget().__class__.__name__
         self.assertNotEqual(cur, "BattleScreen",
                             "kill 之后仍卡在战斗界面")
