@@ -60,6 +60,10 @@ def _elide(painter: QPainter, s: str, fnt: QFont, width: float) -> str:
     return out + "…" if out else ""
 
 
+#: 不能出现在行首的中文标点（避头尾规则）
+_NO_LINE_START = set("\u3002\uff0c\u3001\uff1b\uff1a\uff01\uff1f\uff09\u300d\u300f\u3011\u2026\u00b7%")
+
+
 def wrap_text(painter: QPainter, s: str, fnt: QFont, width: float,
               max_lines: int = 99) -> List[str]:
     """按像素宽度手动折行（中文逐字，英文按词）—— 保证卡面排版精确可控。"""
@@ -81,11 +85,19 @@ def wrap_text(painter: QPainter, s: str, fnt: QFont, width: float,
                 chunk = ch
                 i += 1
             if fm.horizontalAdvance(cur + chunk) > width and cur:
-                lines.append(cur)
-                cur = chunk
+                # 避头尾规则：中文标点不能出现在行首。
+                # 之前卡面会出现孤零零一行只有「。」（真 bug）。
+                if chunk and chunk[0] in _NO_LINE_START and len(cur) > 1:
+                    # 把上一个字一起挪到下一行
+                    lines.append(cur[:-1])
+                    cur = cur[-1] + chunk
+                else:
+                    lines.append(cur)
+                    cur = chunk
             else:
                 cur += chunk
-        lines.append(cur)
+        if cur:
+            lines.append(cur)
     if len(lines) > max_lines:
         lines = lines[:max_lines]
         if lines:
@@ -97,7 +109,14 @@ def draw_text_block(painter: QPainter, rect: QRectF, s: str, fnt: QFont,
                     color: QColor, align=Qt.AlignmentFlag.AlignLeft,
                     max_lines: int = 99, line_gap: float = 2.0,
                     center_v: bool = False) -> float:
-    """在矩形内绘制折行文本，返回占用高度。"""
+    """在矩形内绘制折行文本，返回占用高度。
+
+    会去掉 markdown 风格的 ``**加粗**`` 星号 —— 卡牌数据里用 ``**`` 强调
+    关键字，但 QPainter.drawText 不认 markdown，之前星号会直接印在卡面上
+    （真 bug：37 张卡的描述里都能看到 ``**``）。
+    """
+    if s and "**" in s:
+        s = s.replace("**", "")
     painter.setFont(fnt)
     fm = QFontMetricsF(fnt)
     lh = fm.height() + line_gap

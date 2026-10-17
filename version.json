@@ -1,16 +1,22 @@
 {
-  "version": "0.9.36",
-  "label": "0.9.36 测试版",
-  "label_en": "0.9.36 Beta",
+  "version": "0.9.37",
+  "label": "0.9.37 测试版",
+  "label_en": "0.9.37 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：大厅里可直接填服务器地址（存本地 server.txt，不用改代码）",
-    "支持填多个地址（主服务器 + 备用）"
+    "全面检查修复：补齐 90 条英文翻译（18 个界面全英文）",
+    "修复：卡牌描述里的 ** 星号直接印在卡面上",
+    "修复：中文标点落单在行首（避头尾规则）",
+    "修复：4 组重名卡牌（压制射击/补给线/地毯式轰炸）",
+    "修复：海洋主题残留文案（藤壶/触手/再生）"
   ],
   "notes_en": [
-    "New: the lobby lets you type the server address directly (saved to local server.txt, no code edits)",
-    "Supports several addresses (primary + backups)"
+    "Full audit: added 90 missing English strings (all 18 screens fully English now)",
+    "Fix: ** asterisks from card text were printed literally on card faces",
+    "Fix: Chinese punctuation stranded at line starts (added kinsoku rules)",
+    "Fix: 4 pairs of duplicate card names",
+    "Fix: leftover ocean-themed flavour text"
   ]
 }

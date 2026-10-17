@@ -206,7 +206,8 @@ class HandArea(QWidget):
 
         arc_h = min(18.0, max(5.0, 170.0 / max(1, n)))
         max_rot = min(4.5, 26.0 / max(1, n))
-        base_y = max(0.0, H_ - ch_s - 4)
+        # 底部留 8px：之前是 4px，手牌弧线抬起来后会盖住下方按钮
+        base_y = max(0.0, H_ - ch_s - 8)
 
         for i, c in enumerate(self.cards):
             x = x0 + i * step

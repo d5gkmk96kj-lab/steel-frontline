@@ -39,7 +39,7 @@ BUFF_BARRIER = "barrier"
 
 # 敌人专属 debuff（BOSS 机制）——仍是第 6 节已登记的键
 BUFF_ABYSS_MARK = "abyss_mark"          # 湮灭印记：回合结束按层数对玩家造成伤害
-BUFF_ENTANGLE = "entangle"              # 缠绕藤壶：玩家本回合无法获得格挡加成（引擎可只做数值削弱）
+BUFF_ENTANGLE = "entangle"              # 缠绕压制：玩家本回合无法获得格挡加成（引擎可只做数值削弱）
 BUFF_HUNTED = "hunted"                  # 猎杀标记：敌人对你的伤害 +25%
 BUFF_MEMORY_LOSS = "memory_loss"        # 记忆流失：每层使玩家下回合少抽 1 张（下限 1）
 
@@ -437,7 +437,7 @@ def ai_shell_crab(state, battle, turn) -> MoveDef:
 
 
 def ai_barnacle_hulk(state, battle, turn) -> MoveDef:
-    """藤壶重装者：低血以钙化壁垒自保，否则附着猛击与碾壳轮换。"""
+    """重装工事营：低血以工事壁垒自保，否则附着猛击与碾压轮换。"""
     enemy = _enemy_of(state)
     if _hp_ratio(state) < 0.5:
         return _pick(enemy, ["calcify", "crush_shell", "encrust_slam"], state)
@@ -638,7 +638,7 @@ ENEMY_LIST: List[EnemyDef] = [
     EnemyDef("shoal_serpent", "装甲侦察车", 21, 27, "normal", 1, (
         MoveDef("serpent_strike", "车载机枪", INTENT_ATTACK, damage=6, hits=2, text="双段啃咬"),
         MoveDef("coil", "履带碾压", INTENT_ATTACK_DEBUFF, damage=3,
-                effect=eff_entangle, text="缠住你，藤壶封甲"),
+                effect=eff_entangle, text="缠住你，封锁装甲"),
         MoveDef("shed_skin", "更换装甲板", INTENT_BUFF, effect=eff_dexterity, text="蜕皮，获得灵巧"),
     ), art="shallow_shoal_serpent", desc="轮式装甲车贴着废墟高速穿插，专挑侧翼。"),
 
@@ -856,7 +856,7 @@ ENEMY_LIST: List[EnemyDef] = [
 
     EnemyDef("bone_coral_hydra", "多炮塔重型坦克", 60, 70, "normal", 3, (
         MoveDef("three_bites", "三炮塔齐射", INTENT_ATTACK, damage=7, hits=3, text="三个头同时咬"),
-        MoveDef("regrow", "修复炮塔", INTENT_BUFF, effect=eff_regenerate, text="再生"),
+        MoveDef("regrow", "修复炮塔", INTENT_BUFF, effect=eff_regenerate, text="补充弹药"),
         MoveDef("coral_spit", "破片喷射", INTENT_ATTACK_DEBUFF, damage=6,
                 effect=eff_vulnerable, text="骨刺喷射，施加易伤"),
     ), art="abyss_bone_coral_hydra", desc="精锐：打掉一个炮塔，还有两个在转。"),
@@ -939,11 +939,11 @@ ENEMY_LIST: List[EnemyDef] = [
     ), art="abyss_elite_abyss_watcher_echo", desc="精锐：BOSS 的前哨，机制更狠但耐久更低。"),
 
     EnemyDef("elite_kraken", "精锐·多管火箭炮营", 132, 148, "elite", 3, (
-        MoveDef("eight_arms", "八管齐射", INTENT_ATTACK, damage=6, hits=4, text="四段触手连击"),
+        MoveDef("eight_arms", "八管齐射", INTENT_ATTACK, damage=6, hits=4, text="四轮齐射压制"),
         MoveDef("drag_down", "拖入火网", INTENT_ATTACK_DEBUFF, damage=13,
-                effect=eff_entangle, text="缠绕并封甲"),
+                effect=eff_entangle, text="拖入火网并封甲"),
         MoveDef("ink_ocean", "全频段干扰", INTENT_DEBUFF, effect=eff_memory_loss2, text="记忆大量流失"),
-        MoveDef("regenerate_arms", "补充弹药", INTENT_BUFF, effect=eff_regenerate, text="再生"),
+        MoveDef("regenerate_arms", "补充弹药", INTENT_BUFF, effect=eff_regenerate, text="补充弹药"),
     ), art="abyss_elite_kraken", desc="精锐：四段覆盖射击 + 通讯压制，考验续航。"),
 
     EnemyDef("elite_coral_tyrant", "精锐·要塞炮台", 116, 130, "elite", 3, (

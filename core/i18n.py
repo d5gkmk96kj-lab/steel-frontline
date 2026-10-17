@@ -145,6 +145,10 @@ def t(text: Any):
     """
     if not isinstance(text, str) or not text:
         return text
+    # 去掉 markdown 风格的 **加粗** 星号。
+    # 卡牌数据用 ** 强调关键字，但 Qt 的 drawText 不认 markdown，
+    # 之前星号会原样印在卡面上（37 张卡都有，真 bug）。
+    text = text.replace("**", "")
     if _lang == "zh":
         return text
     tbl = _load(_lang)

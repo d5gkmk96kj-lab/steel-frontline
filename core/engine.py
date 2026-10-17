@@ -473,7 +473,7 @@ class BattleState:
         if kind == "attack" and source is not None and source.get_buff(BUFF_ENVENOM) > 0 \
                 and target is not source and target.alive():
             self.apply_buff(target, BUFF_POISON, source.get_buff(BUFF_ENVENOM))
-        # 藤壶：玩家攻击牌命中后叠毒
+        # 附着毒剂：玩家攻击牌命中后叠毒
         if kind == "attack" and source is not None and source.is_player \
                 and source.get_power(POWER_BARNACLE) > 0 and target.alive():
             self.apply_buff(target, BUFF_POISON, source.get_power(POWER_BARNACLE))
