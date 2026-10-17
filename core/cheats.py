@@ -33,6 +33,8 @@ from core import run as RUN
 CHEAT_CARD_STRAT_BOMB = "cheat_strategic_bomb"
 CHEAT_CARD_GOD_SHIELD = "cheat_god_shield"
 CHEAT_CARD_MANPOWER = "cheat_manpower_drop"
+#: 彩蛋卡：致敬这个项目最开始想做「鲸鱼卡牌」的那个计划
+CHEAT_CARD_WHALE = "whale"
 
 _CHEAT_CARDS_READY = False
 
@@ -61,7 +63,46 @@ def _ensure_cheat_cards() -> None:
         ctx.heal(50)
         ctx.summon("空降兵班", 30, 8)
 
+    def fx_whale(ctx):
+        """鲸鱼：让对手跳过下一回合。
+
+        * 1v1（VersusBattle）：把行动权交给对手再立刻结束它的回合，
+          净效果 = 对手这一轮什么都不做，直接轮到我方。
+        * 战役（BattleState，单人）：没有"对手回合"这个概念，
+          效果落成「立刻再获得一回合」—— 也就是把本回合的
+          已用补给还回来、敌人这轮不行动。用眩晕代替最稳妥。
+        """
+        b = ctx.battle
+        try:
+            # --- 1v1 ---
+            if hasattr(b, "current") and hasattr(b, "end_turn"):
+                enemy_side = 1 - int(getattr(ctx.source, "side", 0))
+                cur = int(getattr(b, "current", 0))
+                if cur != enemy_side:
+                    b.end_turn(cur, _force=True)
+                b.end_turn(enemy_side, _force=True)
+                return
+            # --- 战役（单人）：没有"对手回合"，
+            #     效果落成「敌人这一轮全体不行动」。
+            #     引擎靠 _enemy_queue 逐个执行敌人行动，清空它就是跳过整轮。
+            try:
+                b._enemy_queue = []          # 本轮没人行动
+                b._whale_skip = True         # 记账，给 UI 显示用
+            except Exception:
+                pass
+            try:
+                b.log_msg("巨大的影子掠过战场。所有敌人这一轮都没有行动。")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     specs = [
+        # ---- 彩蛋：致敬最初的「鲸鱼卡牌」企划 ----
+        dict(id=CHEAT_CARD_WHALE, name="鲸鱼吉祥物", cost=0, type="skill",
+             rarity=C.RARITY_RARE, arch=C.ARCH_SUMMON, target="self",
+             text="在二战爆发前，指挥官梦到了一只鲸鱼。",
+             effect=fx_whale, keywords=("彩蛋",)),
         dict(id=CHEAT_CARD_STRAT_BOMB, name="战略轰炸", cost=0, type="attack",
              rarity=C.RARITY_RARE, arch=C.ARCH_ATTACK, target="all_enemies",
              text="对敌方全体造成 9999 点伤害。", effect=fx_strategic_bomb,

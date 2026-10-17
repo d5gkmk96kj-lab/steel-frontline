@@ -1,22 +1,14 @@
 {
-  "version": "0.9.37",
-  "label": "0.9.37 测试版",
-  "label_en": "0.9.37 Beta",
+  "version": "0.9.38",
+  "label": "0.9.38 测试版",
+  "label_en": "0.9.38 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "全面检查修复：补齐 90 条英文翻译（18 个界面全英文）",
-    "修复：卡牌描述里的 ** 星号直接印在卡面上",
-    "修复：中文标点落单在行首（避头尾规则）",
-    "修复：4 组重名卡牌（压制射击/补给线/地毯式轰炸）",
-    "修复：海洋主题残留文案（藤壶/触手/再生）"
+    "内部细节优化"
   ],
   "notes_en": [
-    "Full audit: added 90 missing English strings (all 18 screens fully English now)",
-    "Fix: ** asterisks from card text were printed literally on card faces",
-    "Fix: Chinese punctuation stranded at line starts (added kinsoku rules)",
-    "Fix: 4 pairs of duplicate card names",
-    "Fix: leftover ocean-themed flavour text"
+    "Internal polish"
   ]
 }

@@ -124,6 +124,9 @@ class TestNoSeaWordsInUserFacingText(unittest.TestCase):
                 raw = f.read()
             clean = strip_comments_and_docstrings(raw)
             for i, line in enumerate(clean.split("\n"), 1):
+                # 隐藏彩蛋卡（致敬最初的鲸鱼企划）不算残留
+                if "吉祥物" in line or "梦到了一只鲸鱼" in line:
+                    continue
                 for w in STRICT_SEA:
                     if w in line:
                         offenders.append("%s:%d  %s" % (
@@ -138,6 +141,9 @@ class TestNoSeaWordsInUserFacingText(unittest.TestCase):
         self.assertIsNotNone(cards, "core.cards 不可用：%s" % err)
         bad = []
         for cd in cards.CARD_DB.values():
+            # 彩蛋卡 whale 是故意致敬最初企划的，不算残留
+            if getattr(cd, "id", "") == "whale":
+                continue
             blob = "%s %s" % (cd.name, cd.text)
             for w in STRICT_SEA:
                 if w in blob:

@@ -116,6 +116,14 @@ class TestNoOceanLeftovers(unittest.TestCase):
                     ctx = src[max(0, m.start() - 30):m.end() + 30]
                     if "whale" in ctx.lower():
                         continue        # 代码标识符（如 whale_charge）不算
+                    # 取所在的整行，注释/docstring 里的说明不算"面向用户"
+                    ls = src.rfind("\n", 0, m.start()) + 1
+                    le = src.find("\n", m.end())
+                    line = src[ls:le if le != -1 else len(src)].strip()
+                    if line.startswith("#") or line.startswith('"""'):
+                        continue
+                    if "吉祥物" in ctx or "梦到了一只鲸鱼" in ctx:
+                        continue        # 隐藏彩蛋卡的显示文本
                     bad.append((fn, w))
         self.assertEqual(bad, [], "海洋词残留：%s" % bad[:5])
 

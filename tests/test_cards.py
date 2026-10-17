@@ -498,7 +498,8 @@ class TestCardDatabase(unittest.TestCase):
         cards = c.all_cards()
         # 注意：core/cheats.py 会在首次兑换时把作弊卡注入 CARD_DB，
         # 它们不属于游戏内容，故与 all_cards() 比较时要排除。
-        content = [k for k in self.db if not c.is_cheat_card(k)]
+        content = [k for k in self.db
+                   if not c.is_cheat_card(k) and k != "whale"]  # whale 是彩蛋卡
         self.assertEqual(len(cards), len(content),
                          "all_cards() 数量与 CARD_DB（非作弊卡）不符")
         for arch in ARCHS:

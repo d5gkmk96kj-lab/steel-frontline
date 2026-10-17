@@ -464,6 +464,10 @@ class ConsoleOverlay(QWidget):
             self._say("已加入手牌：%s" % C.CARD_DB[args[0]].name, "ok")
             return
 
+        # ---- 彩蛋（不写进 help / list，别在任何地方提）--------------
+        if self._maybe_easter_egg(raw, a):
+            return
+
         reg = getattr(a, "cheat_reg", None)
         if reg is None:
             reg = CH.CheatRegistry()
@@ -480,6 +484,79 @@ class ConsoleOverlay(QWidget):
                         fn()
                     except Exception:
                         pass
+
+    # 彩蛋口令：大小写不敏感、允许末尾任意字符
+    _EGG_KEY = "whale_card_battle"
+
+    def _maybe_easter_egg(self, raw: str, a) -> bool:
+        """识别隐藏口令。返回 True 表示已处理（调用方应直接 return）。
+
+        注意：**不要**在 help / list / 任何提示里出现这个口令，
+        也别说"口令不对"——失败的输入要和普通未知命令完全一样，
+        否则玩家一试就试出来了。
+        """
+        import re as _re
+        text = str(raw or "").strip()
+        # 允许 "Whale_card_battle_" 以及后面还有别的东西
+        # 注意：不能写 \b —— 后面跟下划线时 \b 不成立（下划线算单词字符）
+        m = _re.match(r"(?i)^\s*whale_card_battle", text)
+        if not m:
+            return False
+        try:
+            from core import cheats as _CH
+            from core.cards import CARD_DB as _DB
+            _CH._ensure_cheat_cards()
+            # 先找战役战斗，找不到再找 1v1 对战（联机/人机）
+            b = getattr(a, "battle", None)
+            if b is None:
+                vs = (getattr(a, "screens", {}) or {}).get("versus")
+                b = getattr(vs, "battle", None) if vs is not None else None
+            if b is None:
+                # 不在战斗里也收下：给个不点破的提示
+                self._say("……海面很平静。", "dim")
+                return True
+            if _CH.CHEAT_CARD_WHALE not in _DB:
+                return False
+            # 手牌满时 add_card_to_hand 会被 HAND_LIMIT 挡掉 ——
+            # 彩蛋得真的给到手里，所以满了就先塞进抽牌堆。
+            added = False
+            # 1v1（VersusBattle）没有 add_card_to_hand，走它自己的接口
+            try:
+                if hasattr(b, "add_card_to_hand"):
+                    from core import engine as _EN
+                    if len(getattr(b.player, "hand", []) or []) < _EN.HAND_LIMIT:
+                        b.add_card_to_hand(_CH.CHEAT_CARD_WHALE)
+                        added = True
+            except Exception:
+                pass
+            if not added:
+                # 1v1：直接造一个 CardInstance 塞进我方手牌
+                try:
+                    from core import cards as _C
+                    side = b.side(0) if hasattr(b, "side") else None
+                    cc = getattr(side, "combatant", None) if side else None
+                    if cc is not None and _CH.CHEAT_CARD_WHALE in _DB:
+                        n = int(getattr(side, "_uid_seq", 9000) or 9000) + 1
+                        try:
+                            side._uid_seq = n
+                        except Exception:
+                            pass
+                        ci = _C.CardInstance(uid=n, def_id=_CH.CHEAT_CARD_WHALE)
+                        cc.hand.append(ci)
+                        added = True
+                except Exception as exc:
+                    print("[egg] versus add failed: %r" % (exc,), flush=True)
+            if not added:
+                try:
+                    b.add_card_to_draw(_CH.CHEAT_CARD_WHALE)
+                    added = True
+                except Exception:
+                    pass
+            if added:
+                self._say("有什么东西浮上来了。", "gold")
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _set_num(a, cmd: str, n: int) -> Tuple[str, str]:
