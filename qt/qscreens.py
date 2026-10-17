@@ -1929,6 +1929,122 @@ class StatsScreen(QWidget):
 # =====================================================================
 
 
+class CommanderScreen(QWidget):
+    """出击前的辅助角色选择。
+
+    玩家从 30 位指挥官里挑一位，每位提供一层全局被动。
+    """
+
+    confirmed = pyqtSignal(str)        # 选定的 commander id（空串 = 不选）
+    closed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._picked = ""
+        self._cards: List[QPushButton] = []
+        self._build()
+
+    def _build(self) -> None:
+        root = QVBoxLayout(self)
+        root.setContentsMargins(50, 24, 50, 24)
+        root.setSpacing(12)
+
+        self.tb = TitleBar("选 择 辅 助 角 色",
+                           "每位指挥官提供一层全局被动 · 只能带一位", self)
+        root.addWidget(self.tb)
+
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(
+            "QScrollArea{background:transparent;border:none;}"
+            "QScrollArea>QWidget>QWidget{background:transparent;}")
+        inner = QWidget(scroll)
+        inner.setStyleSheet("background:transparent;")
+        self._grid = QGridLayout(inner)
+        self._grid.setContentsMargins(6, 6, 6, 6)
+        self._grid.setSpacing(10)
+        scroll.setWidget(inner)
+        root.addWidget(scroll, 1)
+
+        bot = QHBoxLayout()
+        self.lbl_info = QLabel("", self)
+        self.lbl_info.setStyleSheet(
+            f"color:{T.TEXT_DIM};font-size:{T.FONT_SMALL}px;"
+            f"background:transparent;")
+        bot.addWidget(self.lbl_info)
+        bot.addStretch(1)
+        b = QPushButton("返 回", self)
+        b.setObjectName("Ghost")
+        b.clicked.connect(self.closed.emit)
+        bot.addWidget(b)
+        self.btn_go = QPushButton("出 击", self)
+        self.btn_go.setObjectName("Primary")
+        self.btn_go.setMinimumWidth(170)
+        self.btn_go.setMinimumHeight(44)
+        self.btn_go.clicked.connect(lambda: self.confirmed.emit(self._picked))
+        bot.addWidget(self.btn_go)
+        root.addLayout(bot)
+
+    def setup(self, runs: int = 0) -> None:
+        """填充角色列表。``runs`` 是累计局数，用于解锁。"""
+        try:
+            from core import commanders as CM
+        except Exception:
+            return
+        # 清空
+        while self._grid.count():
+            it = self._grid.takeAt(0)
+            w = it.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+        self._cards = []
+        self._picked = ""
+
+        items = CM.available(runs)
+        cols = 5
+        for i, c in enumerate(items):
+            btn = QPushButton(self)
+            btn.setCheckable(True)
+            btn.setMinimumHeight(96)
+            btn.setMinimumWidth(190)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            era = T.tr(c.era)
+            btn.setText("%s\n〔%s〕\n%s" % (T.tr(c.name), era, T.tr(c.text)))
+            btn.setStyleSheet(
+                f"QPushButton{{text-align:left;padding:10px 12px;"
+                f"background:{T.PANEL_LO};border:2px solid {T.BORDER};"
+                f"border-radius:8px;color:{T.TEXT};"
+                f"font-size:{T.FONT_SMALL}px;}}"
+                f"QPushButton:hover{{border-color:{T.BORDER_HI};}}"
+                f"QPushButton:checked{{border-color:{T.GOLD};"
+                f"background:{T.PANEL};color:{T.GOLD};}}")
+            btn.clicked.connect(lambda _c=False, cid=c.id: self._pick(cid))
+            self._grid.addWidget(btn, i // cols, i % cols)
+            self._cards.append(btn)
+
+        self.lbl_info.setText("已解锁 %d / %d 位" % (len(items), len(CM.COMMANDERS)))
+
+    def _pick(self, cid: str) -> None:
+        self._picked = cid
+        try:
+            from core import commanders as CM
+            c = CM.get(cid)
+        except Exception:
+            c = None
+        for b in self._cards:
+            b.setChecked(False)
+        # 找到对应的按钮选中
+        for b in self._cards:
+            if b.text().startswith(T.tr(c.name) if c else "\0"):
+                b.setChecked(True)
+                break
+        if c is not None:
+            self.lbl_info.setText("%s · %s　—　%s" % (
+                T.tr(c.name), T.tr(c.title), T.tr(c.text)))
+
+
 class SettingsScreen(QWidget):
     """设置：显示 / 音量占位 / 数据管理。"""
 

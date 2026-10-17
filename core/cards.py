@@ -1327,11 +1327,19 @@ def fx_nuke(ctx) -> None:
         s = int(ctx.source.buffs.get(BUFF_STRENGTH, 0) or 0)
     except Exception:
         s = 0
+    # 指挥官加成：核弹专属额外伤害
+    _bonus = 0
+    try:
+        from core import commanders as _CMD
+        _bonus = int(_CMD.mods_of(
+            getattr(ctx.battle, "commander", "")).nuke)
+    except Exception:
+        _bonus = 0
     if s < NUKE_MIN_STRENGTH:
         # 火力不足：威力大打折扣，只有基础伤害的一半
-        ctx.deal_damage_all(9)
+        ctx.deal_damage_all(9 + _bonus)
         return
-    ctx.deal_damage_all(18 + s)
+    ctx.deal_damage_all(18 + s + _bonus)
 
 
 def fx_second_strike(ctx) -> None:

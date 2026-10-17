@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from core import cards as C
+from core import commanders as CMD
 from core import enemies as E
 from core import relics as R
 
@@ -341,6 +342,8 @@ class BattleState:
         self.kind = self.encounter.get("kind", "normal")
         self.enemies: List[Combatant] = list(enemies or [])
         self.turn = 0
+        # 辅助角色（指挥官）：本局的全局被动
+        self.commander: str = ""
         self.phase = "player"
         self.log: List[str] = []
         self.cards_played_this_turn = 0
@@ -362,6 +365,16 @@ class BattleState:
             max_hp=getattr(run, "max_hp", 70),
         )
         p.max_energy = 3
+        # 指挥官加成：耐久上限 / 指挥点上限
+        try:
+            m = self.cmd_mods()
+            if m.hp:
+                p.max_hp = max(10, int(p.max_hp) + int(m.hp))
+                p.hp = max(1, int(p.hp) + int(m.hp))
+            if m.energy_cap:
+                p.max_energy = max(1, int(p.max_energy) + int(m.energy_cap))
+        except Exception:
+            pass
         p.relics = list(getattr(run, "relics", []) or [])
         deck = list(getattr(run, "deck", []) or [])
         # 深拷贝牌组，避免战斗修改污染 run.deck
@@ -397,10 +410,14 @@ class BattleState:
             p.block = 0
         else:
             p.add_buff(BUFF_BARRIER, -1)
-        # 能量
-        p.energy = p.max_energy + p.get_power(POWER_TIDEPOOL) + p.get_power(POWER_ABYSSAL_GATE)
-        # 抽牌
-        n = 5 + p.get_power(POWER_DEEP_CURRENT) + p.get_power(POWER_ABYSSAL_GATE)
+        # 能量（含指挥官加成）
+        _m = self.cmd_mods()
+        p.energy = (p.max_energy + p.get_power(POWER_TIDEPOOL)
+                    + p.get_power(POWER_ABYSSAL_GATE) + int(_m.supply))
+        # 抽牌（第一回合额外吃「开局手牌」加成）
+        n = (5 + p.get_power(POWER_DEEP_CURRENT)
+             + p.get_power(POWER_ABYSSAL_GATE) + int(_m.draw)
+             + (int(_m.hand) if first else 0))
         self.draw_cards(p, n)
         # 中毒结算：玩家与所有敌人在各自回合开始都结算
         self._tick_poison(p)
@@ -442,6 +459,14 @@ class BattleState:
                 dmg *= 1.5
         return max(0, int(dmg))
 
+    # ---- 辅助角色加成 -------------------------------------------------
+    def cmd_mods(self):
+        """本局指挥官的加成（没有就返回中性）。"""
+        try:
+            return CMD.mods_of(getattr(self, "commander", ""))
+        except Exception:
+            return CMD.NEUTRAL
+
     def deal_damage(self, source: Combatant, target: Combatant, amount: int,
                     kind: str = "attack") -> int:
         """造成一次伤害，返回实际扣血量。"""
@@ -450,6 +475,16 @@ class BattleState:
         if amount <= 0 and kind == "attack":
             return 0
         dmg = self.calc_attack(source, target, amount, kind=kind) if kind == "attack" else int(amount)
+        # 指挥官加成：只作用于**玩家造成**的伤害
+        try:
+            if source is not None and getattr(source, "is_player", False):
+                m = self.cmd_mods()
+                if kind == "attack" and m.damage != 1.0:
+                    dmg = max(1, int(round(dmg * m.damage)))
+                elif kind in ("poison", "burn") and m.burn != 1.0:
+                    dmg = max(1, int(round(dmg * m.burn)))
+        except Exception:
+            pass
         if dmg <= 0:
             return 0
         # 无实体
@@ -520,6 +555,13 @@ class BattleState:
             amount += target.get_power(POWER_CORAL)
             if target.get_buff(BUFF_FRAIL) > 0:
                 amount *= 0.75
+            # 指挥官加成：掩体倍率
+            try:
+                _bm = self.cmd_mods()
+                if _bm.block != 1.0:
+                    amount *= _bm.block
+            except Exception:
+                pass
         amount = max(0, int(amount))
         target.block += amount
         return amount
@@ -1120,6 +1162,13 @@ def make_battle(run, encounter: dict) -> BattleState:
         ids = ["deep_crab"]
     enemies = [make_enemy_combatant(i, rng, asc, act) for i in ids]
     b = BattleState(run, enemies, rng, {"kind": kind, "enemies": ids})
+    # 辅助角色：从本局状态带进战斗
+    try:
+        b.commander = str(getattr(run, "commander", "") or "")
+        if b.commander:
+            b.player = b._build_player(run)     # 重建以应用耐久/补给加成
+    except Exception:
+        pass
     b.start_battle()
     return b
 

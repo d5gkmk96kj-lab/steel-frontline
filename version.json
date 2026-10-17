@@ -1,14 +1,18 @@
 {
-  "version": "0.9.39",
-  "label": "0.9.39 测试版",
-  "label_en": "0.9.39 Beta",
+  "version": "0.9.40",
+  "label": "0.9.40 测试版",
+  "label_en": "0.9.40 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "图鉴改成网格布局（之前 200 张卡排成一行）"
+    "新增：辅助角色系统（30 位指挥官，开局选一位，各带全局被动）",
+    "角色加成覆盖：补给/耐久/伤害/掩体/抽牌/核弹/金币/商店价/战后回复",
+    "新增：出击前的角色选择界面（5x6 网格，选中高亮）"
   ],
   "notes_en": [
-    "Codex now uses a grid layout (200 cards used to be one long row)"
+    "New: 30 commanders — pick one before each run, each grants a global passive",
+    "Commander bonuses cover supply, HQ durability, damage, armor, card draw, nukes, gold, shop prices and post-battle healing",
+    "New: commander selection screen before deploying (5x6 grid with highlight)"
   ]
 }

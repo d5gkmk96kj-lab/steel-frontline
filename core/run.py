@@ -243,6 +243,8 @@ class RunState:
         self.map_nodes: List[MapNode] = []
         self.current_node: Optional[int] = None
         self.ascension = 0
+        #: 本局选择的辅助角色（指挥官）id
+        self.commander = ""
         self.score = 0
         self.seed = 0
         self.run_start_time = 0.0
@@ -477,6 +479,7 @@ class RunState:
             "relics": list(self.relics), "potions": list(self.potions),
             "current_node": self.current_node,
             "ascension": self.ascension, "score": self.score,
+            "commander": str(getattr(self, "commander", "") or ""),
             "run_start_time": self.run_start_time,
             "stats": dict(self.stats), "seen_events": list(self.seen_events),
             "remove_count": self.remove_count, "daily": self.daily,
@@ -503,6 +506,7 @@ class RunState:
         r.potions = list(d.get("potions", []))
         r.current_node = d.get("current_node")
         r.ascension = int(d.get("ascension", 0))
+        r.commander = str(d.get("commander", "") or "")
         r.score = int(d.get("score", 0))
         r.run_start_time = float(d.get("run_start_time", time.time()))
         r.stats = dict(d.get("stats", {}))

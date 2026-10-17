@@ -55,7 +55,8 @@ from .qconsole import ConsoleOverlay  # noqa: E402
 
 SCREENS = ("menu", "map", "battle", "reward", "shop", "rest", "event",
            "deck", "gameover", "codex", "achievements", "settings",
-           "stats", "pile", "lobby", "deckbuild", "versus", "saves")
+           "stats", "pile", "lobby", "deckbuild", "versus", "saves",
+           "commander")
 
 DEFAULT_CFG: Dict = {
     "fullscreen": False,
@@ -305,6 +306,7 @@ class GameWindow(QMainWindow):
         self.screens["codex"] = qscreens.CodexScreen(self)
         self.screens["achievements"] = qscreens.AchievementScreen(self)
         self.screens["settings"] = qscreens.SettingsScreen(self, self.cfg)
+        self.screens["commander"] = qscreens.CommanderScreen(self)
         self.screens["stats"] = qscreens.StatsScreen(self)
         self.screens["saves"] = qsave.SaveScreen(self)
         self.screens["pile"] = qscreens.PileScreen(self)
@@ -523,6 +525,9 @@ class GameWindow(QMainWindow):
         self.screens["saves"].closed.connect(self._back_to)
         self.screens["saves"].load_run.connect(self._load_slot)
         self.screens["settings"].closed.connect(self.on_settings_closed)
+        cmd = self.screens["commander"]
+        cmd.closed.connect(self.on_commander_closed)
+        cmd.confirmed.connect(self.on_commander_confirmed)
         self.screens["settings"].wipe_meta.connect(self.on_wipe_meta)
         self.screens["settings"].wipe_save.connect(self.on_wipe_save)
         self.screens["gameover"].finished.connect(lambda: self.show_screen("menu"))
@@ -879,11 +884,46 @@ class GameWindow(QMainWindow):
     # =================================================================
     # 开局 / 续玩
     # =================================================================
+    #: 选完指挥官后要继续的开局参数
+    _pending_run = None
+
     def start_new_run(self, ascension: int = 0, seed=None) -> None:
+        """先让玩家选辅助角色，再真正开局。"""
+        self._pending_run = {"ascension": int(ascension), "seed": seed}
+        try:
+            runs = int(getattr(getattr(self, "meta", None), "runs", 0) or 0)
+        except Exception:
+            runs = 0
+        try:
+            self.screens["commander"].setup(runs)
+        except Exception:
+            pass
+        self.show_screen("commander")
+
+    def on_commander_closed(self) -> None:
+        """放弃选择 -> 回主菜单。"""
+        self._pending_run = None
+        self.show_screen("menu")
+
+    def on_commander_confirmed(self, cid: str) -> None:
+        """确认辅助角色 -> 真正开始新战役。"""
+        p = self._pending_run or {}
+        self._pending_run = None
+        self._start_run_now(p.get("ascension", 0), p.get("seed"), str(cid or ""))
+
+    def start_run_direct(self, ascension: int = 0, seed=None,
+                         commander: str = "") -> None:
+        """跳过选角色界面直接开局（自检脚本 / 测试用）。"""
+        self._pending_run = None
+        self._start_run_now(ascension, seed, commander)
+
+    def _start_run_now(self, ascension: int = 0, seed=None,
+                       commander: str = "") -> None:
         self._slot_id = None          # 新开局：下次保存时建新槽位
         self.run = run_mod.RunState()
         try:
             self.run.new_run(seed=seed, ascension=int(ascension))
+            self.run.commander = str(commander or "")
         except Exception as exc:
             print(f"[qt.app] new_run failed: {exc!r}", flush=True)
             QMessageBox.warning(self, "无法开始战役", f"引擎拒绝了这次开局：\n{exc}")

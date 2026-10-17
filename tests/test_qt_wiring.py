@@ -103,7 +103,13 @@ class TestMainWindowWiring(unittest.TestCase):
         self._pump(500)
         self.assertNotEqual(w.stack.currentWidget().__class__.__name__,
                             "MenuScreen")
-        self.assertIsNotNone(w.run)
+        # 现在会先进「选择辅助角色」，选了才真正开局
+        self.assertEqual(w.stack.currentWidget().__class__.__name__,
+                         "CommanderScreen")
+        w.screens["commander"].confirmed.emit("guderian")
+        self._pump(600)
+        self.assertIsNotNone(w.run, "选完角色后应该开始战役")
+        self.assertEqual(w.run.commander, "guderian")
         w.close()
 
     def test_rebuild_screens_rewires(self):
@@ -225,7 +231,7 @@ class TestSaveScreenWiring(unittest.TestCase):
         w = MainWindow()
         w.resize(T.WIN_W, T.WIN_H)
         self._pump(300)
-        w.start_new_run(0, None)
+        w.start_run_direct(0, None, "guderian")
         self._pump(300)
         w.run.hp = 77
         w.show_screen("settings")
@@ -269,7 +275,7 @@ class TestConsoleKillWin(unittest.TestCase):
         w = MainWindow()
         w.resize(T.WIN_W, T.WIN_H)
         self._pump(300)
-        w.start_new_run(0, None)
+        w.start_run_direct(0, None, "guderian")
         self._pump(250)
         w.start_battle({"kind": "normal",
                         "enemies": ["infantry_squad"], "name": "t"})
@@ -361,7 +367,7 @@ class TestCheatEndsBattleUi(unittest.TestCase):
         w = MainWindow()
         w.resize(T.WIN_W, T.WIN_H)
         self._pump(300)
-        w.start_new_run(0, None)
+        w.start_run_direct(0, None, "guderian")
         self._pump(250)
         w.start_battle({"kind": "normal",
                         "enemies": ["infantry_squad"], "name": "t"})

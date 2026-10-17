@@ -135,7 +135,7 @@ def main(argv=None) -> int:
 
     win.show()
     if seed is not None or "--new" in args:
-        win.start_new_run(asc, seed)
+        win.start_run_direct(asc, seed, "guderian")
 
     return app.exec()
 
@@ -158,7 +158,7 @@ def _selftest(win, app) -> bool:
 
     # 2) 开局 + 打完一场战斗
     try:
-        win.start_new_run(0, 42)
+        win.start_run_direct(0, 42, "guderian")
         app.processEvents()
         assert win.run is not None, "run is None"
         enc = win.run.roll_encounter("normal")
