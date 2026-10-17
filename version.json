@@ -1,26 +1,16 @@
 {
-  "version": "1.0.0",
-  "label": "1.0.0 正式版",
-  "label_en": "1.0.0",
+  "version": "1.0.1",
+  "label": "1.0.1 正式版",
+  "label_en": "1.0.1",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "🎉 正式版 1.0 发布",
-    "联机服务器上线（香港 96.126.179.64:9000），开游戏点「一键匹配」就能玩",
-    "新增 30 位辅助角色（指挥官），开局选一位，各带全局被动",
-    "卡面全部重绘：202 张卡各自独立的矢量插图",
-    "攻击特效：子弹拖尾 / 火焰爆开 / 冲击波 / 毒气 / 核爆",
-    "卡组预设、版本不一致拒绝联机、对局结束自动关房间",
-    "反外挂加强：对局中持续校验、快照合理性检测、请求速率检测"
+    "安全：服务器地址不再显示在界面上（只显示在线/离线）",
+    "安全：服务器地址不再以明文写在代码里"
   ],
   "notes_en": [
-    "🎉 Version 1.0 is here",
-    "Online relay is LIVE (Hong Kong 96.126.179.64:9000) — open the game and hit Quick Match",
-    "30 commanders: pick one before each run, each grants a global passive",
-    "All card art redrawn: 202 cards with individual vector illustrations",
-    "Attack effects: bullet trails / fire bursts / shockwaves / gas / nukes",
-    "Deck presets, version-mismatch rejection, auto-closing rooms",
-    "Hardened anticheat: continuous verification, snapshot sanity, intent rate limiting"
+    "Security: the server address is no longer shown in the UI (status only)",
+    "Security: the server address is no longer stored as plain text in the code"
   ]
 }

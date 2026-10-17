@@ -737,9 +737,17 @@ class LobbyScreen(QWidget):
         self._prepare_match()          # 刷新按钮可用状态
 
     def _load_server_address(self) -> None:
-        """把当前配置的地址填进输入框。"""
+        """输入框只在**玩家自己配过**时才回填。
+
+        公开版内置的服务器地址不显示、也不回填 ——
+        地址暴露出去等于给所有人一个攻击目标。
+        """
         try:
             from core import relay_client as _rc
+            # 只有「本地 server.txt / 环境变量」这种玩家自己设的才显示
+            if not _rc.is_user_configured():
+                self.ed_srv.clear()
+                return
             eps = _rc.relay_endpoints()
             if eps:
                 self.ed_srv.setText(",".join(
@@ -762,8 +770,8 @@ class LobbyScreen(QWidget):
             srv = ""
         self.btn_match_go.setEnabled(configured)
         if configured:
-            self._status("点「开始匹配」自动找对手（服务器：%s）" % srv,
-                         T.TEXT_DIM)
+            # 不写服务器地址 —— 只告诉玩家「能用」
+            self._status("点「开始匹配」自动找对手", T.TEXT_DIM)
         else:
             self._status("服务器暂时连不上，请稍后再试。",
                          T.Q_ORANGE)
@@ -869,7 +877,8 @@ class LobbyScreen(QWidget):
 
         configured = bool(_rc is not None and _rc.relay_configured())
         if configured:
-            self.lbl_net_srv.setText("服务器：%s" % _rc.relay_address())
+            # 不暴露服务器地址：只显示在线状态
+            self.lbl_net_srv.setText("🟢 服务器在线")
         else:
             # 服务器还没开 —— 给一句明确、不吓人的提示。
             # 服务器常在线；连不上时给个不吓人的提示。

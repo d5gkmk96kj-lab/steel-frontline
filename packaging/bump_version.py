@@ -33,8 +33,15 @@ def set_version_file(new_ver):
     p = "core/version.py"
     s = _read(p)
     s = re.sub(r'^VERSION = "[^"]*"', 'VERSION = "%s"' % new_ver, s, flags=re.M)
-    label = "%s 测试版" % new_ver
-    label_en = "%s Beta" % new_ver
+    # 1.0 之后是正式版：标签跟着 STAGE 走，不能再写死「测试版」
+    stage_m = re.search(r'^STAGE = "([^"]*)"', s, flags=re.M)
+    stage = stage_m.group(1) if stage_m else "beta"
+    if stage == "release":
+        label = "%s 正式版" % new_ver
+        label_en = "%s" % new_ver
+    else:
+        label = "%s 测试版" % new_ver
+        label_en = "%s Beta" % new_ver
     s = re.sub(r'^VERSION_LABEL = "[^"]*"',
                'VERSION_LABEL = "%s"' % label, s, flags=re.M)
     s = re.sub(r'^VERSION_LABEL_EN = "[^"]*"',

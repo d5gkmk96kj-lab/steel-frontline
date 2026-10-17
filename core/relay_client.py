@@ -57,9 +57,28 @@ from typing import Any, Dict, Optional
 #   3. 老的单地址环境变量 SF_RELAY_HOST
 #
 # 建议用域名而不是 IP：以后换服务器只要改 DNS，老客户端自动跟着走。
+def _decode_host(parts) -> str:
+    """把混淆过的地址片段还原成主机名。
+
+    公开版里服务器地址**不以明文出现** —— 直接写 IP 的话，
+    任何人反编译一下就能拿到，等于发给所有人一个攻击目标。
+    这里只做最基本的混淆（挡住随手 grep / strings），
+    不指望挡住有心人（客户端必然知道要连哪）。
+    """
+    try:
+        return "".join(chr(int(x, 16) ^ 0x5A) for x in parts)
+    except Exception:
+        return ""
+
+
+#: 内置服务器（混淆存储，运行时还原）
+_RELAY_HOST_PARTS = ("63", "6c", "74", "6b", "68", "6c", "74",
+                     "6b", "6d", "63", "74", "6c", "6e")
+_RELAY_PORT = 9000
+
 RELAY_HOSTS = [
     # (主机, 端口) —— 第一个是主力，后面的是备用（连不上自动换）
-    ("96.126.179.64", 9000),
+    (_decode_host(_RELAY_HOST_PARTS), _RELAY_PORT),
 ]
 
 DEFAULT_RELAY_PORT = int(os.environ.get("SF_RELAY_PORT", "9000"))
@@ -182,6 +201,21 @@ def _parse_hosts() -> list:
 def relay_endpoints() -> list:
     """当前配置的全部服务器地址（按优先级）。"""
     return _parse_hosts()
+
+
+def is_user_configured() -> bool:
+    """玩家是否**自己**配了服务器地址（环境变量 / 本地 server.txt）。
+
+    公开版内置的地址不算 —— 界面上不该显示给别人看。
+    """
+    try:
+        if os.environ.get("SF_RELAY_HOSTS", "").strip():
+            return True
+        if _read_config_file():
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def relay_configured() -> bool:
