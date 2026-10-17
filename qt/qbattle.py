@@ -779,6 +779,8 @@ class BattleScreen(QWidget):
             if to_pt is None:
                 to_pt = QPointF(self.stage.width() / 2, self.stage.height() * 0.7)
             self._overlay.fly_card(QPointF(from_pt), QPointF(to_pt), card)
+            # 打牌特效：按这张卡的插图类型播（子弹 / 火焰 / 冲击 / 毒气）
+            self._play_card_fx(card, from_pt, to_pt)
 
         self._after_action(pre)
         # 关键：玩家这一击可能已把最后一个敌人打死，引擎内部会把 phase 设成 "won"。
@@ -794,6 +796,44 @@ class BattleScreen(QWidget):
             except ValueError:
                 pass
         return True
+
+    def _play_card_fx(self, card: dict, from_pt, to_pt) -> None:
+        """按卡牌类型播对应的攻击特效。
+
+        * 枪械类（strike / sniper / cannon …）-> 子弹飞过去
+        * 燃烧类（flame / molotov / fireball …）-> 火焰爆开
+        * 爆炸 / 炮击 -> 冲击波
+        * 毒气 / 燃烧弹 -> 毒雾扩散
+        * 核弹 -> 大范围核爆
+
+        ``core.cardart.fx_for()`` 是唯一事实来源（每张卡的设计里带 fx）。
+        """
+        if self._overlay is None:
+            return
+        try:
+            from core import cardart as _CA
+            kind = _CA.fx_for({"def_id": card.get("def_id") or card.get("id"),
+                               "arch": card.get("arch") or card.get("type")})
+        except Exception:
+            kind = ""
+        if not kind:
+            return
+        try:
+            from core import cards as _C
+            dmg = 0
+            try:
+                dmg = int(card.get("damage") or 0)
+            except (TypeError, ValueError):
+                dmg = 0
+            power = max(0.6, min(1.9, 0.65 + dmg / 22.0))
+            FX.card_fx(self._overlay, kind,
+                       float(to_pt.x()), float(to_pt.y()),
+                       color=T.RED if kind in ("bullet", "impact") else
+                       (T.Q_ORANGE if kind in ("fire", "nuke") else T.Q_GOLD),
+                       power=power,
+                       from_x=float(from_pt.x()), from_y=float(from_pt.y()))
+        except Exception as exc:
+            print(f"[qt.battle] card fx failed: {exc!r}", flush=True)
 
     def _deny_feedback(self, card: dict) -> None:
         reason = "补给不足" if not card.get("playable", True) else "无法打出"

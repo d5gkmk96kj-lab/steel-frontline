@@ -30,7 +30,8 @@ from PyQt6.QtCore import (
     QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRectF, Qt, QTimer,
     pyqtProperty,
 )
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen, QRadialGradient
+from PyQt6.QtGui import (QBrush, QColor, QPainter, QPainterPath, QPen,
+                       QRadialGradient)
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
 from . import qtheme as T
@@ -264,6 +265,332 @@ class SlashArc(QWidget):
         pt.drawArc(rect, int(a0 * 16), int(span * 16))
 
 
+# =====================================================================
+# 攻击特效：子弹 / 火焰 / 冲击 / 毒气
+# =====================================================================
+
+class _BulletTrail(QWidget):
+    """一发子弹：从起点飞向终点，带拖尾和枪口闪光。"""
+
+    def __init__(self, parent, sx, sy, ex, ey, color, life_ms=190):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setGeometry(parent.rect())
+        self._sx, self._sy = float(sx), float(sy)
+        self._ex, self._ey = float(ex), float(ey)
+        self._col = QColor(color)
+        self._life = max(60, int(life_ms))
+        self._t = 0
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._tick)
+        self.show()
+        self.raise_()
+        self._timer.start()
+
+    def _tick(self):
+        self._t += 16
+        if self._t >= self._life:
+            self._timer.stop()
+            self.deleteLater()
+            return
+        self.update()
+
+    def paintEvent(self, ev):  # noqa: N802
+        try:
+            k = min(1.0, self._t / float(self._life))
+            # 缓出：前半段快、后半段慢
+            ease = 1.0 - (1.0 - k) ** 2.4
+            x = self._sx + (self._ex - self._sx) * ease
+            y = self._sy + (self._ey - self._sy) * ease
+            p = QPainter(self)
+            T.aa(p)
+            # 拖尾
+            for i in range(4):
+                back = (i + 1) * 0.055
+                kk = max(0.0, ease - back)
+                tx = self._sx + (self._ex - self._sx) * kk
+                ty = self._sy + (self._ey - self._sy) * kk
+                alpha = int(150 * (1.0 - i / 4.5) * (1.0 - k * 0.5))
+                p.setPen(QPen(T.a(T.f(self._col, 1.35), max(0, alpha)),
+                              max(1.0, 3.2 - i * 0.7)))
+                p.drawLine(QPointF(tx, ty), QPointF(x, y))
+            # 弹头
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(T.a(T.qc("#FFF3C8"), 240)))
+            p.drawEllipse(QPointF(x, y), 2.6, 2.6)
+            # 枪口闪光（只在最开始）
+            if k < 0.25:
+                a2 = int(200 * (1.0 - k / 0.25))
+                p.setBrush(QBrush(T.a(T.qc("#FFE9A8"), a2)))
+                p.drawEllipse(QPointF(self._sx, self._sy),
+                              5.0 + 7.0 * (1 - k / 0.25), 5.0 + 7.0 * (1 - k / 0.25))
+        except Exception:
+            pass
+
+
+class _FireBurst(QWidget):
+    """火焰爆开：几团火苗向外扩散 + 余烬上升。"""
+
+    def __init__(self, parent, x, y, life_ms=520, power=1.0):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setGeometry(parent.rect())
+        self._x, self._y = float(x), float(y)
+        self._life = max(120, int(life_ms))
+        self._t = 0
+        self._power = max(0.5, min(2.0, float(power)))
+        import random as _r
+        rng = _r.Random(int(x * 7 + y * 13))
+        self._flames = []
+        for i in range(int(7 + 5 * self._power)):
+            self._flames.append([
+                rng.uniform(-0.45, 0.45),      # dx 方向
+                rng.uniform(-0.30, 0.30),      # dy
+                rng.uniform(0.55, 1.5),        # 速度
+                rng.uniform(0.6, 1.35),        # 大小
+                rng.uniform(0.0, 0.35),        # 延迟
+            ])
+        self._embers = [[rng.uniform(-1, 1), rng.uniform(-1, 1),
+                         rng.uniform(0.4, 1.0)] for _ in range(14)]
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._tick)
+        self.show()
+        self.raise_()
+        self._timer.start()
+
+    def _tick(self):
+        self._t += 16
+        if self._t >= self._life:
+            self._timer.stop()
+            self.deleteLater()
+            return
+        self.update()
+
+    def paintEvent(self, ev):  # noqa: N802
+        try:
+            k = min(1.0, self._t / float(self._life))
+            p = QPainter(self)
+            T.aa(p)
+            R = 34.0 * self._power
+            # 中心光晕
+            if k < 0.4:
+                a0 = int(120 * (1 - k / 0.4))
+                p.setPen(Qt.PenStyle.NoPen)
+                p.setBrush(QBrush(T.a(T.qc("#FFB24A"), a0)))
+                p.drawEllipse(QPointF(self._x, self._y),
+                              R * (0.5 + k * 1.6), R * (0.5 + k * 1.6))
+            # 火苗
+            for (dx, dy, spd, sz, delay) in self._flames:
+                kk = (k - delay) / max(0.05, 1.0 - delay)
+                if kk <= 0 or kk >= 1:
+                    continue
+                ex = self._x + dx * R * 2.4 * kk
+                ey = self._y + dy * R * 2.0 * kk - R * 0.9 * kk * kk
+                rr = R * sz * (0.30 + 0.55 * kk) * (1.0 - kk * 0.35)
+                alpha = int(210 * (1.0 - kk))
+                # 外焰
+                p.setPen(Qt.PenStyle.NoPen)
+                p.setBrush(QBrush(T.a(T.qc("#E8622A"), alpha // 2)))
+                p.drawEllipse(QPointF(ex, ey), rr, rr * 1.25)
+                # 内焰
+                p.setBrush(QBrush(T.a(T.qc("#FFD166"), int(alpha * 0.85))))
+                p.drawEllipse(QPointF(ex, ey), rr * 0.55, rr * 0.72)
+            # 余烬上升
+            for (ex0, ey0, sz) in self._embers:
+                ex = self._x + ex0 * R * 1.8 * (0.4 + k)
+                ey = self._y + ey0 * R * 1.2 - R * 2.0 * k
+                a1 = int(200 * (1.0 - k))
+                if a1 <= 0:
+                    continue
+                p.setBrush(QBrush(T.a(T.qc("#FFC85C"), a1)))
+                p.drawEllipse(QPointF(ex, ey), 1.5 * sz, 1.5 * sz)
+        except Exception:
+            pass
+
+
+class _ImpactShock(QWidget):
+    """冲击波：白色快闪 + 扩散环 + 碎屑。"""
+
+    def __init__(self, parent, x, y, color, life_ms=340, power=1.0):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setGeometry(parent.rect())
+        self._x, self._y = float(x), float(y)
+        self._col = QColor(color)
+        self._life = max(100, int(life_ms))
+        self._power = max(0.5, min(2.0, float(power)))
+        self._t = 0
+        import random as _r
+        rng = _r.Random(int(x * 3 + y * 17))
+        self._debris = [[rng.uniform(0, 6.283), rng.uniform(0.5, 1.6),
+                         rng.uniform(1.2, 3.0)] for _ in range(10)]
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._tick)
+        self.show()
+        self.raise_()
+        self._timer.start()
+
+    def _tick(self):
+        self._t += 16
+        if self._t >= self._life:
+            self._timer.stop()
+            self.deleteLater()
+            return
+        self.update()
+
+    def paintEvent(self, ev):  # noqa: N802
+        try:
+            k = min(1.0, self._t / float(self._life))
+            p = QPainter(self)
+            T.aa(p)
+            R = 42.0 * self._power
+            # 白闪
+            if k < 0.22:
+                a = int(230 * (1 - k / 0.22))
+                p.setPen(Qt.PenStyle.NoPen)
+                p.setBrush(QBrush(T.a(T.qc("#FFFFFF"), a)))
+                p.drawEllipse(QPointF(self._x, self._y), R * 0.7, R * 0.7)
+            # 扩散环
+            for i, (wf, af) in enumerate(((1.0, 190), (0.7, 120))):
+                rr = R * (0.2 + k * (1.5 + i * 0.5))
+                a = int(af * (1.0 - k))
+                if a <= 0:
+                    continue
+                p.setPen(QPen(T.a(T.f(self._col, 1.4), a), max(1.0, 3.2 - i)))
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawEllipse(QPointF(self._x, self._y), rr, rr)
+            # 碎屑
+            p.setPen(Qt.PenStyle.NoPen)
+            for (ang, spd, sz) in self._debris:
+                import math as _m
+                import random as _r
+                d = R * 1.5 * k * spd
+                ex = self._x + _m.cos(ang) * d
+                ey = self._y + _m.sin(ang) * d + R * 0.5 * k * k
+                a = int(200 * (1.0 - k))
+                if a <= 0:
+                    continue
+                p.setBrush(QBrush(T.a(self._col, a)))
+                p.drawEllipse(QPointF(ex, ey), sz, sz)
+        except Exception:
+            pass
+
+
+class _GasCloud(QWidget):
+    """毒气/燃烧蔓延：几团半透明雾向外飘。"""
+
+    def __init__(self, parent, x, y, color, life_ms=620, power=1.0):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setGeometry(parent.rect())
+        self._x, self._y = float(x), float(y)
+        self._col = QColor(color)
+        self._life = max(150, int(life_ms))
+        self._power = max(0.5, min(2.0, float(power)))
+        self._t = 0
+        import random as _r
+        rng = _r.Random(int(x * 11 + y * 5))
+        self._puffs = [[rng.uniform(-0.5, 0.5), rng.uniform(-0.4, 0.4),
+                        rng.uniform(0.6, 1.4), rng.uniform(0.0, 0.4)]
+                       for _ in range(int(8 + 4 * power))]
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._tick)
+        self.show()
+        self.raise_()
+        self._timer.start()
+
+    def _tick(self):
+        self._t += 16
+        if self._t >= self._life:
+            self._timer.stop()
+            self.deleteLater()
+            return
+        self.update()
+
+    def paintEvent(self, ev):  # noqa: N802
+        try:
+            k = min(1.0, self._t / float(self._life))
+            p = QPainter(self)
+            T.aa(p)
+            R = 30.0 * self._power
+            p.setPen(Qt.PenStyle.NoPen)
+            for (dx, dy, sz, delay) in self._puffs:
+                kk = (k - delay) / max(0.05, 1.0 - delay)
+                if kk <= 0 or kk >= 1:
+                    continue
+                ex = self._x + dx * R * 2.2 * kk
+                ey = self._y + dy * R * 1.6 * kk - R * 0.35 * kk
+                rr = R * sz * (0.4 + 0.9 * kk)
+                a = int(95 * (1.0 - kk))
+                p.setBrush(QBrush(T.a(self._col, a)))
+                p.drawEllipse(QPointF(ex, ey), rr, rr * 0.82)
+        except Exception:
+            pass
+
+
+def card_fx(parent: QWidget, kind: str, x: float, y: float,
+            color: QColor = None, power: float = 1.0,
+            from_x: float = None, from_y: float = None) -> None:
+    """按卡牌类型播对应特效。
+
+    kind:
+      ``bullet`` 子弹飞向目标（from_x/from_y 是枪口位置；没给就默认从左侧）
+      ``fire``   火焰爆开
+      ``impact`` 冲击波
+      ``gas``    毒气扩散
+      ``spark``  电火花
+      ``nuke``   核爆（大范围）
+      其他       普通命中
+    """
+    if not _FX_ENABLED:
+        return
+    try:
+        power = max(0.4, min(2.0, float(power or 1.0)))
+        col = QColor(color) if color else QColor(T.GOLD)
+        k = (kind or "").strip()
+        if k == "bullet":
+            sx = from_x if from_x is not None else x - 190.0
+            sy = from_y if from_y is not None else y - 26.0
+            _BulletTrail(parent, sx, sy, x, y, T.qc("#FFD98A"),
+                         life_ms=int(150 + 40 * power))
+            hit_effect(parent, x, y, col, power * 0.8)
+        elif k == "fire":
+            _FireBurst(parent, x, y, life_ms=int(420 + 160 * power),
+                       power=power)
+            ImpactRing(parent, x, y, QColor(T.Q_ORANGE),
+                       max_r=22.0 + 16.0 * power,
+                       life_ms=int(260 + 100 * power)).start()
+        elif k == "impact":
+            _ImpactShock(parent, x, y, col,
+                         life_ms=int(280 + 90 * power), power=power)
+        elif k == "gas":
+            _GasCloud(parent, x, y, QColor("#7FBF6A"),
+                      life_ms=int(520 + 160 * power), power=power)
+        elif k == "nuke":
+            _FireBurst(parent, x, y, life_ms=900, power=2.0)
+            _ImpactShock(parent, x, y, QColor("#FFFFFF"),
+                         life_ms=520, power=2.0)
+            ImpactRing(parent, x, y, QColor(T.Q_ORANGE),
+                       max_r=120.0, life_ms=560).start()
+        elif k == "spark":
+            SparkBurst(parent, x, y, QColor("#9AD8FF"),
+                       count=22, spread=52.0, life_ms=460).start()
+            ImpactRing(parent, x, y, QColor("#9AD8FF"),
+                       max_r=30.0, life_ms=300).start()
+        else:
+            hit_effect(parent, x, y, col, power)
+    except Exception:
+        pass
+
+
 def hit_effect(parent: QWidget, x: float, y: float,
                color: QColor = None, power: float = 1.0) -> None:
     """命中特效用这一个函数就够了（火花 + 冲击环，高伤害再加斩击）。
@@ -416,5 +743,5 @@ def fade_switch(host: QWidget, do_switch, duration: int = 190) -> None:
 __all__ = [
     "set_enabled", "enabled",
     "SparkBurst", "ImpactRing", "SlashArc",
-    "hit_effect", "block_effect", "fade_switch",
+    "hit_effect", "block_effect", "fade_switch", "card_fx",
 ]

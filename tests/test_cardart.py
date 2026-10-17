@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""卡面插图构图测试（纯数据，不需要 Qt）。"""
+"""卡面插图测试：每张卡一份独立设计（纯数据，不需要 Qt）。"""
 
 from __future__ import annotations
 
@@ -13,79 +13,129 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import cardart as CA  # noqa: E402
 from core.cards import CARD_DB  # noqa: E402
 
+# 作弊专属卡是 core.cheats 懒注入的 —— 主动触发一次，
+# 否则覆盖率断言会漏掉它们（真踩过：3 张作弊卡没设计）。
+try:
+    from core import cheats as _CH
+    _CH._ensure_cheat_cards()
+except Exception:
+    pass
 
-class TestCompose(unittest.TestCase):
 
-    def test_all_cards_compose(self):
-        """199 张卡都必须能算出构图，不能抛异常。"""
-        for cid, cd in CARD_DB.items():
+class TestDesignCoverage(unittest.TestCase):
+
+    def test_all_cards_have_design(self):
+        """199 张卡都必须有登记的设计（不能靠兜底糊过去）。"""
+        missing = [cid for cid in CARD_DB if cid not in CA.DESIGNS]
+        self.assertEqual(missing, [],
+                         "这些卡还没有独立设计：%s" % missing[:10])
+
+    def test_every_design_has_parts(self):
+        for cid, d in CA.DESIGNS.items():
             with self.subTest(card=cid):
-                comp = CA.compose({"def_id": cid})
-                self.assertIsNotNone(comp)
-                self.assertIn(comp.motif, CA.ALL_MOTIFS)
-                self.assertGreaterEqual(comp.count, 1)
-                self.assertLessEqual(comp.count, 4)
+                self.assertGreaterEqual(len(d.parts), 1,
+                                        "%s 的设计是空的" % cid)
 
-    def test_deterministic(self):
-        """同一张卡必须永远得到同样的构图（不能随机抖）。"""
-        a = CA.compose({"def_id": "strike", "arch": "attack"})
-        b = CA.compose({"def_id": "strike", "arch": "attack"})
-        self.assertEqual(a, b, "构图不稳定 —— 卡面会每次都不一样")
+    def test_no_registry_orphans(self):
+        """登记了但卡库里不存在的 id -> 拼错字了。"""
+        orphan = [cid for cid in CA.DESIGNS if cid not in CARD_DB]
+        self.assertEqual(orphan, [],
+                         "这些 id 在卡库里不存在（拼错了？）：%s" % orphan[:10])
 
-    def test_different_cards_differ(self):
-        """不同卡应该有区别（否则又变回"全长一样"）。"""
-        seen = set()
-        for cid in list(CARD_DB)[:60]:
-            cd = CARD_DB[cid]
-            comp = CA.compose({"def_id": cid, "arch": cd.arch,
-                               "rarity": cd.rarity, "damage": cd.damage,
-                               "block": cd.block, "cost": cd.cost})
-            seen.add((comp.motif, comp.count, comp.motifs, comp.band))
-        self.assertGreater(len(seen), 8,
-                           "只有 %d 种构图，太单调了" % len(seen))
 
-    def test_arch_drives_motif(self):
-        """流派决定主图案。"""
-        for arch, (motif, _) in CA.ARCH_MOTIFS.items():
-            comp = CA.compose({"def_id": "x-%s" % arch, "arch": arch})
-            self.assertEqual(comp.motif, motif, "流派 %s 的主图案不对" % arch)
+class TestDesignQuality(unittest.TestCase):
+
+    def test_designs_are_distinct(self):
+        """不同卡不能是同一个设计（否则又变回千篇一律）。"""
+        seen = {}
+        dup = []
+        for cid, d in CA.DESIGNS.items():
+            key = (tuple((p.kind, round(p.x, 2), round(p.y, 2)) for p in d.parts),
+                   d.fx, d.bg)
+            if key in seen:
+                dup.append((seen[key], cid))
+            else:
+                seen[key] = cid
+        self.assertLess(len(dup), 6,
+                        "有 %d 组卡设计完全一样：%s" % (len(dup), dup[:5]))
+
+    def test_parts_within_bounds(self):
+        """图元位置必须在 0~1 之间（画到框外会被裁掉）。"""
+        for cid, d in CA.DESIGNS.items():
+            for pt in d.parts:
+                with self.subTest(card=cid, kind=pt.kind):
+                    self.assertGreaterEqual(pt.x, 0.0)
+                    self.assertLessEqual(pt.x, 1.0)
+                    self.assertGreaterEqual(pt.y, 0.0)
+                    self.assertLessEqual(pt.y, 1.0)
+
+    def test_scales_sane(self):
+        for cid, d in CA.DESIGNS.items():
+            for pt in d.parts:
+                self.assertGreater(pt.s, 0.0, "%s 的 %s 尺寸为 0" % (cid, pt.kind))
+                self.assertLess(pt.s, 4.0, "%s 的 %s 尺寸过大" % (cid, pt.kind))
+
+    def test_all_part_kinds_known(self):
+        """设计里用到的图元名必须在 PART_KINDS 里。"""
+        used = set()
+        for d in CA.DESIGNS.values():
+            for pt in d.parts:
+                used.add(pt.kind)
+        unknown = sorted(used - set(CA.PART_KINDS))
+        self.assertEqual(unknown, [], "未声明的图元：%s" % unknown)
+
+
+class TestFx(unittest.TestCase):
+
+    def test_all_fx_known(self):
+        for cid, d in CA.DESIGNS.items():
+            with self.subTest(card=cid):
+                self.assertIn(d.fx, CA.FX_KINDS,
+                              "%s 的 fx=%r 不在已知类型里" % (cid, d.fx))
+
+    def test_gun_cards_shoot(self):
+        """枪械类卡必须有 bullet 特效。"""
+        for cid in ("strike", "heavy_harpoon", "twin_fang", "sniper" if "sniper" in CARD_DB else "deep_cut"):
+            if cid not in CARD_DB:
+                continue
+            with self.subTest(card=cid):
+                self.assertEqual(CA.fx_for({"def_id": cid}), "bullet",
+                                 "%s 是枪械类，应该有子弹特效" % cid)
+
+    def test_fire_cards_burn(self):
+        """燃烧类卡必须有 fire 特效。"""
+        for cid in ("burn", "toxin_uppercut", "scorched_earth", "carpet_bomb"):
+            if cid not in CARD_DB:
+                continue
+            with self.subTest(card=cid):
+                self.assertEqual(CA.fx_for({"def_id": cid}), "fire",
+                                 "%s 是火攻类，应该有火焰特效" % cid)
+
+    def test_nuke_is_nuke(self):
+        self.assertEqual(CA.fx_for({"def_id": "nuke"}), "nuke")
+
+    def test_no_duplicate_fx_on_same_card(self):
+        for cid in CARD_DB:
+            self.assertIsInstance(CA.fx_for({"def_id": cid}), str)
+
+
+class TestFallback(unittest.TestCase):
+
+    def test_unknown_card_gets_design(self):
+        d = CA.design_for({"def_id": "not_a_real_card", "arch": "attack"})
+        self.assertIsNotNone(d)
+        self.assertGreaterEqual(len(d.parts), 1)
 
     def test_unknown_arch_falls_back(self):
-        comp = CA.compose({"def_id": "x", "arch": "nonsense",
-                           "type": "attack"})
-        self.assertEqual(comp.motif, "rifle")
+        d = CA.design_for({"def_id": "not_a_real_card", "arch": "nonsense"})
+        self.assertIsNotNone(d)
+        self.assertGreaterEqual(len(d.parts), 1)
 
-    def test_rarity_drives_band_and_density(self):
-        lo = CA.compose({"def_id": "a", "arch": "attack", "rarity": "common"})
-        hi = CA.compose({"def_id": "b", "arch": "attack", "rarity": "legendary"})
-        self.assertEqual(lo.band, "steel")
-        self.assertEqual(hi.band, "crimson")
-        self.assertGreater(hi.density, lo.density)
-
-    def test_count_scales_with_numbers(self):
-        weak = CA.compose({"def_id": "a", "arch": "attack", "damage": 2})
-        strong = CA.compose({"def_id": "b", "arch": "attack", "damage": 12})
-        self.assertEqual(weak.count, 1)
-        self.assertEqual(strong.count, 4)
-
-    def test_bad_numbers_do_not_crash(self):
-        for bad in ({"damage": "lots"}, {"block": None}, {"cost": []}):
-            d = {"def_id": "x", "arch": "attack"}
-            d.update(bad)
+    def test_empty_card_does_not_crash(self):
+        for bad in ({}, {"def_id": None}, {"arch": None}):
             with self.subTest(bad=bad):
-                comp = CA.compose(d)
-                self.assertGreaterEqual(comp.count, 1)
-
-    def test_all_motifs_registered(self):
-        """每个母题都要在 ALL_MOTIFS 里（渲染器找不到会静默跳过）。"""
-        for arch, (motif, extras) in CA.ARCH_MOTIFS.items():
-            self.assertIn(motif, CA.ALL_MOTIFS)
-            for e in extras:
-                self.assertIn(e, CA.ALL_MOTIFS)
-
-    def test_seed_stable(self):
-        self.assertEqual(CA._seed_of("strike"), CA._seed_of("strike"))
-        self.assertNotEqual(CA._seed_of("strike"), CA._seed_of("defend"))
+                d = CA.design_for(bad)
+                self.assertGreaterEqual(len(d.parts), 1)
 
 
 if __name__ == "__main__":

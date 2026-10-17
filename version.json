@@ -1,18 +1,20 @@
 {
-  "version": "0.9.29",
-  "label": "0.9.29 测试版",
-  "label_en": "0.9.29 Beta",
+  "version": "0.9.30",
+  "label": "0.9.30 测试版",
+  "label_en": "0.9.30 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "重做卡面插图：5 个流派各有专属图案（步枪/沙袋/油桶/火焰/电台）",
-    "新增 15 种装饰件（弹孔、铁丝网、齿轮、辐射标、天线…），卡牌不再千篇一律",
-    "修复卡面把 {damage} 这类占位符直接印出来的 bug"
+    "重做卡面：202 张卡每张独立绘制（步枪/火炮/坦克/火焰/电台……）",
+    "新增 56 种矢量图元，卡面细节大幅提升",
+    "新增攻击特效：枪械发射子弹拖尾、火攻燃烧爆开、炮击冲击波、毒气扩散、核爆",
+    "修复 QBrush 未 import 导致所有火焰/毒气特效静默不显示"
   ],
   "notes_en": [
-    "Rebuilt card art: each of the 5 archetypes gets its own motif (rifle/sandbags/fuel drum/flame/radio)",
-    "Added 15 decoration types (bullet holes, barbed wire, gears, radiation marks, antennas...); cards no longer look identical",
-    "Fix: the card face printed raw placeholders like {damage}"
+    "Card art rebuilt: all 202 cards drawn individually (rifle/cannon/tank/flame/radio...)",
+    "Added 56 vector primitives; card faces are far more detailed",
+    "New attack FX: bullet trails for guns, burning bursts for fire, shockwaves for shells, gas clouds, nukes",
+    "Fix: QBrush was never imported, so every fire and gas effect silently drew nothing"
   ]
 }
