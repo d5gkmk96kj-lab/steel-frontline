@@ -58,12 +58,8 @@ from typing import Any, Dict, Optional
 #
 # 建议用域名而不是 IP：以后换服务器只要改 DNS，老客户端自动跟着走。
 RELAY_HOSTS = [
-    # (主机, 端口)
-    # 部署后把这里换成你自己的服务器。
-    # 第一个是主力（香港），第二个是备用（美国）。
-    # 例如：
-    #   ("hk.example.com", 9000),
-    #   ("us.example.com", 9000),
+    # (主机, 端口) —— 第一个是主力，后面的是备用（连不上自动换）
+    ("96.126.179.64", 9000),
 ]
 
 DEFAULT_RELAY_PORT = int(os.environ.get("SF_RELAY_PORT", "9000"))

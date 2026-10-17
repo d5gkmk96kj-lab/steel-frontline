@@ -62,6 +62,13 @@ class RelayCase(unittest.TestCase):
         self._old = None
 
     def tearDown(self):
+        # 还原被改过的中继配置（否则会污染后面的测试）
+        try:
+            from core import relay_client as RC
+            RC.DEFAULT_RELAY_HOST = ""
+            RC.RELAY_HOSTS[:] = []
+        except Exception:
+            pass
         try:
             self.proc.terminate()
             self.proc.wait(timeout=5)
@@ -84,7 +91,8 @@ class TestRelayBasics(RelayCase):
     def test_config_helpers(self):
         RC = self._rc()
         self.assertTrue(RC.relay_configured())
-        self.assertEqual(RC.relay_address(), "127.0.0.1:%d" % self.port)
+        # relay_address() 可能带「（+N 备用）」后缀（多地址故障转移）
+        self.assertIn("127.0.0.1:%d" % self.port, RC.relay_address())
 
     def test_create_and_join_room(self):
         RC = self._rc()

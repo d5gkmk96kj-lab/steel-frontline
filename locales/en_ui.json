@@ -741,7 +741,6 @@
  "服务器：": "Server: ",
  "公网联机（自动匹配）": "Online (auto-match)",
  "房间号": "Room code",
- "🕐 开放时间：每天 12:00 ～ 24:00": "🕐 Open daily 12:00 – 24:00",
  "房间码（房主开了才要填）": "Room code (only if the host created one)",
  "⚡ 一 键 匹 配": "⚡ QUICK MATCH",
  "公 网 建 房": "CREATE ROOM",
@@ -790,7 +789,6 @@
  "把当前卡组存下来，下次一键选用": "Save the current deck for one-click use later",
  "掩体 %d": "Armor %d",
  "最多 16 个字符": "Up to 16 characters",
- "服务器未开放，请等待 12:00～24:00 开放服务器": "Server is offline. It opens daily from 12:00 to 24:00.",
  "服务器：%s": "Server: %s",
  "本次更新内容": "What's new",
  "正在搜索对手": "Searching for an opponent",
@@ -928,5 +926,7 @@
  "不列颠之盾": "Shield of Britain",
  "掩体 ×1.25；每回合抽牌 −0（无副作用）。": "Armor x1.25; no downside.",
  "统帅": "Command",
- "科学": "Science"
+ "科学": "Science",
+ "🕐 服务器状态：在线": "🕐 Server status: online",
+ "服务器暂时连不上，请稍后再试。": "Server is temporarily unreachable, please try again later."
 }

@@ -346,7 +346,7 @@ class MenuScreen(QWidget):
         self.btn_versus.setFixedWidth(340)
         self.btn_versus.setToolTip(
             "跨网络 1v1：建房得到 4 位房间号，发给对方即可。\n"
-            "服务器每天 12:00～24:00 开放。")
+            "服务器常在线，匹配会自动找对手。")
         self.btn_versus.clicked.connect(self.open_versus.emit)
         lv.addWidget(self.btn_versus)
 

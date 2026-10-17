@@ -508,7 +508,7 @@ class LobbyScreen(QWidget):
 
         # 固定写出开放时间（不管开没开都显示，玩家一眼知道什么时候能玩）
         self.lbl_net_hours = QLabel(
-            "🕐 开放时间：每天 12:00 ～ 24:00", self.net_box)
+            "🕐 服务器状态：在线", self.net_box)
         self.lbl_net_hours.setStyleSheet(
             f"color:{T.GOLD}; font-size:{T.FONT_SMALL}px;"
             f"background:transparent;font-weight:600;")
@@ -765,7 +765,7 @@ class LobbyScreen(QWidget):
             self._status("点「开始匹配」自动找对手（服务器：%s）" % srv,
                          T.TEXT_DIM)
         else:
-            self._status("服务器未开放，请等待 12:00～24:00 开放服务器",
+            self._status("服务器暂时连不上，请稍后再试。",
                          T.Q_ORANGE)
 
     # ------------------------------------------------------------------
@@ -779,7 +779,7 @@ class LobbyScreen(QWidget):
             self._status("缺少联机模块：%s" % exc, T.Q_RED)
             return
         if not _rc.relay_configured():
-            self._status("服务器未开放，请等待 12:00～24:00 开放服务器",
+            self._status("服务器暂时连不上，请稍后再试。",
                          T.Q_ORANGE)
             return
         if getattr(self, "_matching", False):
@@ -872,9 +872,9 @@ class LobbyScreen(QWidget):
             self.lbl_net_srv.setText("服务器：%s" % _rc.relay_address())
         else:
             # 服务器还没开 —— 给一句明确、不吓人的提示。
-            # 每天 12:00~24:00 开放。
+            # 服务器常在线；连不上时给个不吓人的提示。
             self.lbl_net_srv.setText(
-                "服务器未开放，请等待 12:00～24:00 开放服务器")
+                "服务器暂时连不上，请稍后再试。")
 
         if mode == "net_host":
             self.lbl_net_title.setText("公网建房")

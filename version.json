@@ -1,18 +1,18 @@
 {
-  "version": "0.9.40",
-  "label": "0.9.40 测试版",
-  "label_en": "0.9.40 Beta",
+  "version": "0.9.41",
+  "label": "0.9.41 测试版",
+  "label_en": "0.9.41 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：辅助角色系统（30 位指挥官，开局选一位，各带全局被动）",
-    "角色加成覆盖：补给/耐久/伤害/掩体/抽牌/核弹/金币/商店价/战后回复",
-    "新增：出击前的角色选择界面（5x6 网格，选中高亮）"
+    "联机服务器已上线：96.126.179.64:9000（香港），开游戏即可匹配",
+    "去掉 12:00～24:00 开放时间限制（服务器常在线）",
+    "修复：test_relay 污染后续测试（改的配置没还原）"
   ],
   "notes_en": [
-    "New: 30 commanders — pick one before each run, each grants a global passive",
-    "Commander bonuses cover supply, HQ durability, damage, armor, card draw, nukes, gold, shop prices and post-battle healing",
-    "New: commander selection screen before deploying (5x6 grid with highlight)"
+    "Online server is LIVE at 96.126.179.64:9000 (Hong Kong) — just open the game and match",
+    "Removed the 12:00-24:00 opening-hours restriction (the server stays online)",
+    "Fix: test_relay leaked config changes into later tests"
   ]
 }
