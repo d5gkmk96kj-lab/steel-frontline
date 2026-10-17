@@ -171,6 +171,7 @@ class TestAiUiWiring(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        os.environ.setdefault("SF_NO_UPDATE_CHECK", "1")
         os.environ.setdefault("SF_ALLOW_HEADLESS_QT", "1")
         try:
             from PyQt6.QtWidgets import QApplication

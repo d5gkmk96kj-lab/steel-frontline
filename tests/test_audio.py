@@ -20,6 +20,7 @@ sys.path.insert(0, BASE)
 # 无头环境（CI / 无显示器的机器）必须用 offscreen，
 # 否则 Qt 创建 QApplication 会失败 —— Windows CI 上就是这样挂的。
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("SF_NO_UPDATE_CHECK", "1")
 os.environ.setdefault("SF_ALLOW_HEADLESS_QT", "1")
 
 from core import audio  # noqa: E402

@@ -155,17 +155,35 @@ class GameWindow(QMainWindow):
 
     # ------------------------------------------------------- 更新检查 -- #
     def _start_update_check(self) -> None:
-        """启动后延迟几秒在后台检查更新（不阻塞、离线静默失败）。"""
+        """启动后延迟几秒在后台检查更新（不阻塞、离线静默失败）。
+
+        **只在第一个窗口里查**。
+        背景：每建一个 MainWindow 都会排一次 2.5 秒后的检查；
+        测试里会建几十个窗口，于是排了几十次检查 -> 弹出几十个
+        模态更新框 -> 无限递归、测试卡死 10 分钟（真踩过）。
+        正常用户只开一个窗口，所以「只查一次」不影响体验。
+        """
+        if getattr(MainWindow, "_update_check_started", False):
+            return
+        # 测试环境不查更新：CI 里网络慢/不通，弹窗还会卡住测试。
+        import os as _os
+        if _os.environ.get("SF_NO_UPDATE_CHECK") or _os.environ.get("SF_SELFTEST"):
+            return
         try:
             from PyQt6.QtCore import QTimer
-            # 等界面稳定再查，避免和启动动画抢资源
+            MainWindow._update_check_started = True
             QTimer.singleShot(2500, self.check_updates)
         except Exception:
             pass
 
+    #: 全局只弹一次更新窗（防多个窗口同时弹 -> 模态递归）
+    _update_dialog_shown = False
+
     def check_updates(self, silent: bool = True) -> None:
         """检查新版本。silent=True 时没有更新就不打扰用户。"""
         if getattr(self, "_update_checking", False):
+            return
+        if MainWindow._update_dialog_shown:
             return
         self._update_checking = True
         try:
@@ -204,6 +222,9 @@ class GameWindow(QMainWindow):
                     "当前已是最新版本（%s）。\n\n"
                     "（如果刚发布不久，可能还没同步到，稍后再试。）" % label)
             return
+        if MainWindow._update_dialog_shown:
+            return          # 已经弹过就不重复弹（多窗口场景）
+        MainWindow._update_dialog_shown = True
         try:
             qupdate.show_update_dialog(info, self)
         except Exception as exc:

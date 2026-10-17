@@ -17,6 +17,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("SF_NO_UPDATE_CHECK", "1")
 # 允许在无头环境创建 QApplication（与 test_smoke_ui 同一开关）
 os.environ.setdefault("SF_ALLOW_HEADLESS_QT", "1")
 

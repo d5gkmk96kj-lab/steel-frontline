@@ -35,6 +35,8 @@ except Exception:
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("SF_ALLOW_HEADLESS_QT", "1")
+# 测试里不查更新：CI 网络慢/不通，弹窗会卡住测试
+os.environ.setdefault("SF_NO_UPDATE_CHECK", "1")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
