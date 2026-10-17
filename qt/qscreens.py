@@ -266,7 +266,6 @@ class MenuScreen(QWidget):
     open_codex = pyqtSignal()
     open_achievements = pyqtSignal()
     open_settings = pyqtSignal()
-    open_credits = pyqtSignal()
     open_stats = pyqtSignal()
     open_saves = pyqtSignal()
     open_profile = pyqtSignal()
@@ -382,8 +381,8 @@ class MenuScreen(QWidget):
                    ("战绩档案", self.open_stats.emit, "Ghost"),
                    ("存档管理", self.open_saves.emit, "Ghost"),
                    ("我的资料", self.open_profile.emit, "Ghost"),
-                   ("设置", self.open_settings.emit, "Ghost"),
-                   ("鸣谢", self.open_credits.emit, "Ghost"))
+                   ("设置", self.open_settings.emit, "Ghost"))
+
         for i, (text, sig, obj) in enumerate(entries):
             b = QPushButton(text, left)
             b.setObjectName(obj)
@@ -1909,115 +1908,6 @@ class StatsScreen(QWidget):
 # =====================================================================
 # 11. 设置
 # =====================================================================
-
-
-class CreditsScreen(QWidget):
-    """鸣谢：列出帮助过这个项目的人。
-
-    名单来自 ``core.credits``（本地文件，不进仓库）。
-    """
-
-    closed = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._build()
-
-    def _build(self) -> None:
-        root = QVBoxLayout(self)
-        root.setContentsMargins(56, 30, 56, 30)
-        root.setSpacing(16)
-
-        self.tb = TitleBar("鸣 谢", "感谢这些人的帮助", self)
-        root.addWidget(self.tb)
-
-        scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet(
-            "QScrollArea{background:transparent;border:none;}"
-            "QScrollArea>QWidget>QWidget{background:transparent;}")
-        inner = QWidget(scroll)
-        inner.setStyleSheet("background:transparent;")
-        self._lay = QVBoxLayout(inner)
-        self._lay.setContentsMargins(8, 8, 8, 8)
-        self._lay.setSpacing(10)
-        self._lay.addStretch(1)
-        scroll.setWidget(inner)
-        self._scroll = scroll
-        self._inner = inner
-        root.addWidget(scroll, 1)
-
-        foot = QHBoxLayout()
-        self.lbl_count = QLabel("", self)
-        self.lbl_count.setStyleSheet(
-            f"color:{T.TEXT_MUTED};font-size:{T.FONT_SMALL}px;"
-            f"background:transparent;")
-        foot.addWidget(self.lbl_count)
-        foot.addStretch(1)
-        self.btn_back = QPushButton("返 回", self)
-        self.btn_back.setObjectName("Ghost")
-        self.btn_back.setMinimumWidth(140)
-        self.btn_back.setMinimumHeight(42)
-        self.btn_back.clicked.connect(self.closed.emit)
-        foot.addWidget(self.btn_back)
-        root.addLayout(foot)
-
-        self.refresh()
-
-    def refresh(self) -> None:
-        """重新读名单（玩家可能刚改过 json）。"""
-        # 清空
-        while self._lay.count() > 1:
-            it = self._lay.takeAt(0)
-            w = it.widget()
-            if w is not None:
-                w.setParent(None)
-                w.deleteLater()
-
-        try:
-            from core import credits as _C
-            lines = _C.display_lines()
-        except Exception:
-            lines = []
-
-        if not lines:
-            empty = QLabel("（名单为空）", self._inner)
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty.setStyleSheet(
-                f"color:{T.TEXT_MUTED};font-size:{T.FONT_BODY}px;"
-                f"background:transparent;padding:40px;")
-            self._lay.insertWidget(0, empty)
-            self.lbl_count.setText("共 0 人")
-            return
-
-        for i, line in enumerate(lines):
-            row = QFrame(self._inner)
-            row.setStyleSheet(
-                f"QFrame{{background:{T.PANEL_LO};"
-                f"border:1px solid {T.BORDER};border-radius:8px;}}")
-            rv = QHBoxLayout(row)
-            rv.setContentsMargins(18, 12, 18, 12)
-            rv.setSpacing(14)
-
-            num = QLabel(str(i + 1), row)
-            num.setFixedWidth(30)
-            num.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            num.setStyleSheet(
-                f"color:{T.GOLD};font-size:{T.FONT_H2}px;font-weight:800;"
-                f"background:transparent;border:none;")
-            rv.addWidget(num)
-
-            lbl = QLabel(line, row)
-            lbl.setWordWrap(True)
-            lbl.setStyleSheet(
-                f"color:{T.TEXT};font-size:{T.FONT_H2}px;"
-                f"background:transparent;border:none;")
-            rv.addWidget(lbl, 1)
-
-            self._lay.insertWidget(i, row)
-
-        self.lbl_count.setText("共 %d 人" % len(lines))
 
 
 class SettingsScreen(QWidget):
