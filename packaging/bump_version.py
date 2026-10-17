@@ -97,7 +97,13 @@ def auto_next(cur: str) -> str:
         except Exception:
             head.append("1")
         return ".".join(head)
-    parts[-1] = str(last).zfill(2)
+    # 1.0 之前是 0.9.xx 两位补零的写法；到 1.x 就不该再补零
+    # （1.0.1 补两位会变成 1.0.01，读起来像 1.0.01 = 1.0.1 的另一种写法）
+    major = parts[0] if parts else "0"
+    if major == "0":
+        parts[-1] = str(last).zfill(2)
+    else:
+        parts[-1] = str(last)
     return ".".join(parts)
 
 

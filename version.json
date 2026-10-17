@@ -1,16 +1,14 @@
 {
-  "version": "1.0.1",
-  "label": "1.0.1 正式版",
-  "label_en": "1.0.1",
+  "version": "1.0.2",
+  "label": "1.0.2 正式版",
+  "label_en": "1.0.2",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "安全：服务器地址不再显示在界面上（只显示在线/离线）",
-    "安全：服务器地址不再以明文写在代码里"
+    "辅助角色改为 6 国 × 5 人：中 / 美 / 日 / 苏 / 德 / 英"
   ],
   "notes_en": [
-    "Security: the server address is no longer shown in the UI (status only)",
-    "Security: the server address is no longer stored as plain text in the code"
+    "Commanders reorganised into 6 nations x 5: China / USA / Japan / USSR / Germany / Britain"
   ]
 }

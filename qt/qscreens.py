@@ -2004,27 +2004,43 @@ class CommanderScreen(QWidget):
 
         items = CM.available(runs)
         cols = 5
-        for i, c in enumerate(items):
-            btn = QPushButton(self)
-            btn.setCheckable(True)
-            btn.setMinimumHeight(96)
-            btn.setMinimumWidth(190)
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            era = T.tr(c.era)
-            btn.setText("%s\n〔%s〕\n%s" % (T.tr(c.name), era, T.tr(c.text)))
-            btn.setStyleSheet(
-                f"QPushButton{{text-align:left;padding:10px 12px;"
-                f"background:{T.PANEL_LO};border:2px solid {T.BORDER};"
-                f"border-radius:8px;color:{T.TEXT};"
-                f"font-size:{T.FONT_SMALL}px;}}"
-                f"QPushButton:hover{{border-color:{T.BORDER_HI};}}"
-                f"QPushButton:checked{{border-color:{T.GOLD};"
-                f"background:{T.PANEL};color:{T.GOLD};}}")
-            btn.clicked.connect(lambda _c=False, cid=c.id: self._pick(cid))
-            self._grid.addWidget(btn, i // cols, i % cols)
-            self._cards.append(btn)
+        row = 0
+        total = 0
+        # 按国家分组：每国一行（国家名 + 5 位角色）
+        for code, zh_name, en_name, lst in CM.grouped():
+            lst = [c for c in lst if c in items]
+            if not lst:
+                continue
+            # 国家标题
+            head = QLabel("%s  %s" % (T.tr(zh_name), ""), self)
+            head.setStyleSheet(
+                f"color:{T.GOLD};font-size:{T.FONT_H2}px;"
+                f"font-weight:bold;background:transparent;padding:6px 2px;")
+            self._grid.addWidget(head, row, 0, 1, cols)
+            row += 1
+            for i, c in enumerate(lst):
+                btn = QPushButton(self)
+                btn.setCheckable(True)
+                btn.setMinimumHeight(92)
+                btn.setMinimumWidth(190)
+                btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn.setText("%s\n〔%s〕\n%s" % (
+                    T.tr(c.name), T.tr(c.title), T.tr(c.text)))
+                btn.setStyleSheet(
+                    f"QPushButton{{text-align:left;padding:10px 12px;"
+                    f"background:{T.PANEL_LO};border:2px solid {T.BORDER};"
+                    f"border-radius:8px;color:{T.TEXT};"
+                    f"font-size:{T.FONT_SMALL}px;}}"
+                    f"QPushButton:hover{{border-color:{T.BORDER_HI};}}"
+                    f"QPushButton:checked{{border-color:{T.GOLD};"
+                    f"background:{T.PANEL};color:{T.GOLD};}}")
+                btn.clicked.connect(lambda _c=False, cid=c.id: self._pick(cid))
+                self._grid.addWidget(btn, row, i % cols)
+                self._cards.append(btn)
+                total += 1
+            row += 1
 
-        self.lbl_info.setText("已解锁 %d / %d 位" % (len(items), len(CM.COMMANDERS)))
+        self.lbl_info.setText("已解锁 %d / %d 位 · 6 个国家" % (total, len(CM.COMMANDERS)))
 
     def _pick(self, cid: str) -> None:
         self._picked = cid
@@ -2041,8 +2057,10 @@ class CommanderScreen(QWidget):
                 b.setChecked(True)
                 break
         if c is not None:
-            self.lbl_info.setText("%s · %s　—　%s" % (
-                T.tr(c.name), T.tr(c.title), T.tr(c.text)))
+            from core import commanders as _CM
+            nat = _CM.NATION_NAMES.get(c.nation, c.nation)
+            self.lbl_info.setText("〔%s〕%s · %s　—　%s" % (
+                T.tr(nat), T.tr(c.name), T.tr(c.title), T.tr(c.text)))
 
 
 class SettingsScreen(QWidget):

@@ -55,7 +55,41 @@ class TestRegistry(unittest.TestCase):
             with self.subTest(cmd=c.id):
                 self.assertTrue(c.name.strip(), "%s 没有名字" % c.id)
                 self.assertTrue(c.text.strip(), "%s 没有效果说明" % c.id)
-                self.assertTrue(c.era.strip(), "%s 没有阵营" % c.id)
+                self.assertTrue(c.nation.strip(), "%s 没有国家" % c.id)
+
+    def test_six_nations_five_each(self):
+        """6 个国家，每个正好 5 位。"""
+        groups = CM.grouped()
+        self.assertEqual(len(groups), 6, "应该是 6 个国家")
+        for code, zh, en, lst in groups:
+            with self.subTest(nation=code):
+                self.assertEqual(len(lst), 5,
+                                 "%s 应该有 5 位，实际 %d" % (zh, len(lst)))
+
+    def test_nation_codes(self):
+        got = [g[0] for g in CM.grouped()]
+        self.assertEqual(got, ["CN", "US", "JP", "SU", "DE", "GB"],
+                         "国家顺序/代码不对：%s" % got)
+
+    def test_every_commander_has_valid_nation(self):
+        for c in CM.all_commanders():
+            self.assertIn(c.nation, CM.NATION_NAMES,
+                          "%s 的国家 %r 不合法" % (c.id, c.nation))
+
+    def test_key_figures_present(self):
+        """用户点名要的人物必须在。"""
+        need = {
+            "chiang": "CN", "mao": "CN",
+            "roosevelt": "US", "eisenhower": "US",
+            "yamamoto": "JP", "tojo": "JP",
+            "stalin": "SU", "zhukov": "SU",
+            "hitler": "DE", "guderian": "DE",
+            "churchill": "GB", "montgomery": "GB",
+        }
+        for cid, nat in need.items():
+            c = CM.get(cid)
+            self.assertIsNotNone(c, "%s 缺失" % cid)
+            self.assertEqual(c.nation, nat, "%s 国家错" % cid)
 
     def test_none_is_neutral(self):
         self.assertTrue(CM.mods_of("").is_neutral())

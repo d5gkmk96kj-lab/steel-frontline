@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""辅助角色（指挥官）：每局开战前选一位，提供一层全局被动。
+"""辅助角色（指挥官）：6 个国家，每国 5 位，共 30 位。
 
 设计
 ----
 * **纯数据 + 纯函数**：本模块不依赖 Qt，也不改引擎内部状态。
 * 加成都通过 ``Modifiers`` 表达，引擎在结算时查询，方便测试与存档。
-* 角色用的是**真实历史人物的名字**（姓名本身不构成著作权）；
-  描述为游戏化改编，不代表对历史人物的评价。
+* 用的是**真实历史人物的名字**（姓名本身不构成著作权）；
+  效果为游戏化改编，不代表对历史人物的评价。
 
 加成维度（Modifiers）
 ---------------------
@@ -27,7 +27,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
@@ -76,29 +76,69 @@ NEUTRAL = Modifiers()
 
 
 # --------------------------------------------------------------------------
-# 角色定义
+# 国家
+# --------------------------------------------------------------------------
+NATION_CN = "CN"          # 中国 / China
+NATION_US = "US"          # 美国 / USA
+NATION_JP = "JP"          # 日本 / Japan
+NATION_SU = "SU"          # 苏联 / USSR
+NATION_DE = "DE"          # 德国 / Germany
+NATION_GB = "GB"          # 英国 / Britain
+
+#: 国家代码 -> 中文名
+NATION_NAMES: Dict[str, str] = {
+    "CN": "中国",
+    "US": "美国",
+    "JP": "日本",
+    "SU": "苏联",
+    "DE": "德国",
+    "GB": "英国",
+}
+
+#: 国家代码 -> 英文名
+NATION_NAMES_EN: Dict[str, str] = {
+    "CN": "China",
+    "US": "USA",
+    "JP": "Japan",
+    "SU": "USSR",
+    "DE": "Germany",
+    "GB": "Britain",
+}
+
+#: 界面里的显示顺序
+NATION_ORDER: List[str] = [
+    "CN",
+    "US",
+    "JP",
+    "SU",
+    "DE",
+    "GB",
+]
+
+
+# --------------------------------------------------------------------------
+# 角色
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Commander:
     """一位辅助角色。"""
 
     id: str
-    name: str              # 显示名（中文）
-    name_en: str           # 英文名
-    era: str               # 阵营 / 时期的短标签
-    title: str             # 一句称号
-    text: str              # 效果说明（给人看的一行）
+    name: str          # 中文名
+    name_en: str       # 英文名
+    nation: str        # 国家代码
+    title: str         # 一句称号
+    text: str          # 效果说明
     mods: Modifiers
-    #: 解锁条件：0 = 一开始就有
     unlock_runs: int = 0
 
+    @property
+    def era(self) -> str:
+        """兼容旧字段：返回国家中文名。"""
+        return NATION_NAMES.get(self.nation, self.nation)
 
-def _c(cid, name, name_en, era, title, text, unlock=0, **kw) -> Commander:
-    return Commander(cid, name, name_en, era, title, text,
-                     Modifiers(**kw), unlock)
 
-
-#: 全部角色。数值都做过克制：单条加成不会改变游戏难度层级。
+#: 全部角色（按国家分组定义，扁平存进这个 dict）
 COMMANDERS: Dict[str, Commander] = {}
 
 
@@ -106,160 +146,78 @@ def _reg(c: Commander) -> None:
     COMMANDERS[c.id] = c
 
 
-# ---- 后勤 / 指挥 ----------------------------------------------------------
-_reg(_c("guderian", "古德里安", "Guderian", "装甲",
-        "闪击先锋",
-        "每回合 +1 指挥点；开局手牌 +1。",
-        supply=1, hand=1))
+# ---- 中国 / China ----------------------------------------------------
+_reg(Commander("chiang", "蒋介石", "Chiang Kai-shek", "CN",
+                 "国民政府领袖", "总部耐久 +12；开局金币 +25。", Modifiers(hp=12, gold=25)))
+_reg(Commander("mao", "毛泽东", "Mao Zedong", "CN",
+                 "持久战", "每回合 +1 指挥点；战后回复 +6。", Modifiers(supply=1, heal=6)))
+_reg(Commander("zhu_de", "朱德", "Zhu De", "CN",
+                 "总司令", "伤害 ×1.10；总部耐久 +6。", Modifiers(damage=1.10, hp=6)))
+_reg(Commander("peng", "彭德怀", "Peng Dehuai", "CN",
+                 "百团大战", "伤害 ×1.15；掩体 ×0.94。", Modifiers(damage=1.15, block=0.94)))
+_reg(Commander("xue_yue", "薛岳", "Xue Yue", "CN",
+                 "天炉战法", "掩体 ×1.25；每回合 +1 指挥点。", Modifiers(block=1.25, supply=1)))
 
-_reg(_c("rommel", "隆美尔", "Rommel", "装甲",
-        "沙漠之狐",
-        "每回合 +1 指挥点；伤害 ×1.08。",
-        supply=1, damage=1.08))
+# ---- 美国 / USA ----------------------------------------------------
+_reg(Commander("roosevelt", "罗斯福", "Roosevelt", "US",
+                 "新政", "开局金币 +50；商店价格 ×0.88。", Modifiers(gold=50, price=0.88)))
+_reg(Commander("eisenhower", "艾森豪威尔", "Eisenhower", "US",
+                 "联军统筹", "每回合额外抽 1 张牌；掩体 ×1.08。", Modifiers(draw=1, block=1.08)))
+_reg(Commander("patton", "巴顿", "Patton", "US",
+                 "血胆将军", "伤害 ×1.15；总部耐久 −8。", Modifiers(damage=1.15, hp=-8)))
+_reg(Commander("nimitz", "尼米兹", "Nimitz", "US",
+                 "太平洋统帅", "总部耐久 +10；每回合 +1 指挥点。", Modifiers(hp=10, supply=1)))
+_reg(Commander("oppenheimer", "奥本海默", "Oppenheimer", "US",
+                 "曼哈顿计划", "核弹额外 +12 伤害；每回合 +1 指挥点。", Modifiers(nuke=12, supply=1)))
 
-_reg(_c("patton", "巴顿", "Patton", "装甲",
-        "血胆将军",
-        "伤害 ×1.15；总部耐久 −8。",
-        damage=1.15, hp=-8))
+# ---- 日本 / Japan ----------------------------------------------------
+_reg(Commander("hirohito", "昭和天皇", "Emperor Showa", "JP",
+                 "御前会议", "每回合 +1 指挥点；开局手牌 +1。", Modifiers(supply=1, hand=1)))
+_reg(Commander("tojo", "东条英机", "Tojo Hideki", "JP",
+                 "战时内阁", "伤害 ×1.12；掩体 ×0.92。", Modifiers(damage=1.12, block=0.92)))
+_reg(Commander("yamamoto", "山本五十六", "Yamamoto Isoroku", "JP",
+                 "联合舰队", "每回合额外抽 1 张牌；伤害 ×1.05。", Modifiers(draw=1, damage=1.05)))
+_reg(Commander("okamura", "冈村宁次", "Okamura Yasuji", "JP",
+                 "华北方面军", "燃烧伤害 ×1.20；伤害 ×1.06。", Modifiers(burn=1.20, damage=1.06)))
+_reg(Commander("nagumo", "南云忠一", "Nagumo Chuichi", "JP",
+                 "机动部队", "伤害 ×1.18；总部耐久 −6。", Modifiers(damage=1.18, hp=-6)))
 
-_reg(_c("zhukov", "朱可夫", "Zhukov", "统帅",
-        "钢铁元帅",
-        "总部耐久 +15；战后回复 +6。",
-        hp=15, heal=6))
+# ---- 苏联 / USSR ----------------------------------------------------
+_reg(Commander("stalin", "斯大林", "Stalin", "SU",
+                 "最高统帅", "伤害 ×1.10；总部耐久 −5。", Modifiers(damage=1.10, hp=-5)))
+_reg(Commander("zhukov", "朱可夫", "Zhukov", "SU",
+                 "钢铁元帅", "总部耐久 +15；战后回复 +6。", Modifiers(hp=15, heal=6)))
+_reg(Commander("rokossovsky", "罗科索夫斯基", "Rokossovsky", "SU",
+                 "双线统帅", "每回合 +1 指挥点；指挥点上限 +1。", Modifiers(supply=1, energy_cap=1)))
+_reg(Commander("konev", "科涅夫", "Konev", "SU",
+                 "乌克兰方面军", "伤害 ×1.12；掩体 ×1.05。", Modifiers(damage=1.12, block=1.05)))
+_reg(Commander("vasilevsky", "华西列夫斯基", "Vasilevsky", "SU",
+                 "远东闪击", "伤害 ×1.16；开局手牌 −1。", Modifiers(damage=1.16, hand=-1)))
 
-_reg(_c("rokossovsky", "罗科索夫斯基", "Rokossovsky", "统帅",
-        "双线统帅",
-        "每回合 +1 指挥点；指挥点上限 +1。",
-        supply=1, energy_cap=1))
+# ---- 德国 / Germany ----------------------------------------------------
+_reg(Commander("hitler", "希特勒", "Hitler", "DE",
+                 "元首", "伤害 ×1.15；总部耐久 −10。", Modifiers(damage=1.15, hp=-10)))
+_reg(Commander("guderian", "古德里安", "Guderian", "DE",
+                 "闪击先锋", "每回合 +1 指挥点；开局手牌 +1。", Modifiers(supply=1, hand=1)))
+_reg(Commander("manstein", "曼施坦因", "Manstein", "DE",
+                 "镰刀闪击", "伤害 ×1.10；开局手牌 −1。", Modifiers(damage=1.10, hand=-1)))
+_reg(Commander("rommel", "隆美尔", "Rommel", "DE",
+                 "沙漠之狐", "每回合 +1 指挥点；伤害 ×1.08。", Modifiers(supply=1, damage=1.08)))
+_reg(Commander("speer", "施佩尔", "Speer", "DE",
+                 "军备部长", "开局金币 +60；商店价格 ×0.85。", Modifiers(gold=60, price=0.85)))
 
-_reg(_c("manstein", "曼施坦因", "Manstein", "统帅",
-        "镰刀闪击",
-        "伤害 ×1.10；开局手牌 −1。",
-        damage=1.10, hand=-1))
+# ---- 英国 / Britain ----------------------------------------------------
+_reg(Commander("churchill", "丘吉尔", "Churchill", "GB",
+                 "我们决不投降", "总部耐久 +18；伤害 ×1.05。", Modifiers(hp=18, damage=1.05)))
+_reg(Commander("montgomery", "蒙哥马利", "Montgomery", "GB",
+                 "谨慎的胜利", "掩体 ×1.20；战后回复 +4。", Modifiers(block=1.20, heal=4)))
+_reg(Commander("harris", "哈里斯", "Harris", "GB",
+                 "轰炸机司令", "燃烧伤害 ×1.30；掩体 ×0.90。", Modifiers(burn=1.30, block=0.90)))
+_reg(Commander("dowding", "道丁", "Dowding", "GB",
+                 "不列颠之盾", "掩体 ×1.25。", Modifiers(block=1.25)))
+_reg(Commander("turing", "图灵", "Turing", "GB",
+                 "破译者", "每回合额外抽 1 张牌。", Modifiers(draw=1)))
 
-_reg(_c("montgomery", "蒙哥马利", "Montgomery", "统帅",
-        "谨慎的胜利",
-        "掩体 ×1.20；战后回复 +4。",
-        block=1.20, heal=4))
-
-_reg(_c("eisenhower", "艾森豪威尔", "Eisenhower", "盟军",
-        "联军统筹",
-        "开局金币 +40；商店价格 ×0.90。",
-        gold=40, price=0.90))
-
-# ---- 科研 / 武器 ----------------------------------------------------------
-_reg(_c("oppenheimer", "奥本海默", "Oppenheimer", "科学",
-        "曼哈顿计划",
-        "核弹额外 +12 伤害；每回合 +1 指挥点。",
-        nuke=12, supply=1))
-
-_reg(_c("turing", "图灵", "Turing", "科学",
-        "破译者",
-        "每回合额外抽 1 张牌。",
-        draw=1))
-
-_reg(_c("von_neumann", "冯·诺依曼", "von Neumann", "科学",
-        "计算之父",
-        "每回合额外抽 1 张牌；总部耐久 −5。",
-        draw=1, hp=-5))
-
-_reg(_c("einstein", "爱因斯坦", "Einstein", "科学",
-        "质能方程",
-        "核弹额外 +18 伤害；伤害 ×0.95。",
-        nuke=18, damage=0.95))
-
-_reg(_c("fermi", "费米", "Fermi", "科学",
-        "链式反应",
-        "燃烧伤害 ×1.25。",
-        burn=1.25))
-
-_reg(_c("heisenberg", "海森堡", "Heisenberg", "科学",
-        "不确定原理",
-        "燃烧伤害 ×1.20；开局手牌 +1。",
-        burn=1.20, hand=1))
-
-_reg(_c("teller", "泰勒", "Teller", "科学",
-        "氢弹之父",
-        "核弹额外 +22 伤害；总部耐久 −10。",
-        nuke=22, hp=-10))
-
-_reg(_c("sikorsky", "西科斯基", "Sikorsky", "科学",
-        "旋翼先驱",
-        "每回合 +1 指挥点；掩体 ×0.92。",
-        supply=1, block=0.92))
-
-# ---- 空军 / 海军 ----------------------------------------------------------
-_reg(_c("harris", "哈里斯", "Harris", "空军",
-        "轰炸机司令",
-        "燃烧伤害 ×1.30；掩体 ×0.90。",
-        burn=1.30, block=0.90))
-
-_reg(_c("doolittle", "杜立特", "Doolittle", "空军",
-        "空袭东京",
-        "伤害 ×1.12；每回合 +1 指挥点。",
-        damage=1.12, supply=1))
-
-_reg(_c("yamamoto", "山本五十六", "Yamamoto", "海军",
-        "联合舰队",
-        "每回合额外抽 1 张牌；伤害 ×1.05。",
-        draw=1, damage=1.05))
-
-_reg(_c("nimitz", "尼米兹", "Nimitz", "海军",
-        "太平洋统帅",
-        "总部耐久 +10；每回合 +1 指挥点。",
-        hp=10, supply=1))
-
-_reg(_c("cunningham", "坎宁安", "Cunningham", "海军",
-        "地中海之锚",
-        "掩体 ×1.15；战后回复 +5。",
-        block=1.15, heal=5))
-
-# ---- 后勤 / 工业 ----------------------------------------------------------
-_reg(_c("speer", "施佩尔", "Speer", "工业",
-        "军备部长",
-        "开局金币 +60；商店价格 ×0.85。",
-        gold=60, price=0.85))
-
-_reg(_c("ford", "亨利·福特", "Henry Ford", "工业",
-        "流水线",
-        "开局金币 +30；每回合 +1 指挥点。",
-        gold=30, supply=1))
-
-_reg(_c("kaiser", "凯泽", "Kaiser", "工业",
-        "自由轮",
-        "总部耐久 +12；掩体 ×1.05。",
-        hp=12, block=1.05))
-
-_reg(_c("marshall", "马歇尔", "Marshall", "后勤",
-        "胜利的基石",
-        "战后回复 +8；开局金币 +20。",
-        heal=8, gold=20))
-
-_reg(_c("somervell", "萨默维尔", "Somervell", "后勤",
-        "补给大动脉",
-        "每回合 +1 指挥点；开局手牌 +1。",
-        supply=1, hand=1))
-
-# ---- 医疗 / 士气 ----------------------------------------------------------
-_reg(_c("nightingale", "南丁格尔", "Nightingale", "医疗",
-        "提灯女神",
-        "战后回复 +10；总部耐久 +5。",
-        heal=10, hp=5))
-
-_reg(_c("bethune", "白求恩", "Bethune", "医疗",
-        "前线医者",
-        "战后回复 +12。",
-        heal=12))
-
-_reg(_c("zhang_zhizhong", "张自忠", "Zhang Zizhong", "抗战",
-        "抗战军魂",
-        "伤害 ×1.12；总部耐久 +8。",
-        damage=1.12, hp=8))
-
-_reg(_c("dowding", "道丁", "Dowding", "空军",
-        "不列颠之盾",
-        "掩体 ×1.25；每回合抽牌 −0（无副作用）。",
-        block=1.25))
 
 
 # --------------------------------------------------------------------------
@@ -273,13 +231,25 @@ def all_commanders() -> List[Commander]:
     return list(COMMANDERS.values())
 
 
+def by_nation(code: str) -> List[Commander]:
+    """某国的全部角色（按定义顺序）。"""
+    return [c for c in COMMANDERS.values() if c.nation == str(code or "")]
+
+
+def grouped() -> List[tuple]:
+    """按国家分组：[(国家代码, 中文名, 英文名, [角色...]), ...]"""
+    out = []
+    for code in NATION_ORDER:
+        out.append((code, NATION_NAMES.get(code, code),
+                    NATION_NAMES_EN.get(code, code), by_nation(code)))
+    return out
+
+
 def starters() -> List[Commander]:
-    """一开始就能用的角色。"""
     return [c for c in COMMANDERS.values() if c.unlock_runs <= 0]
 
 
 def available(total_runs: int = 0) -> List[Commander]:
-    """按累计局数解锁后还能用的角色。"""
     n = max(0, int(total_runs or 0))
     return [c for c in COMMANDERS.values() if c.unlock_runs <= n]
 
@@ -291,5 +261,4 @@ def mods_of(cid: Optional[str]) -> Modifiers:
 
 
 def registry():
-    """给界面用的 {id: Commander}（和 COMMANDERS 同源，便于以后热改）。"""
     return dict(COMMANDERS)
