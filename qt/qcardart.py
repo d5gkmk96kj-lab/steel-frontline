@@ -277,22 +277,37 @@ def _rifle(p, cx, cy, s, k, col):
 
 
 def _smg(p, cx, cy, s, k, col):
-    lw = max(1.3, 1.8 * k)
-    p.setBrush(QBrush(T.a(col, 60)))
-    p.setPen(QPen(col, lw))
-    p.drawRoundedRect(QRectF(cx - s * 0.80, cy - s * 0.14, s * 1.30, s * 0.28),
-                      s * 0.05, s * 0.05)
-    p.drawLine(QPointF(cx + s * 0.50, cy - s * 0.01), QPointF(cx + s * 1.30, cy - s * 0.01))
-    # 弹匣（长直）
-    p.setBrush(QBrush(T.a(col, 75)))
-    p.drawRoundedRect(QRectF(cx - s * 0.22, cy + s * 0.10, s * 0.22, s * 0.52),
-                      s * 0.03, s * 0.03)
+    """冲锋枪：机匣 + 长弹匣 + 散热孔，带明暗。"""
+    lw = max(0.9, 1.3 * k)
+    steel = T.qc("#545B64")
+    _shadow(p, cx, cy + s * 0.60, s * 0.80, s * 0.14, 115)
+    body = QRectF(cx - s * 0.82, cy - s * 0.16, s * 1.32, s * 0.32)
+    gg, _ = _metal(cx, cy, s * 0.66, s * 0.16, steel)
+    p.setPen(QPen(T.f(steel, 0.32), lw))
+    p.setBrush(QBrush(gg))
+    p.drawRoundedRect(body, s * 0.05, s * 0.05)
+    # 枪管
+    bbl = QRectF(cx + s * 0.50, cy - s * 0.055, s * 0.82, s * 0.11)
+    gb = QLinearGradient(bbl.topLeft(), bbl.bottomLeft())
+    gb.setColorAt(0.0, T.f(steel, 1.5))
+    gb.setColorAt(0.55, steel)
+    gb.setColorAt(1.0, T.f(steel, 0.34))
+    p.setBrush(QBrush(gb))
+    p.drawRect(bbl)
+    # 长弹匣
+    mg = QRectF(cx - s * 0.24, cy + s * 0.12, s * 0.24, s * 0.56)
+    gm = QLinearGradient(mg.topLeft(), mg.rightTop())
+    gm.setColorAt(0.0, T.f(steel, 1.35))
+    gm.setColorAt(0.55, steel)
+    gm.setColorAt(1.0, T.f(steel, 0.36))
+    p.setBrush(QBrush(gm))
+    p.drawRoundedRect(mg, s * 0.03, s * 0.03)
     # 散热孔
-    p.setPen(QPen(T.a(col, 130), max(0.6, 0.8 * k)))
+    p.setPen(QPen(T.a(T.qc("#08090C"), 190), max(0.7, 1.0 * k)))
     for i in range(4):
-        xx = cx + s * (0.60 + i * 0.16)
-        p.drawLine(QPointF(xx, cy - s * 0.06), QPointF(xx, cy + s * 0.06))
-
+        xx = cx + s * (0.60 + i * 0.17)
+        p.drawEllipse(QPointF(xx, cy), s * 0.028, s * 0.028)
+    _spec(p, body.left() + s * 0.30, body.top() + s * 0.06, s * 0.10, 110)
 
 def _cannon(p, cx, cy, s, k, col):
     """野战炮：粗炮管 + 炮盾 + 轮子 + 高光。"""
@@ -347,42 +362,87 @@ def _cannon(p, cx, cy, s, k, col):
         p.drawEllipse(QPointF(wx, cy + s * 0.40), wr * 0.28, wr * 0.28)
 
 def _sniper(p, cx, cy, s, k, col):
-    lw = max(1.4, 2.0 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 58)))
-    # 枪身（长）
-    p.drawLine(QPointF(cx - s * 1.55, cy), QPointF(cx + s * 1.60, cy - s * 0.02))
-    p.setPen(QPen(col, max(2.6, 3.6 * k)))
-    p.drawLine(QPointF(cx - s * 0.50, cy), QPointF(cx + s * 0.95, cy - s * 0.015))
-    # 瞄准镜
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 90)))
-    p.drawRoundedRect(QRectF(cx - s * 0.35, cy - s * 0.34, s * 0.75, s * 0.18),
-                      s * 0.06, s * 0.06)
-    p.drawLine(QPointF(cx - s * 0.20, cy - s * 0.16), QPointF(cx - s * 0.20, cy))
-    p.drawLine(QPointF(cx + s * 0.25, cy - s * 0.16), QPointF(cx + s * 0.25, cy))
+    """狙击枪：长枪身 + 瞄准镜 + 枪托，带明暗。"""
+    lw = max(0.9, 1.3 * k)
+    steel = T.qc("#5C636D")
+    wood = T.qc("#7A4E2A")
+    _shadow(p, cx, cy + s * 0.26, s * 1.50, s * 0.13, 115)
+    # 枪身
+    p.setPen(QPen(T.f(steel, 0.32), max(1.6, 2.4 * k)))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawLine(QPointF(cx - s * 1.55, cy + s * 0.02), QPointF(cx + s * 1.60, cy - s * 0.02))
+    bbl = QRectF(cx + s * 0.95, cy - s * 0.05, s * 0.70, s * 0.09)
+    gb = QLinearGradient(bbl.topLeft(), bbl.bottomLeft())
+    gb.setColorAt(0.0, T.f(steel, 1.45))
+    gb.setColorAt(1.0, T.f(steel, 0.34))
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QBrush(gb))
+    p.drawRect(bbl)
+    # 护木
+    wd = QRectF(cx - s * 0.50, cy - s * 0.09, s * 1.42, s * 0.18)
+    gw, _ = _metal(cx + s * 0.21, cy, s * 0.71, s * 0.09, wood)
+    p.setPen(QPen(T.f(wood, 0.36), lw))
+    p.setBrush(QBrush(gw))
+    p.drawRoundedRect(wd, s * 0.04, s * 0.04)
     # 枪托
     st = QPainterPath()
-    st.moveTo(cx - s * 1.60, cy - s * 0.10); st.lineTo(cx - s * 1.00, cy - s * 0.08)
-    st.lineTo(cx - s * 1.00, cy + s * 0.10); st.lineTo(cx - s * 1.50, cy + s * 0.20)
+    st.moveTo(cx - s * 1.58, cy - s * 0.12)
+    st.lineTo(cx - s * 0.98, cy - s * 0.09)
+    st.lineTo(cx - s * 0.98, cy + s * 0.11)
+    st.lineTo(cx - s * 1.48, cy + s * 0.24)
     st.closeSubpath()
-    p.setBrush(QBrush(T.a(col, 70))); p.drawPath(st)
-
+    gst, _ = _metal(cx - s * 1.28, cy, s * 0.30, s * 0.14, wood)
+    p.setBrush(QBrush(gst))
+    p.drawPath(st)
+    # 瞄准镜（圆柱）
+    sc = QRectF(cx - s * 0.36, cy - s * 0.38, s * 0.78, s * 0.20)
+    gsc = QLinearGradient(sc.topLeft(), sc.bottomLeft())
+    gsc.setColorAt(0.0, T.f(steel, 1.55))
+    gsc.setColorAt(0.45, steel)
+    gsc.setColorAt(1.0, T.f(steel, 0.30))
+    p.setPen(QPen(T.f(steel, 0.30), lw))
+    p.setBrush(QBrush(gsc))
+    p.drawRoundedRect(sc, s * 0.08, s * 0.08)
+    # 镜片
+    p.setBrush(QBrush(T.a(T.qc("#6FA8D0"), 220)))
+    p.drawEllipse(QPointF(cx + s * 0.42, cy - s * 0.28), s * 0.05, s * 0.075)
+    # 镜架
+    p.setPen(QPen(T.f(steel, 0.8), max(0.6, 0.9 * k)))
+    p.drawLine(QPointF(cx - s * 0.18, cy - s * 0.18), QPointF(cx - s * 0.18, cy - s * 0.02))
+    p.drawLine(QPointF(cx + s * 0.26, cy - s * 0.18), QPointF(cx + s * 0.26, cy - s * 0.02))
 
 def _pistol(p, cx, cy, s, k, col):
-    lw = max(1.3, 1.9 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 70)))
+    """手枪：套筒 + 握把，带明暗和投影。"""
+    lw = max(0.9, 1.3 * k)
+    steel = T.qc("#5A616B")
+    grip_c = T.qc("#3A2E22")
+    _shadow(p, cx, cy + s * 0.62, s * 0.60, s * 0.10, 110)
     # 套筒
-    p.drawRoundedRect(QRectF(cx - s * 0.55, cy - s * 0.22, s * 1.20, s * 0.26),
-                      s * 0.04, s * 0.04)
-    # 握把
+    sl = QRectF(cx - s * 0.56, cy - s * 0.24, s * 1.22, s * 0.28)
+    gg, _ = _metal(cx, cy - s * 0.10, s * 0.61, s * 0.14, steel)
+    p.setPen(QPen(T.f(steel, 0.32), lw))
+    p.setBrush(QBrush(gg))
+    p.drawRoundedRect(sl, s * 0.04, s * 0.04)
+    # 握把（木/聚合物）
     gr = QPainterPath()
-    gr.moveTo(cx - s * 0.42, cy + s * 0.04); gr.lineTo(cx - s * 0.08, cy + s * 0.04)
-    gr.lineTo(cx + s * 0.04, cy + s * 0.60); gr.lineTo(cx - s * 0.34, cy + s * 0.62)
+    gr.moveTo(cx - s * 0.42, cy + s * 0.04)
+    gr.lineTo(cx - s * 0.06, cy + s * 0.04)
+    gr.lineTo(cx + s * 0.06, cy + s * 0.60)
+    gr.lineTo(cx - s * 0.34, cy + s * 0.62)
     gr.closeSubpath()
+    ggr, _ = _metal(cx - s * 0.20, cy + s * 0.32, s * 0.20, s * 0.28, grip_c)
+    p.setBrush(QBrush(ggr))
     p.drawPath(gr)
+    # 握把纹
+    p.setPen(QPen(T.a(T.qc("#0A0C10"), 140), max(0.4, 0.6 * k)))
+    for i in range(3):
+        p.drawLine(QPointF(cx - s * 0.30, cy + s * (0.16 + i * 0.14)),
+                   QPointF(cx - s * 0.10, cy + s * (0.14 + i * 0.14)))
     # 扳机护圈
+    p.setPen(QPen(T.f(steel, 0.9), max(0.8, 1.1 * k)))
     p.setBrush(Qt.BrushStyle.NoBrush)
-    p.drawArc(QRectF(cx - s * 0.10, cy + s * 0.02, s * 0.30, s * 0.26), 190 * 16, 150 * 16)
-
+    p.drawArc(QRectF(cx - s * 0.10, cy + s * 0.02, s * 0.32, s * 0.28), 190 * 16, 150 * 16)
+    _spec(p, sl.left() + s * 0.25, sl.top() + s * 0.06, s * 0.09, 120)
 
 def _turret(p, cx, cy, s, k, col):
     """坦克：车体 + 炮塔 + 炮管 + 履带，带明暗。"""
@@ -438,19 +498,37 @@ def _turret(p, cx, cy, s, k, col):
     p.drawEllipse(QPointF(cx + s * 1.30, cy - s * 0.17), s * 0.04, s * 0.055)
 
 def _bullet(p, cx, cy, s, k, col):
-    p.setPen(Qt.PenStyle.NoPen)
-    for i, (dx, al) in enumerate(((0.0, 230), (0.10, 160), (0.20, 90))):
-        bx = cx - s * 0.42 + dx * s
-        p.setBrush(QBrush(T.a(T.f(col, 1.3), al)))
-        p.drawRoundedRect(QRectF(bx, cy - s * 0.055, s * 0.30, s * 0.11),
-                          s * 0.05, s * 0.05)
-    # 弹尖
+    """子弹：黄铜弹壳 + 铜弹头 + 高光。"""
+    brass = T.qc("#C89A38")
+    _shadow(p, cx, cy + s * 0.14, s * 0.44, s * 0.05, 90)
+    # 弹壳
+    cs = QRectF(cx - s * 0.44, cy - s * 0.062, s * 0.46, s * 0.124)
+    gc = QLinearGradient(cs.topLeft(), cs.bottomLeft())
+    gc.setColorAt(0.0, T.f(brass, 1.60))
+    gc.setColorAt(0.45, brass)
+    gc.setColorAt(1.0, T.f(brass, 0.32))
+    p.setPen(QPen(T.f(brass, 0.34), max(0.6, 0.9 * k)))
+    p.setBrush(QBrush(gc))
+    p.drawRoundedRect(cs, s * 0.03, s * 0.03)
+    # 底缘
+    p.setBrush(QBrush(T.f(brass, 1.15)))
+    p.drawRect(QRectF(cs.left() - s * 0.03, cs.top() - s * 0.012,
+                      s * 0.05, cs.height() + s * 0.024))
+    # 弹头
     tip = QPainterPath()
-    tip.moveTo(cx + s * 0.14, cy - s * 0.075); tip.lineTo(cx + s * 0.30, cy)
-    tip.lineTo(cx + s * 0.14, cy + s * 0.075)
+    tip.moveTo(cx + s * 0.02, cy - s * 0.075)
+    tip.lineTo(cx + s * 0.14, cy - s * 0.070)
+    tip.lineTo(cx + s * 0.34, cy)
+    tip.lineTo(cx + s * 0.14, cy + s * 0.070)
+    tip.lineTo(cx + s * 0.02, cy + s * 0.075)
     tip.closeSubpath()
-    p.setBrush(QBrush(T.a(T.f(col, 1.4), 230))); p.drawPath(tip)
-
+    gt = QLinearGradient(QPointF(cx, cy - s * 0.075), QPointF(cx, cy + s * 0.075))
+    gt.setColorAt(0.0, T.qc("#E8C479"))
+    gt.setColorAt(0.45, T.qc("#B87830"))
+    gt.setColorAt(1.0, T.qc("#704018"))
+    p.setBrush(QBrush(gt))
+    p.drawPath(tip)
+    _spec(p, cx - s * 0.20, cy - s * 0.030, s * 0.07, 170)
 
 def _shell(p, cx, cy, s, k, col):
     """炮弹：黄铜壳 + 尖弹头 + 高光。"""
@@ -779,35 +857,83 @@ def _explosion(p, cx, cy, s, k, col):
 
 
 def _grenade(p, cx, cy, s, k, col):
-    lw = max(1.1, 1.5 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 70)))
+    """手雷：菠萝纹弹体 + 保险杆，带明暗。"""
+    lw = max(0.8, 1.1 * k)
+    base = T.qc("#4A5238")
+    _shadow(p, cx, cy + s * 0.50, s * 0.40, s * 0.09, 110)
+    # 弹体（球）
+    gg = QRadialGradient(QPointF(cx - s * 0.12, cy - s * 0.10), s * 0.62)
+    gg.setColorAt(0.0, T.f(base, 1.75))
+    gg.setColorAt(0.45, T.f(base, 1.05))
+    gg.setColorAt(1.0, T.f(base, 0.34))
+    p.setPen(QPen(T.f(base, 0.30), lw))
+    p.setBrush(QBrush(gg))
     p.drawEllipse(QPointF(cx, cy + s * 0.06), s * 0.34, s * 0.40)
-    p.drawRect(QRectF(cx - s * 0.11, cy - s * 0.40, s * 0.22, s * 0.14))
-    # 拉环
+    # 菠萝纹（横竖格）
+    p.setPen(QPen(T.a(T.f(base, 0.45), 140), max(0.4, 0.6 * k)))
+    for i in range(-2, 3):
+        yy = cy + s * 0.06 + i * s * 0.11
+        p.drawLine(QPointF(cx - s * 0.30, yy), QPointF(cx + s * 0.30, yy))
+    for i in range(-2, 3):
+        xx = cx + i * s * 0.11
+        p.drawLine(QPointF(xx, cy - s * 0.26), QPointF(xx, cy + s * 0.40))
+    # 引信座
+    neck = QRectF(cx - s * 0.11, cy - s * 0.44, s * 0.22, s * 0.16)
+    gn, _ = _metal(cx, cy - s * 0.36, s * 0.11, s * 0.08, T.qc("#6A6F78"))
+    p.setPen(QPen(T.qc("#2A2E24"), lw))
+    p.setBrush(QBrush(gn))
+    p.drawRoundedRect(neck, s * 0.03, s * 0.03)
+    # 保险杆
+    p.setPen(QPen(T.qc("#9AA3AD"), max(1.2, 1.8 * k)))
     p.setBrush(Qt.BrushStyle.NoBrush)
-    p.drawEllipse(QPointF(cx + s * 0.20, cy - s * 0.40), s * 0.12, s * 0.12)
-    p.setPen(QPen(T.a(col, 140), max(0.7, 0.9 * k)))
-    p.drawLine(QPointF(cx - s * 0.26, cy - s * 0.10), QPointF(cx + s * 0.26, cy - s * 0.10))
-    p.drawLine(QPointF(cx - s * 0.26, cy + s * 0.20), QPointF(cx + s * 0.26, cy + s * 0.20))
-
+    p.drawArc(QRectF(cx - s * 0.30, cy - s * 0.44, s * 0.60, s * 0.52), 20 * 16, 140 * 16)
+    # 拉环
+    p.setPen(QPen(T.qc("#B9C0C9"), max(0.9, 1.3 * k)))
+    p.drawEllipse(QPointF(cx + s * 0.30, cy - s * 0.40), s * 0.11, s * 0.11)
+    _spec(p, cx - s * 0.14, cy - s * 0.14, s * 0.12, 150)
 
 def _molotov(p, cx, cy, s, k, col):
-    lw = max(1.1, 1.5 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 65)))
+    """燃烧瓶：玻璃瓶 + 液体 + 布条火焰，带透明感。"""
+    lw = max(0.8, 1.1 * k)
+    # 火焰（顶部）
+    _shadow(p, cx, cy + s * 0.48, s * 0.34, s * 0.08, 110)
+    # 瓶身
     body = QPainterPath()
-    body.moveTo(cx - s * 0.26, cy + s * 0.40)
-    body.lineTo(cx + s * 0.26, cy + s * 0.40)
-    body.lineTo(cx + s * 0.12, cy - s * 0.16)
-    body.lineTo(cx - s * 0.12, cy - s * 0.16)
+    body.moveTo(cx - s * 0.28, cy + s * 0.42)
+    body.cubicTo(cx - s * 0.30, cy + s * 0.10, cx - s * 0.14, cy - s * 0.06,
+                 cx - s * 0.13, cy - s * 0.18)
+    body.lineTo(cx + s * 0.13, cy - s * 0.18)
+    body.cubicTo(cx + s * 0.14, cy - s * 0.06, cx + s * 0.30, cy + s * 0.10,
+                 cx + s * 0.28, cy + s * 0.42)
     body.closeSubpath()
+    gb = QLinearGradient(QPointF(cx - s * 0.28, 0), QPointF(cx + s * 0.28, 0))
+    gb.setColorAt(0.0, T.qc("#2E4A2A"))
+    gb.setColorAt(0.30, T.qc("#7AA05A"))
+    gb.setColorAt(0.55, T.qc("#4A6E38"))
+    gb.setColorAt(1.0, T.qc("#1E3018"))
+    p.setPen(QPen(T.a(T.qc("#C8E0A8"), 140), lw))
+    p.setBrush(QBrush(gb))
     p.drawPath(body)
-    p.drawLine(QPointF(cx - s * 0.10, cy - s * 0.16), QPointF(cx - s * 0.10, cy - s * 0.42))
-    p.drawLine(QPointF(cx + s * 0.10, cy - s * 0.16), QPointF(cx + s * 0.10, cy - s * 0.42))
-    # 火苗
+    # 液体
+    liq = QRectF(cx - s * 0.25, cy + s * 0.10, s * 0.50, s * 0.30)
+    gl = QLinearGradient(liq.topLeft(), liq.bottomLeft())
+    gl.setColorAt(0.0, T.a(T.qc("#E8A020"), 150))
+    gl.setColorAt(1.0, T.a(T.qc("#8C4A10"), 190))
+    p.setBrush(QBrush(gl))
+    p.drawEllipse(liq)
+    # 瓶颈
+    p.setPen(QPen(T.a(T.qc("#C8E0A8"), 130), max(0.7, 1.0 * k)))
+    p.setBrush(QBrush(T.a(T.qc("#7AA05A"), 120)))
+    p.drawRect(QRectF(cx - s * 0.12, cy - s * 0.30, s * 0.24, s * 0.14))
+    # 布条 + 火苗
+    p.setPen(QPen(T.qc("#D8D0B8"), max(1.0, 1.4 * k)))
+    p.drawLine(QPointF(cx, cy - s * 0.30), QPointF(cx + s * 0.04, cy - s * 0.44))
     p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QBrush(T.a(T.Q_ORANGE, 220)))
-    p.drawEllipse(QPointF(cx, cy - s * 0.50), s * 0.10, s * 0.16)
-
+    for r, a, c in ((s * 0.15, 90, "#F07018"), (s * 0.095, 170, "#FFB03A"),
+                    (s * 0.05, 230, "#FFE48A")):
+        p.setBrush(QBrush(T.a(T.qc(c), a)))
+        p.drawEllipse(QPointF(cx + s * 0.04, cy - s * 0.50), r * 0.8, r * 1.15)
+    _spec(p, cx - s * 0.12, cy + s * 0.02, s * 0.09, 130)
 
 def _smoke(p, cx, cy, s, k, col):
     p.setPen(Qt.PenStyle.NoPen)
@@ -937,33 +1063,100 @@ def _gear(p, cx, cy, s, k, col):
     _spec(p, cx - r * 0.30, cy - r * 0.34, r * 0.32, 110)
 
 def _wrench(p, cx, cy, s, k, col):
-    lw = max(1.6, 2.2 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(Qt.BrushStyle.NoBrush)
-    p.drawLine(QPointF(cx - s * 0.44, cy + s * 0.46), QPointF(cx + s * 0.30, cy - s * 0.24))
-    p.setBrush(QBrush(T.a(col, 70)))
-    p.drawEllipse(QPointF(cx + s * 0.40, cy - s * 0.34), s * 0.20, s * 0.20)
-    p.setBrush(QBrush(T.a(T.Q_BLACK, 200)))
-    p.drawEllipse(QPointF(cx + s * 0.44, cy - s * 0.38), s * 0.10, s * 0.10)
-
+    """扳手：镀铬钢柄 + 开口头，带高光。"""
+    steel = T.qc("#8A939E")
+    deg = -0.9
+    _shadow(p, cx + s * 0.10, cy + s * 0.52, s * 0.50, s * 0.08, 100)
+    p.save()
+    p.translate(cx, cy)
+    p.rotate(math.degrees(deg))
+    # 柄
+    hd = QRectF(-s * 0.52, -s * 0.075, s * 1.02, s * 0.15)
+    gh = QLinearGradient(hd.topLeft(), hd.bottomLeft())
+    gh.setColorAt(0.0, T.f(steel, 1.70))
+    gh.setColorAt(0.40, T.f(steel, 1.10))
+    gh.setColorAt(1.0, T.f(steel, 0.30))
+    p.setPen(QPen(T.f(steel, 0.28), max(0.7, 1.0 * k)))
+    p.setBrush(QBrush(gh))
+    p.drawRoundedRect(hd, s * 0.07, s * 0.07)
+    # 开口头
+    head = QPainterPath()
+    head.moveTo(s * 0.46, -s * 0.26)
+    head.lineTo(s * 0.72, -s * 0.30)
+    head.lineTo(s * 0.66, -s * 0.06)
+    head.lineTo(s * 0.72, s * 0.30)
+    head.lineTo(s * 0.46, s * 0.26)
+    head.lineTo(s * 0.56, s * 0.06)
+    head.lineTo(s * 0.30, 0)
+    head.lineTo(s * 0.56, -s * 0.06)
+    head.closeSubpath()
+    ghd, _ = _metal(s * 0.55, 0, s * 0.20, s * 0.28, steel)
+    p.setBrush(QBrush(ghd))
+    p.drawPath(head)
+    # 高光
+    p.setPen(QPen(T.a(T.qc("#FFFFFF"), 95), max(0.8, 1.2 * k)))
+    p.drawLine(QPointF(-s * 0.44, -s * 0.035), QPointF(s * 0.38, -s * 0.035))
+    p.restore()
 
 def _jerrycan(p, cx, cy, s, k, col):
-    lw = max(1.0, 1.3 * k)
+    """油桶：平板钢桶 + 提手 + X 压纹，带明暗。"""
+    lw = max(0.8, 1.1 * k)
+    base = T.qc("#4E5A38")
     w, h = s * 0.34, s * 0.50
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 60)))
-    p.drawRoundedRect(QRectF(cx - w, cy - h, w * 2, h * 2), s * 0.06, s * 0.06)
-    p.drawRect(QRectF(cx - s * 0.10, cy - h - s * 0.12, s * 0.20, s * 0.12))
-    p.setPen(QPen(T.a(col, 140), max(0.6, 0.8 * k)))
-    p.drawLine(QPointF(cx - w * 0.5, cy - h * 0.5), QPointF(cx + w * 0.5, cy - h * 0.5))
-
+    _shadow(p, cx, cy + h * 1.16, w * 1.1, h * 0.20, 110)
+    r = QRectF(cx - w, cy - h, w * 2, h * 2)
+    gg, _ = _metal(cx, cy, w, h, base)
+    p.setPen(QPen(T.f(base, 0.32), lw))
+    p.setBrush(QBrush(gg))
+    p.drawRoundedRect(r, s * 0.06, s * 0.06)
+    # X 压纹
+    p.setPen(QPen(T.a(T.f(base, 1.5), 90), max(1.0, 1.4 * k)))
+    p.drawLine(QPointF(r.left() + r.width() * 0.18, r.top() + r.height() * 0.22),
+               QPointF(r.right() - r.width() * 0.18, r.bottom() - r.height() * 0.22))
+    p.drawLine(QPointF(r.right() - r.width() * 0.18, r.top() + r.height() * 0.22),
+               QPointF(r.left() + r.width() * 0.18, r.bottom() - r.height() * 0.22))
+    # 提手
+    p.setPen(QPen(T.f(base, 1.3), max(1.0, 1.4 * k)))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawArc(QRectF(cx - s * 0.12, cy - h - s * 0.14, s * 0.24, s * 0.20),
+              0, 180 * 16)
+    # 加油口
+    cap = QRectF(cx + w * 0.34, cy - h - s * 0.05, s * 0.16, s * 0.09)
+    p.setPen(QPen(T.f(base, 0.35), max(0.5, 0.8 * k)))
+    p.setBrush(QBrush(T.f(base, 1.35)))
+    p.drawRoundedRect(cap, s * 0.02, s * 0.02)
+    _spec(p, r.left() + w * 0.55, r.top() + h * 0.30, s * 0.10, 110)
 
 def _pipe(p, cx, cy, s, k, col):
-    lw = max(1.8, 2.6 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(Qt.BrushStyle.NoBrush)
-    p.drawLine(QPointF(cx - s * 0.85, cy), QPointF(cx + s * 0.85, cy))
-    p.setPen(QPen(T.a(col, 170), lw * 0.6))
-    for dx in (-0.45, 0.0, 0.45):
-        p.drawLine(QPointF(cx + s * dx, cy - s * 0.16), QPointF(cx + s * dx, cy + s * 0.16))
-
+    """钢管：圆柱感 + 法兰盘 + 锈迹。"""
+    steel = T.qc("#6E7680")
+    rust = T.qc("#8A5030")
+    _shadow(p, cx, cy + s * 0.22, s * 0.90, s * 0.07, 100)
+    # 管身（纵向渐变 = 圆柱）
+    body = QRectF(cx - s * 0.88, cy - s * 0.14, s * 1.76, s * 0.28)
+    gg = QLinearGradient(body.topLeft(), body.bottomLeft())
+    gg.setColorAt(0.0, T.f(steel, 1.55))
+    gg.setColorAt(0.28, T.f(steel, 1.30))
+    gg.setColorAt(0.62, steel)
+    gg.setColorAt(1.0, T.f(steel, 0.30))
+    p.setPen(QPen(T.f(steel, 0.26), max(0.7, 1.0 * k)))
+    p.setBrush(QBrush(gg))
+    p.drawRect(body)
+    # 法兰
+    for dx in (-0.60, 0.0, 0.60):
+        fl = QRectF(cx + s * dx - s * 0.055, cy - s * 0.20, s * 0.11, s * 0.40)
+        gf = QLinearGradient(fl.topLeft(), fl.bottomLeft())
+        gf.setColorAt(0.0, T.f(steel, 1.60))
+        gf.setColorAt(0.55, T.f(steel, 0.95))
+        gf.setColorAt(1.0, T.f(steel, 0.28))
+        p.setPen(QPen(T.f(steel, 0.26), max(0.5, 0.8 * k)))
+        p.setBrush(QBrush(gf))
+        p.drawRoundedRect(fl, s * 0.02, s * 0.02)
+    # 锈斑
+    p.setPen(Qt.PenStyle.NoPen)
+    for i, (rx, rr) in enumerate(((-0.36, 0.055), (0.26, 0.042), (0.46, 0.030))):
+        p.setBrush(QBrush(T.a(rust, 120)))
+        p.drawEllipse(QPointF(cx + s * rx, cy + s * 0.03), s * rr, s * rr * 0.7)
 
 def _radio(p, cx, cy, s, k, col):
     """野战电台：金属机身 + 发光屏幕 + 旋钮。"""
@@ -1015,17 +1208,41 @@ def _antenna(p, cx, cy, s, k, col):
 
 
 def _binoculars(p, cx, cy, s, k, col):
-    lw = max(1.1, 1.5 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 60)))
-    for dx in (-0.24, 0.24):
-        p.drawRoundedRect(QRectF(cx + s * dx - s * 0.16, cy - s * 0.34,
-                                 s * 0.32, s * 0.68), s * 0.08, s * 0.08)
-    p.drawRect(QRectF(cx - s * 0.10, cy - s * 0.08, s * 0.20, s * 0.16))
-
+    """望远镜：两个圆筒 + 镜片反光 + 连接桥。"""
+    lw = max(0.8, 1.2 * k)
+    base = T.qc("#3E4448")
+    _shadow(p, cx, cy + s * 0.46, s * 0.60, s * 0.09, 105)
+    for dx in (-0.25, 0.25):
+        r = QRectF(cx + s * dx - s * 0.17, cy - s * 0.36, s * 0.34, s * 0.72)
+        gg = QLinearGradient(r.leftTop(), r.rightBottom())
+        gg.setColorAt(0.0, T.f(base, 1.75))
+        gg.setColorAt(0.42, T.f(base, 1.05))
+        gg.setColorAt(1.0, T.f(base, 0.28))
+        p.setPen(QPen(T.f(base, 0.28), lw))
+        p.setBrush(QBrush(gg))
+        p.drawRoundedRect(r, s * 0.10, s * 0.10)
+        # 镜片
+        lens = QRectF(r.left() + s * 0.04, r.top() + s * 0.05, r.width() - s * 0.08, s * 0.16)
+        gl = QLinearGradient(lens.topLeft(), lens.bottomLeft())
+        gl.setColorAt(0.0, T.qc("#A8D8F0"))
+        gl.setColorAt(0.55, T.qc("#3A6E90"))
+        gl.setColorAt(1.0, T.qc("#12202A"))
+        p.setPen(QPen(T.qc("#0E1014"), max(0.5, 0.8 * k)))
+        p.setBrush(QBrush(gl))
+        p.drawEllipse(lens)
+        _spec(p, lens.center().x() - s * 0.04, lens.center().y() - s * 0.02,
+               s * 0.055, 180)
+    # 连接桥
+    br = QRectF(cx - s * 0.10, cy - s * 0.08, s * 0.20, s * 0.17)
+    gb, _ = _metal(cx, cy, s * 0.10, s * 0.085, base)
+    p.setPen(QPen(T.f(base, 0.28), max(0.5, 0.8 * k)))
+    p.setBrush(QBrush(gb))
+    p.drawRoundedRect(br, s * 0.03, s * 0.03)
 
 def _map(p, cx, cy, s, k, col):
-    lw = max(1.0, 1.3 * k)
-    p.setPen(QPen(col, lw)); p.setBrush(QBrush(T.a(col, 40)))
+    """作战地图：做旧纸 + 折痕 + 红线标注。"""
+    paper = T.qc("#C8B88A")
+    _shadow(p, cx, cy + s * 0.46, s * 0.66, s * 0.09, 105)
     path = QPainterPath()
     path.moveTo(cx - s * 0.60, cy - s * 0.40)
     path.lineTo(cx - s * 0.20, cy - s * 0.48)
@@ -1036,20 +1253,53 @@ def _map(p, cx, cy, s, k, col):
     path.lineTo(cx - s * 0.20, cy + s * 0.40)
     path.lineTo(cx - s * 0.60, cy + s * 0.48)
     path.closeSubpath()
+    gg = QLinearGradient(QPointF(cx - s * 0.6, cy - s * 0.5),
+                         QPointF(cx + s * 0.6, cy + s * 0.5))
+    gg.setColorAt(0.0, T.f(paper, 1.18))
+    gg.setColorAt(0.48, paper)
+    gg.setColorAt(1.0, T.f(paper, 0.62))
+    p.setPen(QPen(T.qc("#6A5A3A"), max(0.7, 1.0 * k)))
+    p.setBrush(QBrush(gg))
     p.drawPath(path)
-    p.setPen(QPen(T.a(col, 130), max(0.6, 0.8 * k)))
+    # 折痕
+    p.setPen(QPen(T.a(T.qc("#6A5A3A"), 130), max(0.5, 0.8 * k)))
     p.drawLine(QPointF(cx - s * 0.20, cy - s * 0.46), QPointF(cx - s * 0.20, cy + s * 0.42))
     p.drawLine(QPointF(cx + s * 0.20, cy - s * 0.42), QPointF(cx + s * 0.20, cy + s * 0.46))
-
+    # 红线标注（进攻箭头）
+    p.setPen(QPen(T.a(T.qc("#C03020"), 200), max(0.9, 1.3 * k)))
+    p.drawLine(QPointF(cx - s * 0.34, cy + s * 0.18), QPointF(cx + s * 0.30, cy - s * 0.12))
+    p.drawLine(QPointF(cx + s * 0.30, cy - s * 0.12), QPointF(cx + s * 0.16, cy - s * 0.14))
+    p.drawLine(QPointF(cx + s * 0.30, cy - s * 0.12), QPointF(cx + s * 0.24, cy + s * 0.02))
 
 def _flare(p, cx, cy, s, k, col):
-    p.setPen(QPen(T.a(col, 190), max(1.2, 1.6 * k)))
-    p.drawLine(QPointF(cx, cy + s * 0.45), QPointF(cx, cy - s * 0.10))
+    """信号弹：弹体 + 强光 + 拖尾烟。"""
+    # 光晕
+    gl = QRadialGradient(QPointF(cx, cy - s * 0.24), s * 0.72)
+    gl.setColorAt(0.0, T.a(T.qc("#FFF0B0"), 220))
+    gl.setColorAt(0.35, T.a(T.qc("#FFB020"), 110))
+    gl.setColorAt(1.0, T.a(T.qc("#FF8A00"), 0))
     p.setPen(Qt.PenStyle.NoPen)
-    for r, al in ((0.24, 60), (0.15, 120), (0.08, 220)):
-        p.setBrush(QBrush(T.a(T.Q_GOLD, al)))
-        p.drawEllipse(QPointF(cx, cy - s * 0.28), s * r, s * r)
-
+    p.setBrush(QBrush(gl))
+    p.drawEllipse(QPointF(cx, cy - s * 0.24), s * 0.72, s * 0.72)
+    # 弹体
+    bd = QRectF(cx - s * 0.075, cy - s * 0.10, s * 0.15, s * 0.56)
+    gb = QLinearGradient(bd.topLeft(), bd.rightTop())
+    gb.setColorAt(0.0, T.qc("#8C2E1E"))
+    gb.setColorAt(0.40, T.qc("#D85030"))
+    gb.setColorAt(1.0, T.qc("#5A1A10"))
+    p.setPen(QPen(T.qc("#2A0E08"), max(0.5, 0.8 * k)))
+    p.setBrush(QBrush(gb))
+    p.drawRoundedRect(bd, s * 0.03, s * 0.03)
+    # 弹头火光
+    p.setBrush(QBrush(T.qc("#FFF6D0")))
+    p.drawEllipse(QPointF(cx, cy - s * 0.22), s * 0.09, s * 0.11)
+    # 拖尾烟
+    p.setPen(Qt.PenStyle.NoPen)
+    for i in range(4):
+        yy = cy + s * (0.12 + i * 0.14)
+        rr = s * (0.07 - i * 0.012)
+        p.setBrush(QBrush(T.a(T.qc("#9AA0AA"), 90 - i * 18)))
+        p.drawEllipse(QPointF(cx + (i % 2) * s * 0.03, yy), rr, rr)
 
 def _signal(p, cx, cy, s, k, col):
     p.setPen(QPen(col, max(0.9, 1.2 * k))); p.setBrush(Qt.BrushStyle.NoBrush)
@@ -1070,28 +1320,64 @@ def _troops(p, cx, cy, s, k, col):
 
 
 def _medic(p, cx, cy, s, k, col):
-    lw = max(1.3, 1.8 * k)
-    p.setPen(QPen(T.a(col, 210), lw)); p.setBrush(QBrush(T.a(col, 45)))
-    p.drawRoundedRect(QRectF(cx - s * 0.46, cy - s * 0.46, s * 0.92, s * 0.92),
-                      s * 0.10, s * 0.10)
-    p.setBrush(QBrush(T.a(T.qc("#E8E4DA"), 200))); p.setPen(Qt.PenStyle.NoPen)
-    p.drawRect(QRectF(cx - s * 0.09, cy - s * 0.28, s * 0.18, s * 0.56))
-    p.drawRect(QRectF(cx - s * 0.28, cy - s * 0.09, s * 0.56, s * 0.18))
-
+    """医疗箱：白漆金属箱 + 红十字 + 提手 + 明暗。"""
+    lw = max(0.8, 1.2 * k)
+    base = T.qc("#D8D4C8")
+    _shadow(p, cx, cy + s * 0.50, s * 0.56, s * 0.09, 115)
+    r = QRectF(cx - s * 0.48, cy - s * 0.40, s * 0.96, s * 0.86)
+    gg, _ = _metal(cx, cy, s * 0.48, s * 0.43, base)
+    p.setPen(QPen(T.qc("#6A6458"), lw))
+    p.setBrush(QBrush(gg))
+    p.drawRoundedRect(r, s * 0.08, s * 0.08)
+    # 提手
+    p.setPen(QPen(T.qc("#4E4A42"), max(1.2, 1.7 * k)))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawArc(QRectF(cx - s * 0.18, r.top() - s * 0.16, s * 0.36, s * 0.26),
+              0, 180 * 16)
+    # 红十字
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QBrush(T.qc("#C02820")))
+    p.drawRect(QRectF(cx - s * 0.085, cy - s * 0.26, s * 0.17, s * 0.56))
+    p.drawRect(QRectF(cx - s * 0.27, cy - s * 0.075, s * 0.54, s * 0.17))
+    _spec(p, r.left() + s * 0.14, r.top() + s * 0.12, s * 0.10, 120)
 
 def _flag(p, cx, cy, s, k, col):
-    p.setPen(QPen(T.a(col, 200), max(1.4, 2.0 * k)))
-    p.drawLine(QPointF(cx - s * 0.52, cy - s * 0.52), QPointF(cx - s * 0.52, cy + s * 0.50))
-    p.setPen(QPen(col, max(0.9, 1.2 * k))); p.setBrush(QBrush(T.a(col, 110)))
+    """军旗：旗杆 + 飘动旗面（有褶皱明暗）。"""
+    lw = max(0.9, 1.3 * k)
+    # 旗杆
+    pole = QRectF(cx - s * 0.56, cy - s * 0.56, s * 0.075, s * 1.10)
+    gp = QLinearGradient(pole.topLeft(), pole.rightTop())
+    gp.setColorAt(0.0, T.qc("#5A5048"))
+    gp.setColorAt(0.42, T.qc("#B0A090"))
+    gp.setColorAt(1.0, T.qc("#3A342C"))
+    p.setPen(QPen(T.qc("#2A241E"), max(0.5, 0.8 * k)))
+    p.setBrush(QBrush(gp))
+    p.drawRect(pole)
+    # 旗杆顶
+    p.setBrush(QBrush(T.qc("#C0A050")))
+    p.drawEllipse(QPointF(cx - s * 0.52, cy - s * 0.60), s * 0.055, s * 0.055)
+    # 旗面（波浪）
     fl = QPainterPath()
-    fl.moveTo(cx - s * 0.52, cy - s * 0.50)
-    fl.lineTo(cx + s * 0.50, cy - s * 0.36)
-    fl.lineTo(cx + s * 0.16, cy - s * 0.02)
-    fl.lineTo(cx + s * 0.50, cy + s * 0.16)
-    fl.lineTo(cx - s * 0.52, cy + s * 0.02)
+    fl.moveTo(cx - s * 0.49, cy - s * 0.52)
+    fl.cubicTo(cx - s * 0.10, cy - s * 0.60, cx + s * 0.14, cy - s * 0.36,
+               cx + s * 0.52, cy - s * 0.40)
+    fl.lineTo(cx + s * 0.34, cy - s * 0.10)
+    fl.lineTo(cx + s * 0.52, cy + s * 0.18)
+    fl.cubicTo(cx + s * 0.14, cy + s * 0.14, cx - s * 0.10, cy + s * 0.02,
+               cx - s * 0.49, cy + s * 0.04)
     fl.closeSubpath()
+    gf = QLinearGradient(QPointF(cx - s * 0.5, cy - s * 0.5),
+                         QPointF(cx + s * 0.5, cy + s * 0.2))
+    gf.setColorAt(0.0, T.f(col, 1.25))
+    gf.setColorAt(0.45, col)
+    gf.setColorAt(1.0, T.f(col, 0.45))
+    p.setPen(QPen(T.f(col, 0.45), max(0.7, 1.0 * k)))
+    p.setBrush(QBrush(gf))
     p.drawPath(fl)
-
+    # 褶皱
+    p.setPen(QPen(T.a(T.f(col, 0.40), 130), max(0.6, 0.9 * k)))
+    p.drawLine(QPointF(cx - s * 0.20, cy - s * 0.50), QPointF(cx - s * 0.14, cy - s * 0.04))
+    p.drawLine(QPointF(cx + s * 0.12, cy - s * 0.42), QPointF(cx + s * 0.20, cy + s * 0.04))
 
 def _bullet_holes(p, cx, cy, s, k, col):
     p.setPen(QPen(T.a(col, 110), max(0.6, 0.8 * k)))

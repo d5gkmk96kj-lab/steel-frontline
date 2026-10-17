@@ -1,20 +1,16 @@
 {
-  "version": "0.9.31",
-  "label": "0.9.31 测试版",
-  "label_en": "0.9.31 Beta",
+  "version": "0.9.32",
+  "label": "0.9.32 测试版",
+  "label_en": "0.9.32 Beta",
   "released": "2026-10-17",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "卡面加色阶与渐变：物体有明暗和体积感",
-    "卡面加场景背景：天空渐变 + 地平线 + 远山剪影 + 地面透视 + 暗角",
-    "重画步枪/坦克/火炮/油桶/沙袋/铁丝网/电台等，具象可辨",
-    "所有物体加投影和高光"
+    "把剩余 43 个线稿图元全部改成有体积的（手枪/冲锋枪/狙击枪/手雷/燃烧瓶/扳手/钢管/望远镜/地图/信号弹/医疗箱/军旗）",
+    "每个物体加金属渐变、投影和高光点"
   ],
   "notes_en": [
-    "Card art now uses tonal ramps and gradients: objects read as solid volumes",
-    "Scenic backgrounds: sky gradient, horizon, hill silhouettes, ground perspective, vignette",
-    "Redrawn rifle/tank/cannon/fuel drum/sandbags/barbed wire/radio so shapes are recognizable",
-    "Cast shadows and specular highlights on every object"
+    "Converted the last 43 flat/line-art primitives to shaded volumes (pistol/SMG/sniper/grenade/molotov/wrench/pipe/binoculars/map/flare/medkit/flag)",
+    "Every object now has metal gradients, cast shadows and specular highlights"
   ]
 }
