@@ -11,9 +11,9 @@
 
 <h2>
 
-[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.28/SteelFrontline-Public-v0.9.28-beta.dmg)
+[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.32/SteelFrontline-Public-v0.9.32-beta.dmg)
 
-[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.28/SteelFrontline-WindowsRework-0.9.28.zip)
+[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v0.9.32/SteelFrontline-WindowsRework-0.9.32.zip)
 
 </h2>
 
@@ -80,7 +80,7 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **0.9.32 测试版 · 公开版** | `SteelFrontline-Public-v0.9.28-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | **0.9.32 测试版 · 公开版** | `SteelFrontline-Public-v0.9.32-beta.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
 > | 0.9.32 测试版 · 完整版 | `钢铁战线-v0.9.32 测试版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
