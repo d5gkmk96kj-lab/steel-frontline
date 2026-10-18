@@ -1,16 +1,20 @@
 {
-  "version": "1.0.5",
-  "label": "1.0.5 正式版",
-  "label_en": "1.0.5",
+  "version": "1.0.6",
+  "label": "1.0.6 正式版",
+  "label_en": "1.0.6",
   "released": "2026-10-18",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：公网建房没人也能进对局（连上服务器被误判成有对手）",
-    "修复：对局右侧按钮太挤（改成两列网格 + 加大间距）"
+    "新增：主线剧情（三幕九段，带结局）",
+    "新增：12 段小人物特写事件（反战基调，TFR 式插叙）",
+    "新增：无尽爬塔模式（通关主线后解锁，敌人每轮变强）",
+    "修改：指挥官「蒋介石」改为「孙中山」"
   ],
   "notes_en": [
-    "Fix: creating an online room sent you into a match with nobody (connecting to the server was mistaken for an opponent)",
-    "Fix: versus right-side buttons were too cramped (now a 2-column grid with more spacing)"
+    "New: main story — 3 acts, 9 scenes, with an ending",
+    "New: 12 vignettes about ordinary people (anti-war, TFR-style interludes)",
+    "New: Endless mode — unlocked after finishing the main story; enemies grow stronger each loop",
+    "Changed: commander Chiang Kai-shek -> Sun Yat-sen"
   ]
 }

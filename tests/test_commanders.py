@@ -79,7 +79,7 @@ class TestRegistry(unittest.TestCase):
     def test_key_figures_present(self):
         """用户点名要的人物必须在。"""
         need = {
-            "chiang": "CN", "mao": "CN",
+            "sun_yatsen": "CN", "mao": "CN",
             "roosevelt": "US", "eisenhower": "US",
             "yamamoto": "JP", "tojo": "JP",
             "stalin": "SU", "zhukov": "SU",

@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from core import cards as C
+from core import story as STORY
 from core import enemies as E
 from core import events as EV
 from core import relics as R
@@ -253,9 +254,20 @@ class RunState:
         self.remove_count = 0
         self.pending_node: Optional[int] = None
         self.daily = False
+        #: "story" = 主线（三幕，打完给结局）；"endless" = 无尽爬塔
+        self.mode = "story"
+        #: 已播放过的剧情 id（主线段落 + 小人物特写）
+        self.story_seen: set = set()
+        #: 无尽模式已经循环了几轮（第一轮 = 0）
+        self.loop = 0
+        #: 待播放的剧情（UI 取走后清空）
+        self.pending_story: Optional[dict] = None
+        #: 主线是否已通关（本局）
+        self.story_cleared = False
 
     # -- 初始化 -----------------------------------------------------------
-    def new_run(self, seed=None, ascension=0, character="whale", daily=False) -> None:
+    def new_run(self, seed=None, ascension=0, character="whale", daily=False,
+                mode: str = "story") -> None:
         if seed is None:
             seed = random.randrange(1, 2 ** 31 - 1)
         self.seed = int(seed)
@@ -280,6 +292,11 @@ class RunState:
         self.seen_events = []
         self.remove_count = 0
         self.daily = bool(daily)
+        self.mode = "endless" if str(mode) == "endless" else "story"
+        self.story_seen = set()
+        self.loop = 0
+        self.pending_story = None
+        self.story_cleared = False
         self.run_start_time = time.time()
         self.stats = {
             "elites_killed": 0, "bosses_killed": 0, "damage_dealt": 0,
@@ -341,8 +358,91 @@ class RunState:
             info["rest_heal"] = self.rest_heal_amount()
         return info
 
+    # -- 幕 / 模式 -------------------------------------------------------
+    def act_pool(self) -> int:
+        """当前该用哪一幕的敌人池。
+
+        主线：就是 act。
+        无尽：act 一直往上加，但敌人池在 1..3 循环。
+        """
+        if self.mode != "endless":
+            return max(1, min(3, int(self.act)))
+        return ((max(1, int(self.act)) - 1) % 3) + 1
+
+    def difficulty_scale(self) -> float:
+        """额外的难度倍率（无尽模式每轮 +18%）。"""
+        if self.mode != "endless":
+            return 1.0
+        return 1.0 + 0.18 * max(0, int(self.loop))
+
+    def max_act(self) -> int:
+        """主线只有 3 幕；无尽没有上限。"""
+        return 3 if self.mode != "endless" else 999
+
+    # -- 剧情 -------------------------------------------------------------
+    def take_story(self, trigger: str) -> Optional[dict]:
+        """取一条该触发点的剧情（没看过才给）。返回给 UI 的 dict。"""
+        try:
+            b = STORY.next_beat(trigger, int(self.act), self.story_seen)
+        except Exception:
+            return None
+        if b is None:
+            return None
+        self.story_seen.add(b.id)
+        self.pending_story = {
+            "id": b.id, "title": b.title,
+            "lines": list(b.lines),
+            "choices": [{"label": c.label, "desc": c.desc} for c in b.choices],
+            "act": b.act, "key": b.key,
+        }
+        return self.pending_story
+
+    def take_vignette(self) -> Optional[dict]:
+        """取一段没看过的小人物特写（无尽/主线都有）。"""
+        try:
+            v = STORY.random_vignette(self.rng, self.story_seen)
+        except Exception:
+            return None
+        if v is None:
+            return None
+        self.story_seen.add(v.id)
+        self.pending_story = {
+            "id": v.id, "title": v.title,
+            "lines": list(v.lines),
+            "choices": [{"label": c.label, "desc": c.desc} for c in v.choices],
+            "act": v.act, "key": False,
+        }
+        return self.pending_story
+
+    def apply_story_choice(self, index: int) -> str:
+        """执行剧情的第 index 个选择，返回结果文本。"""
+        p = self.pending_story or {}
+        self.pending_story = None
+        try:
+            b = None
+            for beats in STORY.MAIN_STORY.values():
+                for x in beats:
+                    if x.id == p.get("id"):
+                        b = x; break
+                if b: break
+            if b is None:
+                for x in STORY.VIGNETTES:
+                    if x.id == p.get("id"):
+                        b = x; break
+            if b is None:
+                return ""
+            i = max(0, min(len(b.choices) - 1, int(index)))
+            if not b.choices:
+                return ""
+            ch = b.choices[i]
+            if ch.effect is None:
+                return ""
+            return str(ch.effect(self) or "")
+        except Exception:
+            return ""
+
     def roll_encounter(self, kind: str) -> dict:
-        pool = E.ENCOUNTERS.get(self.act, {}).get(kind) or []
+        pool = E.ENCOUNTERS.get(self.act_pool(), {}).get(kind) or []
         if not pool:
             pool = E.ENCOUNTERS.get(1, {}).get("normal") or []
         if not pool:
@@ -455,13 +555,32 @@ class RunState:
             self.advance_act()
 
     def advance_act(self) -> None:
+        """打完一幕的要塞后推进。
+
+        主线：1 -> 2 -> 3 -> 4（4 = 主线通关，UI 走结局流程）
+        无尽：1 -> 2 -> 3 -> 1 -> 2 -> ...，每循环一轮 ``loop + 1`` 加难度
+        """
+        if self.mode == "endless":
+            nxt = int(self.act) + 1
+            if nxt > 3:
+                nxt = 1
+                self.loop = int(self.loop) + 1
+                self.score += 1000 + self.max_hp * 5
+            self.act = nxt
+            self.floor = 0
+            self.current_node = None
+            self.map_nodes = MapGenerator(self.rng, self.act).generate()
+            return
         if self.act < 3:
             self.act += 1
             self.floor = 0
             self.current_node = None
             self.map_nodes = MapGenerator(self.rng, self.act).generate()
         else:
-            self.score += 1000 + self.max_hp * 5
+            # 主线三幕全部打完 —— 标记通关（结局由 UI 播放）
+            self.act = 4
+            self.story_cleared = True
+            self.score += 2000 + self.max_hp * 5
 
     def final_score(self) -> int:
         s = self.score + self.gold // 2 + self.hp * 3 + len(self.relics) * 15
@@ -480,6 +599,10 @@ class RunState:
             "current_node": self.current_node,
             "ascension": self.ascension, "score": self.score,
             "commander": str(getattr(self, "commander", "") or ""),
+            "mode": str(getattr(self, "mode", "story") or "story"),
+            "story_seen": sorted(getattr(self, "story_seen", set()) or set()),
+            "loop": int(getattr(self, "loop", 0) or 0),
+            "story_cleared": bool(getattr(self, "story_cleared", False)),
             "run_start_time": self.run_start_time,
             "stats": dict(self.stats), "seen_events": list(self.seen_events),
             "remove_count": self.remove_count, "daily": self.daily,
@@ -507,6 +630,11 @@ class RunState:
         r.current_node = d.get("current_node")
         r.ascension = int(d.get("ascension", 0))
         r.commander = str(d.get("commander", "") or "")
+        r.mode = "endless" if d.get("mode") == "endless" else "story"
+        r.story_seen = set(d.get("story_seen", []) or [])
+        r.loop = int(d.get("loop", 0) or 0)
+        r.story_cleared = bool(d.get("story_cleared", False))
+        r.pending_story = None
         r.score = int(d.get("score", 0))
         r.run_start_time = float(d.get("run_start_time", time.time()))
         r.stats = dict(d.get("stats", {}))
@@ -544,6 +672,14 @@ class MetaProgress:
         self.unlocked_relics: set = set()
         self.total_playtime = 0.0
         self.daily_done: List[str] = []
+        #: 主线是否通关过（通关后解锁无尽模式）
+        self.story_done = False
+        #: 主线通关次数
+        self.story_wins = 0
+        #: 跨局记住的小人物特写（不重复播）
+        self.seen_vignettes: set = set()
+        #: 跨局记住的主线剧情 id
+        self.seen_story: set = set()
 
     # -- 读写 -------------------------------------------------------------
     @classmethod
@@ -571,6 +707,10 @@ class MetaProgress:
             m.unlocked_relics = set(d.get("unlocked_relics", []))
             m.total_playtime = float(d.get("total_playtime", 0.0))
             m.daily_done = list(d.get("daily_done", []))
+            m.story_done = bool(d.get("story_done", False))
+            m.story_wins = int(d.get("story_wins", 0))
+            m.seen_vignettes = set(d.get("seen_vignettes", []))
+            m.seen_story = set(d.get("seen_story", []))
         except Exception:
             pass
         return m
@@ -600,6 +740,10 @@ class MetaProgress:
             "unlocked_relics": sorted(self.unlocked_relics),
             "total_playtime": self.total_playtime,
             "daily_done": list(self.daily_done),
+            "story_done": bool(self.story_done),
+            "story_wins": int(self.story_wins),
+            "seen_vignettes": sorted(self.seen_vignettes),
+            "seen_story": sorted(self.seen_story),
         }
 
     # -- 解锁 -------------------------------------------------------------

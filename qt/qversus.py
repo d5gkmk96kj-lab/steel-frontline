@@ -1584,7 +1584,20 @@ class VersusScreen(QWidget):
             self._step_ai()
             self._sync(animate=True)
         else:
-            # 联机：轮询网络事件（客户端与房主都从这里驱动 UI）
+            # 联机：先推进回合计时，再轮询网络事件。
+            # ⚠ 房主必须调用 net.tick() —— 回合超时是**房主权威**判定的，
+            # 之前这里只 poll_net()，导致联机时倒计时永远不走、
+            # 对方挂机也能无限卡住（真 bug）。
+            net = self.net
+            tick_fn = getattr(net, "tick", None) if net is not None else None
+            # 只有房主（Host）有 tick —— 回合超时由房主权威判定
+            if callable(tick_fn):
+                try:
+                    if tick_fn(dt):
+                        # 发生了自动换手：立刻刷新界面（房主会广播 state）
+                        self._sync(animate=True)
+                except Exception:
+                    pass
             self.poll_net()
 
     def _step_ai(self) -> None:

@@ -261,7 +261,7 @@ class RewardPick(QWidget):
 class MenuScreen(QWidget):
     """主菜单：钢铁战线标题 + 战役入口 + 图鉴/成就/设置。"""
 
-    new_run = pyqtSignal(int, object)      # ascension, seed(None=随机)
+    new_run = pyqtSignal(int, object, str)  # ascension, seed(None=随机), mode
     continue_run = pyqtSignal()
     open_codex = pyqtSignal()
     open_achievements = pyqtSignal()
@@ -326,12 +326,26 @@ class MenuScreen(QWidget):
         # 只先填左栏小字，等右栏建好后再统一刷新一次。
 
         lv.addSpacing(26)
-        self.btn_new = QPushButton("开 始 新 战 役", left)
+        # 模式选择：主线（三幕有剧情）/ 无尽（通关后解锁）
+        mode_row = QHBoxLayout()
+        mode_row.setContentsMargins(0, 0, 0, 0)
+        mode_row.setSpacing(8)
+        self.btn_new = QPushButton("主 线 剧 情", left)
         self.btn_new.setObjectName("Primary")
         self.btn_new.setMinimumHeight(52)
-        self.btn_new.setFixedWidth(340)
-        self.btn_new.clicked.connect(self._emit_new)
-        lv.addWidget(self.btn_new)
+        self.btn_new.setFixedWidth(214)
+        self.btn_new.setToolTip("三幕主线，带剧情与结局。通关后解锁无尽模式。")
+        self.btn_new.clicked.connect(lambda: self._emit_new("story"))
+        self.btn_endless = QPushButton("无 尽 爬 塔", left)
+        self.btn_endless.setObjectName("Primary")
+        self.btn_endless.setMinimumHeight(52)
+        self.btn_endless.setFixedWidth(118)
+        self.btn_endless.setToolTip("三幕循环，难度每轮递增。通关主线后解锁。")
+        self.btn_endless.clicked.connect(lambda: self._emit_new("endless"))
+        self.btn_endless.setEnabled(False)
+        mode_row.addWidget(self.btn_new)
+        mode_row.addWidget(self.btn_endless)
+        lv.addLayout(mode_row)
 
         self.btn_cont = QPushButton("继 续 上 次 战 役", left)
         self.btn_cont.setMinimumHeight(46)
@@ -645,8 +659,20 @@ class MenuScreen(QWidget):
         except ValueError:
             return abs(hash(s)) % (2 ** 31 - 1)
 
-    def _emit_new(self) -> None:
-        self.new_run.emit(int(self.spin_asc.value()), self._seed_or_none())
+    def _emit_new(self, mode: str = "story") -> None:
+        self._mode = str(mode or "story")
+        self.new_run.emit(int(self.spin_asc.value()), self._seed_or_none(),
+                          self._mode)
+
+    def refresh_mode_buttons(self, endless_unlocked: bool) -> None:
+        """根据元进度决定「无尽爬塔」能不能点。"""
+        try:
+            self.btn_endless.setEnabled(bool(endless_unlocked))
+            self.btn_endless.setToolTip(
+                "三幕循环，难度每轮递增。" if endless_unlocked
+                else "通关主线后解锁。")
+        except Exception:
+            pass
 
     def _emit_ai_versus(self) -> None:
         """读下拉框难度并发出信号（拿不到就退回 normal）。"""
@@ -1927,6 +1953,138 @@ class StatsScreen(QWidget):
 # =====================================================================
 # 11. 设置
 # =====================================================================
+
+
+class StoryScreen(QWidget):
+    """剧情界面：逐行显示对白，最后给选择。
+
+    基调是反战 —— 这些都是普通人的故事，没有慷慨激昂。
+    文字刻意排得松、字号偏大，让人愿意读完。
+    """
+
+    finished = pyqtSignal(int)      # 选择了第几个（没选择时固定 0）
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._beat = {}
+        self._line_i = 0
+        self._built_lines = 0
+        self._build()
+
+    def _build(self) -> None:
+        root = QVBoxLayout(self)
+        root.setContentsMargins(120, 44, 120, 40)
+        root.setSpacing(16)
+
+        self.lbl_title = QLabel("", self)
+        self.lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_title.setStyleSheet(
+            f"color:{T.GOLD}; font-size:{T.FONT_H1}px; font-weight:800;"
+            f"letter-spacing:6px; background:transparent;")
+        root.addWidget(self.lbl_title)
+
+        # 分隔线
+        line = QFrame(self)
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setStyleSheet("color:%s; background:%s;" % (T.BORDER, T.BORDER))
+        line.setFixedHeight(1)
+        root.addWidget(line)
+
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(
+            "QScrollArea{background:transparent;border:none;}"
+            "QScrollArea>QWidget>QWidget{background:transparent;}")
+        self.inner = QWidget(scroll)
+        self.inner.setStyleSheet("background:transparent;")
+        self.lines_lay = QVBoxLayout(self.inner)
+        self.lines_lay.setContentsMargins(20, 14, 20, 14)
+        self.lines_lay.setSpacing(9)
+        self.lines_lay.addStretch(1)
+        scroll.setWidget(self.inner)
+        root.addWidget(scroll, 1)
+        self.scroll = scroll
+
+        self.choice_lay = QVBoxLayout()
+        self.choice_lay.setSpacing(10)
+        root.addLayout(self.choice_lay)
+
+        self.btn_next = QPushButton("继 续", self)
+        self.btn_next.setObjectName("Primary")
+        self.btn_next.setMinimumHeight(50)
+        self.btn_next.clicked.connect(self._next)
+        root.addWidget(self.btn_next)
+
+    def setup(self, beat: dict) -> None:
+        self._beat = dict(beat or {})
+        self._line_i = 0
+        self._built_lines = 0
+        self.lbl_title.setText(T.tr(str(self._beat.get("title", ""))))
+        # 清空
+        while self.lines_lay.count():
+            it = self.lines_lay.takeAt(0)
+            w = it.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+        for b in list(self._choice_buttons()):
+            b.setParent(None)
+            b.deleteLater()
+        self.lines_lay.addStretch(1)
+        self.btn_next.show()
+        self.scroll.verticalScrollBar().setValue(0)
+        # 先显示第一行
+        self._next()
+
+    def _choice_buttons(self):
+        out = []
+        for i in range(self.choice_lay.count()):
+            w = self.choice_lay.itemAt(i).widget()
+            if w is not None:
+                out.append(w)
+        return out
+
+    def _next(self) -> None:
+        lines = list(self._beat.get("lines") or [])
+        if self._line_i < len(lines):
+            txt = str(lines[self._line_i])
+            lab = QLabel(T.tr(txt) if txt else " ", self.inner)
+            lab.setWordWrap(True)
+            lab.setStyleSheet(
+                f"color:{T.TEXT if txt else 'transparent'};"
+                f"font-size:{T.FONT_BODY + 3}px; line-height:160%;"
+                f"background:transparent;")
+            self.lines_lay.insertWidget(self.lines_lay.count() - 1, lab)
+            self._built_lines += 1
+            self._line_i += 1
+            # 自动滚到底
+            QTimer.singleShot(
+                30, lambda: self.scroll.verticalScrollBar().setValue(
+                    self.scroll.verticalScrollBar().maximum()))
+            return
+        # 全部显示完 -> 出选项
+        self._show_choices()
+
+    def _show_choices(self) -> None:
+        self.btn_next.hide()
+        choices = list(self._beat.get("choices") or [])
+        if not choices:
+            btn = QPushButton("继 续", self)
+            btn.setObjectName("Primary")
+            btn.setMinimumHeight(48)
+            btn.clicked.connect(lambda: self.finished.emit(0))
+            self.choice_lay.addWidget(btn)
+            return
+        for i, ch in enumerate(choices):
+            btn = QPushButton("%s　—　%s" % (
+                T.tr(str(ch.get("label", ""))),
+                T.tr(str(ch.get("desc", "")))), self)
+            btn.setObjectName("Primary" if i == 0 else "Ghost")
+            btn.setMinimumHeight(48)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda _c=False, idx=i: self.finished.emit(idx))
+            self.choice_lay.addWidget(btn)
 
 
 class CommanderScreen(QWidget):

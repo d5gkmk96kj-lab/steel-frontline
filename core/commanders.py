@@ -147,8 +147,8 @@ def _reg(c: Commander) -> None:
 
 
 # ---- 中国 / China ----------------------------------------------------
-_reg(Commander("chiang", "蒋介石", "Chiang Kai-shek", "CN",
-                 "国民政府领袖", "总部耐久 +12；开局金币 +25。", Modifiers(hp=12, gold=25)))
+_reg(Commander("sun_yatsen", "孙中山", "Sun Yat-sen", "CN",
+                 "民族先驱", "总部耐久 +12；开局金币 +25。", Modifiers(hp=12, gold=25)))
 _reg(Commander("mao", "毛泽东", "Mao Zedong", "CN",
                  "持久战", "每回合 +1 指挥点；战后回复 +6。", Modifiers(supply=1, heal=6)))
 _reg(Commander("zhu_de", "朱德", "Zhu De", "CN",

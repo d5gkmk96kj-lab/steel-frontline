@@ -1128,7 +1128,8 @@ class BattleState:
 # --------------------------------------------------------------------------
 
 def make_enemy_combatant(def_id: str, rng: random.Random,
-                         ascension: int = 0, act: int = 1) -> Combatant:
+                         ascension: int = 0, act: int = 1,
+                         scale: float = 1.0) -> Combatant:
     edef = E.ENEMY_DB.get(def_id)
     if edef is None:
         edef = E.ENEMY_DB.get("deep_crab")
@@ -1139,6 +1140,13 @@ def make_enemy_combatant(def_id: str, rng: random.Random,
     hp = int(hp * (1.0 + 0.02 * max(0, ascension)))
     if ascension >= 10:
         hp = int(hp * 1.05)
+    # 无尽模式的循环难度
+    try:
+        scale = float(scale)
+    except (TypeError, ValueError):
+        scale = 1.0
+    if scale > 1.0:
+        hp = int(hp * scale)
     c = Combatant(is_player=False, name=edef.name, hp=max(1, hp), max_hp=max(1, hp))
     c.def_id = def_id
     c.tier = getattr(edef, "tier", "normal")
@@ -1160,7 +1168,11 @@ def make_battle(run, encounter: dict) -> BattleState:
             ids = pick.get("enemies", []) if isinstance(pick, dict) else list(pick)
     if not ids:
         ids = ["deep_crab"]
-    enemies = [make_enemy_combatant(i, rng, asc, act) for i in ids]
+    try:
+        scale = float(getattr(run, "difficulty_scale", lambda: 1.0)())
+    except Exception:
+        scale = 1.0
+    enemies = [make_enemy_combatant(i, rng, asc, act, scale) for i in ids]
     b = BattleState(run, enemies, rng, {"kind": kind, "enemies": ids})
     # 辅助角色：从本局状态带进战斗
     try:

@@ -56,7 +56,7 @@ from .qconsole import ConsoleOverlay  # noqa: E402
 SCREENS = ("menu", "map", "battle", "reward", "shop", "rest", "event",
            "deck", "gameover", "codex", "achievements", "settings",
            "stats", "pile", "lobby", "deckbuild", "versus", "saves",
-           "commander")
+           "commander", "story")
 
 DEFAULT_CFG: Dict = {
     "fullscreen": False,
@@ -113,6 +113,9 @@ class GameWindow(QMainWindow):
         except Exception:
             pass
         self._pending: Dict = {}      # move_to 返回的遭遇描述
+        self._pending_battle = None   # 剧情播完后要打的仗
+        self._pending_advance = False # 剧情播完后是否要推进幕
+        self._story_next = None
         self._gold_gain = 0
         self._history: List[str] = ["menu"]
 
@@ -307,6 +310,7 @@ class GameWindow(QMainWindow):
         self.screens["achievements"] = qscreens.AchievementScreen(self)
         self.screens["settings"] = qscreens.SettingsScreen(self, self.cfg)
         self.screens["commander"] = qscreens.CommanderScreen(self)
+        self.screens["story"] = qscreens.StoryScreen(self)
         self.screens["stats"] = qscreens.StatsScreen(self)
         self.screens["saves"] = qsave.SaveScreen(self)
         self.screens["pile"] = qscreens.PileScreen(self)
@@ -528,6 +532,7 @@ class GameWindow(QMainWindow):
         cmd = self.screens["commander"]
         cmd.closed.connect(self.on_commander_closed)
         cmd.confirmed.connect(self.on_commander_confirmed)
+        self.screens["story"].finished.connect(self.on_story_finished)
         self.screens["settings"].wipe_meta.connect(self.on_wipe_meta)
         self.screens["settings"].wipe_save.connect(self.on_wipe_save)
         self.screens["gameover"].finished.connect(lambda: self.show_screen("menu"))
@@ -544,6 +549,13 @@ class GameWindow(QMainWindow):
         if name != "versus":
             try:
                 self.screens["versus"].stop()
+            except Exception:
+                pass
+        # 每次进主菜单都刷新「无尽爬塔」的解锁状态
+        if name == "menu":
+            try:
+                self.screens["menu"].refresh_mode_buttons(
+                    bool(getattr(self.meta, "story_done", False)))
             except Exception:
                 pass
         # 界面过渡：淡入淡出（可在设置里关掉）
@@ -886,10 +898,14 @@ class GameWindow(QMainWindow):
     # =================================================================
     #: 选完指挥官后要继续的开局参数
     _pending_run = None
+    #: 剧情播完后的去向（"map" / "boss" / "ending"）
+    _story_next = None
 
-    def start_new_run(self, ascension: int = 0, seed=None) -> None:
+    def start_new_run(self, ascension: int = 0, seed=None,
+                      mode: str = "story") -> None:
         """先让玩家选辅助角色，再真正开局。"""
-        self._pending_run = {"ascension": int(ascension), "seed": seed}
+        self._pending_run = {"ascension": int(ascension), "seed": seed,
+                             "mode": str(mode or "story")}
         try:
             runs = int(getattr(getattr(self, "meta", None), "runs", 0) or 0)
         except Exception:
@@ -900,6 +916,60 @@ class GameWindow(QMainWindow):
             pass
         self.show_screen("commander")
 
+    # ---- 剧情 ---------------------------------------------------------
+    def play_story(self, beat: Optional[dict], next_screen: str = "map") -> bool:
+        """播放一段剧情，播完去 ``next_screen``。返回是否真的播了。"""
+        if not beat:
+            return False
+        try:
+            self._story_next = str(next_screen)
+            self.screens["story"].setup(beat)
+            self.show_screen("story")
+            return True
+        except Exception as exc:
+            print(f"[qt.app] play_story failed: {exc!r}", flush=True)
+            return False
+
+    def on_story_finished(self, choice_index: int = 0) -> None:
+        """剧情看完：应用选择效果，然后去下一个界面。"""
+        nxt = self._story_next or "map"
+        self._story_next = None
+        try:
+            if self.run is not None:
+                self.run.apply_story_choice(int(choice_index))
+                run_mod.save_run(self.run)
+        except Exception as exc:
+            print(f"[qt.app] story choice failed: {exc!r}", flush=True)
+        if nxt == "ending":
+            self._story_ending()
+            return
+        if nxt == "battle_pending":
+            enc = getattr(self, "_pending_battle", None)
+            self._pending_battle = None
+            if enc:
+                self.start_battle(enc)
+            else:
+                self.show_screen("map")
+            return
+        if nxt == "after_boss_done":
+            self._do_advance()
+            return
+        if nxt == "act_start_done":
+            self.show_screen("map")
+            return
+        self.show_screen(nxt if nxt in self.screens else "map")
+
+    def _story_ending(self) -> None:
+        """主线通关：解锁无尽模式，然后结算。"""
+        try:
+            self.meta.story_done = True
+            self.meta.story_wins = int(getattr(self.meta, "story_wins", 0)) + 1
+            self.meta.seen_story |= set(getattr(self.run, "story_seen", set()))
+            self.meta.save()
+        except Exception as exc:
+            print(f"[qt.app] ending save failed: {exc!r}", flush=True)
+        self._finish_game(won=True, story=True)
+
     def on_commander_closed(self) -> None:
         """放弃选择 -> 回主菜单。"""
         self._pending_run = None
@@ -909,20 +979,22 @@ class GameWindow(QMainWindow):
         """确认辅助角色 -> 真正开始新战役。"""
         p = self._pending_run or {}
         self._pending_run = None
-        self._start_run_now(p.get("ascension", 0), p.get("seed"), str(cid or ""))
+        self._start_run_now(p.get("ascension", 0), p.get("seed"),
+                            str(cid or ""), p.get("mode", "story"))
 
     def start_run_direct(self, ascension: int = 0, seed=None,
-                         commander: str = "") -> None:
+                         commander: str = "", mode: str = "story") -> None:
         """跳过选角色界面直接开局（自检脚本 / 测试用）。"""
         self._pending_run = None
-        self._start_run_now(ascension, seed, commander)
+        self._start_run_now(ascension, seed, commander, mode)
 
     def _start_run_now(self, ascension: int = 0, seed=None,
-                       commander: str = "") -> None:
+                       commander: str = "", mode: str = "story") -> None:
         self._slot_id = None          # 新开局：下次保存时建新槽位
         self.run = run_mod.RunState()
         try:
-            self.run.new_run(seed=seed, ascension=int(ascension))
+            self.run.new_run(seed=seed, ascension=int(ascension),
+                             mode=str(mode or "story"))
             self.run.commander = str(commander or "")
         except Exception as exc:
             print(f"[qt.app] new_run failed: {exc!r}", flush=True)
@@ -930,7 +1002,18 @@ class GameWindow(QMainWindow):
             return
         self.battle = None
         self._pending = {}
+        self._pending_battle = None
         run_mod.save_run(self.run)
+        # 主线的开场剧情（无尽模式没有，直接进地图）
+        beat = None
+        if getattr(self.run, "mode", "story") != "endless":
+            try:
+                beat = self.run.take_story("run_start")
+            except Exception as exc:
+                print(f"[qt.app] take_story failed: {exc!r}", flush=True)
+                beat = None
+        if self.play_story(beat, "map"):
+            return
         self.show_screen("map")
 
     def continue_run(self) -> None:
@@ -999,8 +1082,27 @@ class GameWindow(QMainWindow):
         if kind in ("battle", "elite", "boss"):
             enc = info.get("encounter") or self.run.roll_encounter(
                 "normal" if kind == "battle" else kind)
+            # 要塞战之前播一段主线剧情（无尽模式不播）
+            if kind == "boss" and getattr(self.run, "mode", "story") != "endless":
+                try:
+                    beat = self.run.take_story("before_boss")
+                except Exception:
+                    beat = None
+                if beat:
+                    self._pending_battle = enc
+                    if self.play_story(beat, "battle_pending"):
+                        return
             self.start_battle(enc)
         elif kind == "event":
+            # 事件节点有几率播一段「小人物特写」（TFR 式插叙）
+            try:
+                if (self.run.rng.random() < 0.45):
+                    vg = self.run.take_vignette()
+                    if vg:
+                        if self.play_story(vg, "map"):
+                            return
+            except Exception:
+                pass
             ev = info.get("event")
             if ev is None:
                 # 契约保证 event 一定存在；防御性兜底 —— 转成一场遭遇战，
@@ -1153,17 +1255,48 @@ class GameWindow(QMainWindow):
         self._show_reward(gold=gold_gain, cards=cards, relic_id=relic_id)
 
     def _advance_act(self) -> None:
+        """BOSS 打完之后：播剧情 -> 推进 -> 播下一幕开场。"""
+        self.battle = None
+        cur_act = int(getattr(self.run, "act", 1))
+        is_story = (getattr(self.run, "mode", "story") != "endless")
+
+        # 1) 本幕打完的收尾剧情（主线才有；第三幕这段就是结局）
+        if is_story:
+            try:
+                beat = self.run.take_story("after_boss")
+            except Exception:
+                beat = None
+            if beat:
+                ending = (cur_act >= 3)
+                if self.play_story(beat, "ending" if ending else "after_boss_done"):
+                    # 结局/推进等剧情播完再继续
+                    self._pending_advance = (not ending)
+                    return
+        self._do_advance()
+
+    def _do_advance(self) -> None:
+        """真正推进幕数，然后播新一幕的开场剧情。"""
+        self.battle = None
+        cur_act = int(getattr(self.run, "act", 1))
         try:
             self.run.advance_act()
         except Exception as exc:
             print(f"[qt.app] advance_act failed: {exc!r}", flush=True)
-        self.battle = None
         run_mod.save_run(self.run)
-        # 通关（第三幕后）
+
+        # 主线第三幕打完 -> act 变 4 -> 结局
         if int(getattr(self.run, "act", 1)) > 3:
-            self._finish_game(won=True)
-        else:
-            self.show_screen("map")
+            self._story_ending()
+            return
+
+        # 2) 新一幕的开场剧情
+        try:
+            beat = self.run.take_story("act_start")
+        except Exception:
+            beat = None
+        if self.play_story(beat, "map"):
+            return
+        self.show_screen("map")
 
     def _show_reward(self, gold: int = 0, cards: Optional[List] = None,
                      relic_id: Optional[str] = None, banner: str = "",
@@ -1208,7 +1341,7 @@ class GameWindow(QMainWindow):
     # =================================================================
     # 结算
     # =================================================================
-    def _finish_game(self, won: bool) -> None:
+    def _finish_game(self, won: bool, story: bool = False) -> None:
         self.battle = None
         new_ach: List[str] = []
         score = 0

@@ -20,9 +20,11 @@ from core import netplay as N  # noqa: E402
 
 
 def _deck(n=20):
+    # 必须用**真实存在**的卡 id：服务端现在会严格校验卡是否存在
+    # （之前用 "assault"/"brace" 这种不存在的 id，被静默丢掉后反而测不出问题）
     import itertools
     return list(itertools.islice(
-        itertools.cycle(["strike", "defend", "assault", "brace"]), n))
+        itertools.cycle(["strike", "defend", "cleave", "frenzy"]), n))
 
 
 class TokenCase(unittest.TestCase):

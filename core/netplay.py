@@ -67,6 +67,7 @@ import errno
 import json
 import queue
 import random
+import re
 import socket
 import threading
 import time
@@ -179,7 +180,13 @@ def free_port() -> int:
 
 
 def _is_valid_card_id(cid: Any) -> bool:
-    """卡牌 id 只允许短的 snake_case，防止超长字符串 / 注入怪东西进对战引擎。"""
+    """卡牌 id 必须是**真实存在**的卡，且是短的 snake_case。
+
+    光校验格式是不够的：``"fake_card"`` 格式完全合法，
+    但 ``versus._build_draw_pile`` 遇到未知 id 会**静默跳过** ——
+    玩家发 30 张、对手只收到 10 张，两边牌库不一致，
+    相当于偷偷缩了对方的卡组（真的能利用）。
+    """
     if not isinstance(cid, str):
         return False
     if not cid or len(cid) > MAX_DECK_ID_LEN:
@@ -187,13 +194,44 @@ def _is_valid_card_id(cid: Any) -> bool:
     for ch in cid:
         if not (ch.isalnum() or ch == "_"):
             return False
+    # 必须是真实卡牌
+    try:
+        from core import cards as _C
+        if cid not in _C.CARD_DB:
+            # 作弊卡是按需注入的，注册一下再查
+            try:
+                from core import cheats as _CH
+                _CH._ensure_cheat_cards()
+            except Exception:
+                pass
+            if cid not in _C.CARD_DB:
+                return False
+    except Exception:
+        pass
     return True
 
 
+#: ANSI 转义序列（终端颜色 / 光标控制）
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b.")
+
+
 def _sanitize_name(name: Any, fallback: str = "玩家") -> str:
+    """清洗玩家名：去控制字符 / ANSI 转义，限长。
+
+    控制字符（\x00-\x1f）和 ANSI 转义（\x1b[...m）会被日志记录、
+    也会被原样画到界面上 —— 能伪造颜色甚至污染终端输出，
+    所以一律剔除（只保留普通空白）。
+    """
     if not isinstance(name, str):
         return fallback
-    name = name.strip().replace("\n", " ").replace("\r", " ")
+    # 1) 先把 ANSI 转义序列整段剔掉（\x1b[31m 这种）
+    name = _ANSI_RE.sub("", name)
+    # 2) 再把所有控制字符（含 \x00）换成空格；\t 也当空格
+    name = "".join(
+        (" " if (ch == "\t" or ord(ch) < 0x20 or ord(ch) == 0x7f) else ch)
+        for ch in name)
+    # 3) 连续空白压成一个
+    name = " ".join(name.split())
     if not name:
         return fallback
     return name[:MAX_NAME_LEN]
@@ -1084,6 +1122,17 @@ class _Conn:
         except (ValueError, UnicodeDecodeError):
             self._error(ERR_BAD_FRAME)
             return
+        except RecursionError:
+            # 深层嵌套的 JSON（{"a":{"a":{...}}} 几千层）会让 json 模块
+            # 抛 RecursionError —— 不接住的话**整个接收线程直接死掉**，
+            # 对方看起来就是「莫名其妙断线」（真测出来的 bug）。
+            self._error(ERR_BAD_FRAME)
+            self._security_reject("消息嵌套过深。")
+            return
+        except Exception:
+            # 兜底：任何解析异常都不能让接收线程崩掉。
+            self._error(ERR_BAD_FRAME)
+            return
         if not isinstance(msg, dict):
             self._error(ERR_BAD_FRAME)
             return
@@ -1634,9 +1683,12 @@ class Host(_Conn):
             if not self._peer_name:
                 ver = _safe_int(msg.get("ver"), 0)
                 if ver != PROTOCOL_VERSION:
-                    self._send({"t": "error",
-                                "msg": ERR_PROTOCOL.format(ver=ver,
-                                                           need=PROTOCOL_VERSION)})
+                    why = ERR_PROTOCOL.format(ver=ver, need=PROTOCOL_VERSION)
+                    self._send({"t": "error", "msg": why})
+                    # 这条必须让**本地界面**也知道，否则玩家只看到"连上了又断开"
+                    self._emit({"type": "error", "msg": why})
+                    self._emit({"type": "protocol_mismatch",
+                                "peer": ver, "need": PROTOCOL_VERSION})
                     self._send_bye("协议版本不兼容")
                     self._teardown(notify=False)
                     return
@@ -1692,6 +1744,16 @@ class Host(_Conn):
             self._flag_cheater(cheat)
         self._send({"t": "error", "msg": "不支持的消息类型：%s" % str(t)[:24]})
 
+    def _reject_deck(self, why: str) -> None:
+        """拒绝对方卡组：**同时**告诉对方和本地界面。
+
+        之前只调 ``_send`` 发给对方，房主自己的界面收不到任何事件，
+        于是一直停在「准备中…」，玩家完全不知道为什么（真 bug）。
+        """
+        self._send({"t": "error", "msg": why})
+        self._emit({"type": "deck_rejected", "msg": why})
+        self._emit({"type": "error", "msg": why})
+
     def _on_peer_ready(self, msg: dict) -> None:
         cards = msg.get("cards")
         if self._peer_ready:
@@ -1699,17 +1761,19 @@ class Host(_Conn):
             # 绝不能静默忽略 —— 那会让作弊者以为得手了。
             self._send({"t": "error",
                         "msg": "卡组已经提交过了，对局中不能更换卡组。"})
+            self._emit({"type": "error",
+                        "msg": "对方重复提交卡组（疑似作弊）。"})
             return
         if not isinstance(cards, list) or not cards:
-            self._send({"t": "error", "msg": ERR_DECK_EMPTY})
+            self._reject_deck(ERR_DECK_EMPTY)
             return
         if len(cards) > MAX_CARDS:
-            self._send({"t": "error", "msg": ERR_DECK_TOO_BIG.format(max=MAX_CARDS)})
+            self._reject_deck(ERR_DECK_TOO_BIG.format(max=MAX_CARDS))
             return
         clean: List[str] = []
         for cid in cards:
             if not _is_valid_card_id(cid):
-                self._send({"t": "error", "msg": ERR_DECK_BAD_CARD})
+                self._reject_deck(ERR_DECK_BAD_CARD)
                 return
             clean.append(cid)
         self._peer_deck = clean
@@ -1761,6 +1825,7 @@ class Host(_Conn):
             self._emit({"type": "rejected", "msg": reason})
             return
         if self._battle is None:
+            # 对方在开局前发操作意图 —— 只回给对方，本地不必提示
             self._send({"t": "error", "msg": "对战还没开始。"})
             return
         # 速率检测：机器人/脚本会在极短时间内狂发请求
