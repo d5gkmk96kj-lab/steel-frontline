@@ -537,6 +537,15 @@ QPushButton#Ghost {{
     color: {TEXT_DIM}; font-weight: 500;
 }}
 QPushButton#Ghost:hover {{ border: 1px solid {GOLD}; color: {TEXT}; }}
+/* 次级主按钮：透明底 + 金色描边。比 Primary 低调，但一眼看得出是"能点的" */
+QPushButton#Outline {{
+    background: transparent; border: 1px solid {GOLD};
+    color: {GOLD}; font-weight: 600;
+}}
+QPushButton#Outline:hover {{
+    border: 1px solid {GOLD}; color: #FFF6DC;
+    background: rgba(200,168,75,0.08);
+}}
 QPushButton#Tab {{
     background: {PANEL_LO}; border: 1px solid {BORDER};
     border-radius: 0px; padding: 8px 16px; color: {TEXT_DIM};

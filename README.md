@@ -2,7 +2,7 @@
 
 # 钢铁战线 Steel Frontline
 
-**二战装甲卡牌 Roguelike** · 当前版本 **v1.0.6 正式版**
+**二战装甲卡牌 Roguelike** · 当前版本 **v1.0.7 正式版**
 
 ---
 ---
@@ -11,9 +11,9 @@
 
 <h2>
 
-[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.6/SteelFrontline-Public-v1.0.6.dmg)
+[🖥️ macOS 版（38 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.7/SteelFrontline-Public-v1.0.7.dmg)
 
-[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.6/SteelFrontline-WindowsRework-1.0.6.zip)
+[🪟 Windows 版（52 MB）](https://github.com/d5gkmk96kj-lab/steel-frontline/releases/download/v1.0.7/SteelFrontline-WindowsRework-1.0.7.zip)
 
 </h2>
 
@@ -75,7 +75,7 @@
 >
 > | 要写的 | 从哪来 |
 > |---|---|
-> | **版本号** | 主菜单副标题，例如 `v1.0.6 正式版` |
+> | **版本号** | 主菜单副标题，例如 `v1.0.7 正式版` |
 > | **怎么复现** | 你点了什么、期望发生什么、实际发生了什么 |
 > | **截图** | 有的话最好 |
 > | **`~/Documents/钢铁战线/data/crash.log`** | 如果是崩溃，把这个文件内容贴上 |
@@ -84,8 +84,8 @@
 
 > | 版本 | 文件名 | 大小 | 音乐 | 用途 |
 > |---|---|---|---|---|
-> | **v1.0.6 正式版 · 公开版** | `SteelFrontline-Public-v1.0.6.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
-> | v1.0.6 正式版 · 完整版 | `钢铁战线-v1.0.6 正式版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
+> | **v1.0.7 正式版 · 公开版** | `SteelFrontline-Public-v1.0.7.dmg` | 38 MB | 无 | 发同学 / GitHub 下载 |
+> | v1.0.7 正式版 · 完整版 | `钢铁战线-v1.0.7 正式版-安装包.dmg` | 185 MB | 29 首 | 自己玩（含音乐，不公开分发） |
 
 
 一款**卡牌构筑 Roguelike**（Slay the Spire 式），二战装甲战争题材，回合制。

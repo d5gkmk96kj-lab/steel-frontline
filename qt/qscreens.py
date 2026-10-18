@@ -333,13 +333,13 @@ class MenuScreen(QWidget):
         self.btn_new = QPushButton("主 线 剧 情", left)
         self.btn_new.setObjectName("Primary")
         self.btn_new.setMinimumHeight(52)
-        self.btn_new.setFixedWidth(214)
+        self.btn_new.setFixedWidth(176)
         self.btn_new.setToolTip("三幕主线，带剧情与结局。通关后解锁无尽模式。")
         self.btn_new.clicked.connect(lambda: self._emit_new("story"))
         self.btn_endless = QPushButton("无 尽 爬 塔", left)
         self.btn_endless.setObjectName("Primary")
         self.btn_endless.setMinimumHeight(52)
-        self.btn_endless.setFixedWidth(118)
+        self.btn_endless.setFixedWidth(156)
         self.btn_endless.setToolTip("三幕循环，难度每轮递增。通关主线后解锁。")
         self.btn_endless.clicked.connect(lambda: self._emit_new("endless"))
         self.btn_endless.setEnabled(False)
@@ -347,10 +347,14 @@ class MenuScreen(QWidget):
         mode_row.addWidget(self.btn_endless)
         lv.addLayout(mode_row)
 
-        self.btn_cont = QPushButton("继 续 上 次 战 役", left)
+        # 「继续上次战役」已并入存档管理（存档槽位里能直接读档）。
+        # 这个位置改放「存档管理」，并且用 Ghost 样式（有金边 hover），
+        # 之前这里是个无 objectName 的默认按钮，看着没有边框（用户反馈）。
+        self.btn_cont = QPushButton("存 档 管 理  /  继 续 战 役", left)
+        self.btn_cont.setObjectName("Outline")
         self.btn_cont.setMinimumHeight(46)
         self.btn_cont.setFixedWidth(340)
-        self.btn_cont.clicked.connect(self.continue_run.emit)
+        self.btn_cont.clicked.connect(self.open_saves.emit)
         lv.addWidget(self.btn_cont)
 
         # 联机对战入口：放在主按钮正下方，比次级网格更显眼
@@ -393,7 +397,6 @@ class MenuScreen(QWidget):
                    ("图鉴", self.open_codex.emit, "Ghost"),
                    ("成就", self.open_achievements.emit, "Ghost"),
                    ("战绩档案", self.open_stats.emit, "Ghost"),
-                   ("存档管理", self.open_saves.emit, "Ghost"),
                    ("我的资料", self.open_profile.emit, "Ghost"),
                    ("设置", self.open_settings.emit, "Ghost"))
 
@@ -612,8 +615,11 @@ class MenuScreen(QWidget):
                 f"{T.tr('成就')} {done}/{total} · "
                 f"{T.tr('已解锁难度')} {max_asc}")
             has = run_mod.has_save()
-            self.btn_cont.setEnabled(bool(has))
-            self.btn_cont.setText("继 续 上 次 战 役" if has else "无 存 档")
+            # 这个按钮现在直接打开存档管理（可以读档继续，也能删档/导出）
+            self.btn_cont.setEnabled(True)
+            self.btn_cont.setText(
+                "存 档 管 理  /  继 续 战 役" if has
+                else "存 档 管 理")
         except Exception as exc:
             print(f"[qt.menu] meta refresh failed: {exc!r}", flush=True)
 

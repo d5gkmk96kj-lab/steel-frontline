@@ -1,20 +1,18 @@
 {
-  "version": "1.0.6",
-  "label": "1.0.6 正式版",
-  "label_en": "1.0.6",
+  "version": "1.0.7",
+  "label": "1.0.7 正式版",
+  "label_en": "1.0.7",
   "released": "2026-10-18",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：主线剧情（三幕九段，带结局）",
-    "新增：12 段小人物特写事件（反战基调，TFR 式插叙）",
-    "新增：无尽爬塔模式（通关主线后解锁，敌人每轮变强）",
-    "修改：指挥官「蒋介石」改为「孙中山」"
+    "修复：无尽爬塔按钮文字被挤掉",
+    "改进：菜单「继续上次战役」改为「存档管理」（直接打开存档槽位）",
+    "改进：菜单按钮统一金色描边"
   ],
   "notes_en": [
-    "New: main story — 3 acts, 9 scenes, with an ending",
-    "New: 12 vignettes about ordinary people (anti-war, TFR-style interludes)",
-    "New: Endless mode — unlocked after finishing the main story; enemies grow stronger each loop",
-    "Changed: commander Chiang Kai-shek -> Sun Yat-sen"
+    "Fix: the Endless button text was being clipped",
+    "Changed: menu 'Continue' is now 'Save Manager' (opens save slots directly)",
+    "Polish: unified gold borders on menu buttons"
   ]
 }
