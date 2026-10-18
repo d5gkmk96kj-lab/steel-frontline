@@ -73,7 +73,7 @@ import threading
 import time
 
 from . import session as _sess
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Tuple
 
 # --------------------------------------------------------------------------
 # 常量

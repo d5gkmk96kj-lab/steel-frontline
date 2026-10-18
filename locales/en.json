@@ -1289,7 +1289,7 @@
  "残血": "Low HP",
  "残部收编": "Absorb Remnants",
  "每 3 个回合开始时，获得 1 点补给。": "Every 3 turns, gain 1 Energy at the start of the turn.",
- "每个存档都是一个独立文件，可以**发给别人**：点「导出」存成 .json 发出去，对方点「导入存档」选中即可。\n存档目录：data/saves/": "Each save is a standalone file you can send to a friend: click Export to write a .json file, and they click Import Save to load it.\nSave folder: data/saves/",
+ "每个存档都是一个独立文件，可以**发给别人**：点「导出」存成 .json 发出去，对方点「导入存档」选中即可。\n存档目录：data/saves/": "Each save is a standalone file you can **share**: press Export to save it as .json, and the other side presses Import to load it.\nSave folder: data/saves/",
  "每个附属单位各对目标造成一次等同于其攻击力的伤害。": "Each Minion deals damage equal to its Attack to the target.",
  "每回合叠加力量": "Stacks Strength each turn",
  "每回合开始时获得等量火力。": "Gain equal Strength at the start of each turn.",
@@ -2213,7 +2213,7 @@
  "联 机 对 战  (1v1)": "ONLINE 1v1",
  "我的资料": "My Profile",
  "快速匹配": "Quick Match",
- "点下面的按钮，服务器会**自动帮你找一个对手**。\n不用交换房间号，不用知道对方 IP。": "Press the button below and the server will find an opponent for you.\nNo room codes, no IP addresses.",
+ "点下面的按钮，服务器会**自动帮你找一个对手**。\n不用交换房间号，不用知道对方 IP。": "Press the button below and the server will **find an opponent for you**.\nNo room codes, no IP addresses.",
  "服务器：": "Server: ",
  "公网联机（自动匹配）": "Online (auto-match)",
  "房间号": "Room code",
@@ -2738,5 +2738,11 @@
  "你也说不清为什么。": "You couldn't say why either.",
  "走过去": "Walk on",
  "只是路过。": "Just passing through.",
- "你没有回头。": "You didn't look back."
+ "你没有回头。": "You didn't look back.",
+ "主 线 剧 情": "STORY MODE",
+ "无 尽 爬 塔": "ENDLESS",
+ "🚩 举报对手": "🚩 Report",
+ "点下面的按钮，服务器会自动帮你找一个对手。\n不用交换房间号，不用知道对方 IP。": "Press the button below and the server will find an opponent for you.\nNo room codes, no IP addresses.",
+ "每个存档都是一个独立文件，可以发给别人：点「导出」存成 .json 发出去，对方点「导入存档」选中即可。\n存档目录：data/saves/": "Each save is a standalone file you can share: press Export to save it as .json, and the other side presses Import to load it.\nSave folder: data/saves/",
+ "存 档 管 理": "SAVE MANAGER"
 }

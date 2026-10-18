@@ -586,10 +586,14 @@ class VersusAI:
             if st["hp"] >= 140 or foe_hp >= 140:
                 return True
 
-            # 双方都堆了大量掩体能力 → 每回合自动涨甲，输出追不上
-            if self._power(me, "shellguard") >= 25 and \
-                    self._power(foe, "shellguard") >= 25:
-                return True
+            # 双方都堆了大量掩体能力 → 每回合自动涨甲，输出追不上。
+            # 注意：这里必须自己取 me/foe —— 之前直接用了未定义的变量，
+            # NameError 被外层 except 吞掉，整段僵局检测静默失效（真 bug）。
+            me, foe = self._me_foe(bs)
+            if me is not None and foe is not None:
+                if (self._power(me, "shellguard") >= 25
+                        and self._power(foe, "shellguard") >= 25):
+                    return True
 
             # 回合数拖得极长：默认 60 秒回合的 1v1 不该拖这么久
             if st.get("turn", 0) >= 80:

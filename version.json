@@ -1,16 +1,22 @@
 {
-  "version": "1.0.8",
-  "label": "1.0.8 正式版",
-  "label_en": "1.0.8",
+  "version": "1.0.9",
+  "label": "1.0.9 正式版",
+  "label_en": "1.0.9",
   "released": "2026-10-18",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：加耐力角色每打一场就叠一次血（能叠到 120+）",
-    "修复：指挥官的金币加成、商店折扣、战后回复之前根本没生效"
+    "修复：联机兑换码函数缺少类型导入（调用即报错）",
+    "修复：AI 僵局检测因变量未定义而静默失效",
+    "修复：卡面 set_card 重复定义（丢失缓存失效）",
+    "优化：服务器违规日志增加轮转（上限 2MB，防打爆磁盘）",
+    "修复：英文模式下 4 处界面文字未翻译"
   ],
   "notes_en": [
-    "Fix: HP-bonus commanders stacked HP every battle (could reach 120+)",
-    "Fix: commander gold bonus, shop discount and post-battle healing were not actually applied"
+    "Fix: netplay redeem() was missing a type import (crashed when called)",
+    "Fix: AI stalemate detection silently failed due to an undefined variable",
+    "Fix: duplicate set_card definition on card views (cache invalidation was lost)",
+    "Hardening: server abuse log now rotates at 2MB (prevents disk exhaustion)",
+    "Fix: 4 UI strings still Chinese in English mode"
   ]
 }

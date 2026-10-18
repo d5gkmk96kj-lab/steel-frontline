@@ -1561,14 +1561,10 @@ class CardView(QWidget):
             self.update()
 
     def set_card(self, card: dict) -> None:
-        self.card = dict(card or {})
-        self._refresh_tooltip()
-        self.update()
-
-    def set_card(self, card: dict) -> None:
         """更新卡牌数据（会失效渲染缓存）。"""
         self.card = dict(card or {})
         self._cp_tok = None
+        self._refresh_tooltip()
         self.update()
 
     def resizeEvent(self, ev):  # noqa: N802

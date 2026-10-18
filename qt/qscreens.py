@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import sys
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
