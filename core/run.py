@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from core import cards as C
+from core import commanders as CMD
 from core import story as STORY
 from core import enemies as E
 from core import events as EV
@@ -351,12 +352,61 @@ class RunState:
                 self.seen_events.append(ev.id)
                 info["event"] = ev
         elif kind == "shop":
-            info["shop"] = EV.build_shop_inventory(self.rng, self.act, self.ascension)
+            shop = EV.build_shop_inventory(self.rng, self.act_pool(), self.ascension)
+            # 指挥官折扣：把库存里的每个价格都按倍率缩放
+            try:
+                mult = self.price_mult()
+                if mult != 1.0 and isinstance(shop, dict):
+                    for key in ("card_prices", "relic_prices"):
+                        d = shop.get(key)
+                        if isinstance(d, dict):
+                            for k in list(d):
+                                d[k] = max(1, int(round(int(d[k]) * mult)))
+                    for key in ("potion_price", "remove_price"):
+                        v = shop.get(key)
+                        if isinstance(v, int):
+                            shop[key] = max(1, int(round(v * mult)))
+            except Exception:
+                pass
+            info["shop"] = shop
         elif kind == "treasure":
             info["treasure"] = EV.roll_treasure(self.rng, self.act)
         elif kind == "rest":
             info["rest_heal"] = self.rest_heal_amount()
         return info
+
+    # -- 指挥官（辅助角色）------------------------------------------------
+    def apply_commander(self, cid) -> None:
+        """选好指挥官后调用**一次**：结算一次性加成（耐久 / 金币）。
+
+        注意：这里只做"一次"的加成。每回合（补给/抽牌）、每次伤害
+        （伤害/掩体/燃烧）的加成在引擎里实时查询，不进这里，
+        否则会重复叠加（耐久叠到 120+ 的真 bug 就是这么来的）。
+        """
+        self.commander = str(cid or "")
+        try:
+            m = CMD.mods_of(self.commander)
+        except Exception:
+            return
+        if m.hp:
+            self.max_hp = max(10, int(self.max_hp) + int(m.hp))
+            self.hp = max(1, min(self.max_hp, int(self.hp) + int(m.hp)))
+        if m.gold:
+            self.gold = max(0, int(self.gold) + int(m.gold))
+
+    def cmd_mods(self):
+        """本局指挥官的加成（没选就是中性）。"""
+        try:
+            return CMD.mods_of(getattr(self, "commander", ""))
+        except Exception:
+            return CMD.NEUTRAL
+
+    def price_mult(self) -> float:
+        """商店价格倍率（指挥官折扣）。"""
+        try:
+            return float(self.cmd_mods().price)
+        except Exception:
+            return 1.0
 
     # -- 幕 / 模式 -------------------------------------------------------
     def act_pool(self) -> int:
@@ -537,7 +587,7 @@ class RunState:
             st["cards_played"] = st.get("cards_played", 0) + getattr(battle, "cards_played_total", 0)
             st["turns"] = st.get("turns", 0) + getattr(battle, "turn", 0)
             if battle.player is not None:
-                self.hp = max(0, int(battle.player.hp))
+                self.hp = max(0, min(int(self.max_hp), int(battle.player.hp)))
             self.add_gold(max(0, int(getattr(battle, "gold_gain", 0))))
             n = self.node_by_id(self.current_node) if self.current_node is not None else None
             if result == "won":
@@ -548,6 +598,13 @@ class RunState:
                 st["kills"] = st.get("kills", 0) + 1
         if result == "won":
             self.score += 10 + self.floor * 2
+            # 指挥官：战后回复
+            try:
+                _heal = int(self.cmd_mods().heal)
+                if _heal > 0:
+                    self.heal(_heal)
+            except Exception:
+                pass
         else:
             self.score += self.floor * 2
         # 进入下一幕

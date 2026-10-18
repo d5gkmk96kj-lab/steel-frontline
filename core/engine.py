@@ -365,12 +365,13 @@ class BattleState:
             max_hp=getattr(run, "max_hp", 70),
         )
         p.max_energy = 3
-        # 指挥官加成：耐久上限 / 指挥点上限
+        # 指挥官加成：只取**每场战斗独立**的那部分。
+        # 耐久加成**不在这里** —— 它在选角色时一次性加到 run 上
+        # （见 RunState.apply_commander）。之前放在这里，
+        # 每打一场就 +一次，配合 finish_battle 把血量写回 run，
+        # 血量会无限膨胀（用户实测叠到 120+，真 bug）。
         try:
             m = self.cmd_mods()
-            if m.hp:
-                p.max_hp = max(10, int(p.max_hp) + int(m.hp))
-                p.hp = max(1, int(p.hp) + int(m.hp))
             if m.energy_cap:
                 p.max_energy = max(1, int(p.max_energy) + int(m.energy_cap))
         except Exception:
@@ -1174,11 +1175,10 @@ def make_battle(run, encounter: dict) -> BattleState:
         scale = 1.0
     enemies = [make_enemy_combatant(i, rng, asc, act, scale) for i in ids]
     b = BattleState(run, enemies, rng, {"kind": kind, "enemies": ids})
-    # 辅助角色：从本局状态带进战斗
+    # 辅助角色：只是把 id 带进战斗，让每回合/伤害加成能查到。
+    # 耐久与金币已在开局时一次性结算，这里**不要**重建玩家。
     try:
         b.commander = str(getattr(run, "commander", "") or "")
-        if b.commander:
-            b.player = b._build_player(run)     # 重建以应用耐久/补给加成
     except Exception:
         pass
     b.start_battle()

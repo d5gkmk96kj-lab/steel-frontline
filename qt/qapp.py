@@ -995,7 +995,8 @@ class GameWindow(QMainWindow):
         try:
             self.run.new_run(seed=seed, ascension=int(ascension),
                              mode=str(mode or "story"))
-            self.run.commander = str(commander or "")
+            # 一次性结算指挥官的耐久/金币加成
+            self.run.apply_commander(str(commander or ""))
         except Exception as exc:
             print(f"[qt.app] new_run failed: {exc!r}", flush=True)
             QMessageBox.warning(self, "无法开始战役", f"引擎拒绝了这次开局：\n{exc}")

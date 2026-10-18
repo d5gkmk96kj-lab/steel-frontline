@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import cards as C  # noqa: E402
 from core import commanders as CM  # noqa: E402
 from core import engine as EN  # noqa: E402
+from core import run as R  # noqa: E402
 
 
 class _Run:
@@ -30,12 +31,16 @@ class _Run:
 
 
 def _battle(cid: str):
-    r = _Run()
-    b = EN.make_battle(r, {"kind": "normal", "enemies": ["infantry_squad"]})
-    b.commander = cid
-    b.player = b._build_player(r)
-    b.start_battle()
-    return b
+    """造一场已经选好指挥官的战斗。
+
+    一次性的加成（耐久/金币）走 ``run.apply_commander`` ——
+    它只在**开局时**结算一次，不会每场战斗重复加。
+    ``make_battle`` 内部已经调用过 ``start_battle()``，这里不再重复调。
+    """
+    r = R.RunState()
+    r.new_run(seed=7)
+    r.apply_commander(cid)
+    return EN.make_battle(r, {"kind": "normal", "enemies": ["infantry_squad"]})
 
 
 class TestRegistry(unittest.TestCase):
@@ -174,3 +179,98 @@ class TestUnlock(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+class TestNoStatStacking(unittest.TestCase):
+    """边界：一次性加成不能被反复叠加。
+
+    真 bug：耐久加成原本放在 ``_build_player`` 里，每场战斗 +一次，
+    而 ``finish_battle`` 又把含加成的血量写回 run，于是越打血越多
+    （用户实测叠到 120+）。
+    """
+
+    def _run(self, cid=""):
+        r = R.RunState()
+        r.new_run(seed=7, mode="story")
+        r.apply_commander(cid)
+        return r
+
+    def test_hp_bonus_applied_once(self):
+        for cid in ("zhukov", "churchill", "sun_yatsen", "patton"):
+            with self.subTest(cmd=cid):
+                r = self._run(cid)
+                c = CM.get(cid)
+                want = 75 + int(c.mods.hp)
+                self.assertEqual(r.max_hp, want,
+                                 "%s 耐久上限应该是 %d" % (cid, want))
+                self.assertEqual(r.hp, want)
+
+    def test_no_hp_growth_over_many_battles(self):
+        for cid in ("zhukov", "churchill", "patton", ""):
+            with self.subTest(cmd=cid):
+                r = self._run(cid)
+                start_max = int(r.max_hp)
+                for _ in range(10):
+                    b = EN.make_battle(
+                        r, {"kind": "normal", "enemies": ["infantry_squad"]})
+                    # 不低于上限，模拟每场都几乎满血
+                    self.assertLessEqual(b.player.max_hp, start_max,
+                                         "战斗里耐久上限不该超过 run 的上限")
+                    self.assertLessEqual(b.player.hp, b.player.max_hp,
+                                         "当前耐久不该超过上限")
+                    b.player.hp = b.player.max_hp
+                    r.finish_battle("won", b)
+                self.assertEqual(int(r.max_hp), start_max,
+                                 "%s 打 10 场后耐久上限不该变" % cid)
+                self.assertLessEqual(int(r.hp), int(r.max_hp),
+                                     "打完血量不该超过上限")
+
+    def test_gold_bonus_applied_once(self):
+        for cid, extra_gold in (("speer", 60), ("roosevelt", 50),
+                                ("sun_yatsen", 25)):
+            with self.subTest(cmd=cid):
+                r = self._run(cid)
+                self.assertEqual(int(r.gold), 99 + extra_gold)
+
+    def test_gold_not_regranted_on_reload(self):
+        """读档不该重新发一次开局金币。"""
+        import tempfile
+        r = self._run("speer")
+        gold = int(r.gold)
+        p = tempfile.mktemp(suffix=".json")
+        try:
+            R.save_run(r, p)
+            r2 = R.load_run(p)
+            self.assertEqual(int(r2.gold), gold,
+                             "读档后金币不该再 +60")
+        finally:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+    def test_price_discount(self):
+        r = self._run("speer")
+        self.assertAlmostEqual(r.price_mult(), 0.85, places=3)
+        r2 = self._run("")
+        self.assertAlmostEqual(r2.price_mult(), 1.0, places=3)
+
+    def test_heal_after_battle(self):
+        for cid in ("zhukov", "montgomery"):
+            with self.subTest(cmd=cid):
+                r = self._run(cid)
+                c = CM.get(cid)
+                r.hp = 40
+                b = EN.make_battle(
+                    r, {"kind": "normal", "enemies": ["infantry_squad"]})
+                b.player.hp = 40
+                r.finish_battle("won", b)
+                self.assertEqual(int(r.hp), 40 + int(c.mods.heal),
+                                 "%s 战后应该回复 %d" % (cid, c.mods.heal))
+
+    def test_heal_never_exceeds_max(self):
+        r = self._run("zhukov")
+        r.hp = int(r.max_hp) - 1
+        b = EN.make_battle(r, {"kind": "normal", "enemies": ["infantry_squad"]})
+        b.player.hp = int(r.max_hp) - 1
+        r.finish_battle("won", b)
+        self.assertLessEqual(int(r.hp), int(r.max_hp))

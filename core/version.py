@@ -10,9 +10,9 @@ from __future__ import annotations
 # --------------------------------------------------------------------------
 # 版本
 # --------------------------------------------------------------------------
-VERSION = "1.0.7"
-VERSION_LABEL = "1.0.7 正式版"
-VERSION_LABEL_EN = "1.0.7"
+VERSION = "1.0.8"
+VERSION_LABEL = "1.0.8 正式版"
+VERSION_LABEL_EN = "1.0.8"
 
 # 版本阶段：alpha / beta / rc / stable
 STAGE = "release"

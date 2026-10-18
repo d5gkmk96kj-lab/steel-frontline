@@ -1,18 +1,16 @@
 {
-  "version": "1.0.7",
-  "label": "1.0.7 正式版",
-  "label_en": "1.0.7",
+  "version": "1.0.8",
+  "label": "1.0.8 正式版",
+  "label_en": "1.0.8",
   "released": "2026-10-18",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：无尽爬塔按钮文字被挤掉",
-    "改进：菜单「继续上次战役」改为「存档管理」（直接打开存档槽位）",
-    "改进：菜单按钮统一金色描边"
+    "修复：加耐力角色每打一场就叠一次血（能叠到 120+）",
+    "修复：指挥官的金币加成、商店折扣、战后回复之前根本没生效"
   ],
   "notes_en": [
-    "Fix: the Endless button text was being clipped",
-    "Changed: menu 'Continue' is now 'Save Manager' (opens save slots directly)",
-    "Polish: unified gold borders on menu buttons"
+    "Fix: HP-bonus commanders stacked HP every battle (could reach 120+)",
+    "Fix: commander gold bonus, shop discount and post-battle healing were not actually applied"
   ]
 }
