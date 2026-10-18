@@ -45,8 +45,8 @@ from PyQt6.QtGui import (
     QBrush, QColor, QLinearGradient, QPainter, QPen, QRadialGradient,
 )
 from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea,
-    QSizePolicy, QVBoxLayout, QWidget,
+    QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from . import qchat  # noqa: E402
@@ -969,20 +969,34 @@ class VersusScreen(QWidget):
         bl.addWidget(self.hand, 1)
 
         right = QWidget(self.bottom)
+        # 右侧栏改成「主按钮独占一行 + 其余两列网格」：
+        # 之前 6 个按钮挤在一列、间距 6px，小的像作弊/举报按钮
+        # 很难点中（用户反馈）。
+        right.setMinimumWidth(240)
+        right.setMaximumWidth(260)
         rv = QVBoxLayout(right)
-        rv.setContentsMargins(0, 18, 0, 0)
-        rv.setSpacing(6)
+        rv.setContentsMargins(10, 14, 10, 10)
+        rv.setSpacing(10)
+
         self.btn_end = QPushButton("结 束 回 合", right)
         self.btn_end.setObjectName("Primary")
-        self.btn_end.setFixedWidth(152)
-        self.btn_end.setMinimumHeight(46)
+        self.btn_end.setMinimumHeight(50)
         self.btn_end.clicked.connect(self.end_turn)
         rv.addWidget(self.btn_end)
+
+        # 次要按钮：两列
+        grid_w = QWidget(right)
+        self._right_grid = QGridLayout(grid_w)
+        self._right_grid.setContentsMargins(0, 0, 0, 0)
+        self._right_grid.setHorizontalSpacing(8)
+        self._right_grid.setVerticalSpacing(8)
+        rv.addWidget(grid_w)
+
         self.btn_leave = QPushButton("离 开 对 战", right)
         self.btn_leave.setObjectName("Ghost")
-        self.btn_leave.setFixedWidth(152)
+        self.btn_leave.setMinimumHeight(38)
         self.btn_leave.clicked.connect(lambda: self._leave("left"))
-        rv.addWidget(self.btn_leave)
+        self._right_grid.addWidget(self.btn_leave, 0, 0)
 
         # 聊天面板：**放进右侧栏布局**，跟着按钮列一起排。
         # 之前 parent=self 又没 addWidget，结果是个悬在右上角
@@ -999,20 +1013,20 @@ class VersusScreen(QWidget):
         # 人机对局没有对手可聊，显示出来只会让人困惑（用户反馈）。
         self.btn_chat = QPushButton("💬 聊天", right)
         self.btn_chat.setObjectName("Ghost")
-        self.btn_chat.setFixedWidth(96)
+        self.btn_chat.setMinimumHeight(38)
         self.btn_chat.clicked.connect(self._toggle_chat)
         self.btn_chat.hide()
-        rv.addWidget(self.btn_chat)
+        self._right_grid.addWidget(self.btn_chat, 0, 1)
 
-        self.btn_report = QPushButton("举 报 对 手", right)
+        self.btn_report = QPushButton("🚩 举报对手", right)
         self.btn_report.setObjectName("Ghost")
-        self.btn_report.setFixedWidth(126)
+        self.btn_report.setMinimumHeight(38)
         self.btn_report.setToolTip(
             "遇到疑似改代码 / 作弊的对手，点这里举报。\n"
             "举报后会对他启用更严格的检测。")
         self.btn_report.clicked.connect(self._do_report)
         self.btn_report.hide()          # 默认不显示，开了真人局才显示
-        rv.addWidget(self.btn_report)
+        self._right_grid.addWidget(self.btn_report, 1, 0)
 
         # 聊天面板放在按钮下面，占满剩余高度（右侧栏里的一块）
         if getattr(self, "chat", None) is not None:
@@ -1025,17 +1039,17 @@ class VersusScreen(QWidget):
         cb.setSpacing(4)
         self.btn_cheat = QPushButton("房主作弊：关", self.cheat_box)
         self.btn_cheat.setObjectName("Ghost")
-        self.btn_cheat.setFixedWidth(152)
+        self.btn_cheat.setMinimumHeight(34)
         self.btn_cheat.setCheckable(True)
         self.btn_cheat.clicked.connect(self._toggle_host_cheats)
         cb.addWidget(self.btn_cheat)
         self.cheat_input = QLineEdit(self.cheat_box)
-        self.cheat_input.setFixedWidth(152)
+        self.cheat_input.setMinimumHeight(30)
         self.cheat_input.setPlaceholderText(T.tr("作弊码，回车"))
         self.cheat_input.returnPressed.connect(self._submit_cheat)
         cb.addWidget(self.cheat_input)
         self.cheat_msg = QLabel("", self.cheat_box)
-        self.cheat_msg.setFixedWidth(152)
+
         self.cheat_msg.setWordWrap(True)
         self.cheat_msg.setStyleSheet(
             f"color:{T.TEXT_MUTED}; font-size:{T.FONT_TINY}px; background:transparent;")
@@ -1045,7 +1059,7 @@ class VersusScreen(QWidget):
 
         self.hint = QLabel("点手牌出牌", right)
         self.hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.hint.setFixedWidth(152)
+
         self.hint.setWordWrap(True)
         self.hint.setStyleSheet(
             f"color:{T.TEXT_MUTED}; font-size:{T.FONT_TINY}px; background:transparent;")

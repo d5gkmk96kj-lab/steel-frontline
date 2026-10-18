@@ -1,18 +1,16 @@
 {
-  "version": "1.0.4",
-  "label": "1.0.4 正式版",
-  "label_en": "1.0.4",
-  "released": "2026-10-17",
+  "version": "1.0.5",
+  "label": "1.0.5 正式版",
+  "label_en": "1.0.5",
+  "released": "2026-10-18",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：公网/匹配模式显示局域网教程（「怎么玩」面板现在按模式切换）",
-    "修复：对局界面永远卡在「准备中…」—— 对方不交卡组时没有任何提示",
-    "服务器：心跳超时 30→60 秒，减少误判断线"
+    "修复：公网建房没人也能进对局（连上服务器被误判成有对手）",
+    "修复：对局右侧按钮太挤（改成两列网格 + 加大间距）"
   ],
   "notes_en": [
-    "Fix: online/quick-match modes showed the LAN tutorial (\"How to play\" now switches by mode)",
-    "Fix: versus screen stuck on \"Preparing...\" forever when the opponent never sends a deck",
-    "Server: heartbeat timeout raised 30s -> 60s to reduce false disconnects"
+    "Fix: creating an online room sent you into a match with nobody (connecting to the server was mistaken for an opponent)",
+    "Fix: versus right-side buttons were too cramped (now a 2-column grid with more spacing)"
   ]
 }

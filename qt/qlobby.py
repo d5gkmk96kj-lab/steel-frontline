@@ -699,6 +699,7 @@ class LobbyScreen(QWidget):
         if mode != self._mode:
             self.stop_all()
         self._mode = mode
+        self._via_relay = mode in ("net_host", "net_join", "match")
         self.btn_host.setChecked(mode == "host")
         self.btn_join.setChecked(mode == "join")
         self.btn_net_host.setChecked(mode == "net_host")
@@ -1182,7 +1183,18 @@ class LobbyScreen(QWidget):
                                               int(ev.get("port", self._port))),
                          T.Q_GOLD)
         elif t == "connected":
-            # 连上后**必须立刻进入卡组构筑**，否则死锁：
+            # ⚠ 关键区分：
+            #   * 局域网：connected = 真的有人连进来了 -> 可以进构筑
+            #   * 公网：  connected = **我们自己连上了服务器**，
+            #             此时**还没有对手**！必须继续等 peer 事件。
+            # 之前没区分，导致公网建房一个人也能进对局（真 bug）。
+            _is_relay = (self._mode in ("net_host", "net_join", "match")
+                         or getattr(self, "_via_relay", False))
+            if _is_relay:
+                self.radar.set_live(True)
+                self._status("已连上服务器，正在等对手…", T.Q_GOLD)
+                return
+            # 局域网：连上后**必须立刻进入卡组构筑**，否则死锁：
             # connected.emit 原本只在收到 start 时才发，而 start 需要
             # 双方都 send_deck —— 可玩家根本没机会去编卡组，于是画面
             # 永远停在「正在交换卡组…」，看着就是卡死（用户实际遇到）。
@@ -1203,8 +1215,22 @@ class LobbyScreen(QWidget):
                 QTimer.singleShot(350,
                                   lambda n=net, sd=side: self.connected.emit(sd, n))
         elif t == "peer":
+            _is_relay = (self._mode in ("net_host", "net_join", "match")
+                         or getattr(self, "_via_relay", False))
             self._status("对方「%s」已进入房间，等待确认卡组…"
                          % ev.get("name", "同学"), T.Q_GREEN)
+            if _is_relay:
+                # 公网：**这才是真正有对手了**，可以进卡组构筑
+                host_obj = self.host or getattr(self, "host_net", None)
+                client_obj = self.client or getattr(self, "client_net", None)
+                is_host = host_obj is not None
+                net = host_obj if is_host else client_obj
+                if net is not None:
+                    side = 0 if is_host else 1
+                    self.my_side = side
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(
+                        350, lambda n=net, sd=side: self.connected.emit(sd, n))
         elif t == "ready":
             self._status("我的卡组已就绪，等对方…", T.Q_GOLD)
         elif t == "peer_ready":
