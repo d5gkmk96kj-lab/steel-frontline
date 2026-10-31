@@ -952,6 +952,17 @@ class GameWindow(QMainWindow):
                 self.show_screen("map")
             return
         if nxt == "after_boss_done":
+            # 要塞后的收尾剧情播完 -> 再播本幕「间章」，然后才推进
+            try:
+                if getattr(self.run, "mode", "story") != "endless":
+                    ep = self.run.take_story("end")
+                    if ep and self.play_story(ep, "after_act_end"):
+                        return
+            except Exception:
+                pass
+            self._do_advance()
+            return
+        if nxt == "after_act_end":
             self._do_advance()
             return
         if nxt == "act_start_done":
@@ -1095,13 +1106,17 @@ class GameWindow(QMainWindow):
                         return
             self.start_battle(enc)
         elif kind == "event":
-            # 事件节点有几率播一段「小人物特写」（TFR 式插叙）
+            # 事件节点优先播剧情：主线中段 > 小人物特写。
+            # 主线模式每幕有 3 段中段剧情，播完才轮到特写。
             try:
-                if (self.run.rng.random() < 0.45):
+                if getattr(self.run, "mode", "story") != "endless":
+                    mid = self.run.take_story("mid")
+                    if mid and self.play_story(mid, "map"):
+                        return
+                if self.run.rng.random() < 0.55:
                     vg = self.run.take_vignette()
-                    if vg:
-                        if self.play_story(vg, "map"):
-                            return
+                    if vg and self.play_story(vg, "map"):
+                        return
             except Exception:
                 pass
             ev = info.get("event")

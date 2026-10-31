@@ -431,9 +431,25 @@ class RunState:
 
     # -- 剧情 -------------------------------------------------------------
     def take_story(self, trigger: str) -> Optional[dict]:
-        """取一条该触发点的剧情（没看过才给）。返回给 UI 的 dict。"""
+        """取一条该触发点的剧情（没看过才给）。返回给 UI 的 dict。
+
+        支持三种 trigger：
+
+        * ``"run_start"`` / ``"before_boss"`` 等通用触发点
+        * ``"act_start"`` —— 幕专属（内部会查 ``act_start@2`` 这种键）
+        * ``"mid"``   —— 幕中段：查 ``act{N}_mid`` 那一组，幕内随机推进
+        """
         try:
-            b = STORY.next_beat(trigger, int(self.act), self.story_seen)
+            act = int(self.act)
+            if trigger == "mid":
+                # 中段剧情：主线模式下，每幕 3 段，按幕进度依次给
+                key = "act%d_mid" % act
+                b = STORY.next_beat_from_key(key, self.story_seen)
+            elif trigger == "end":
+                key = "act%d_end" % act
+                b = STORY.next_beat_from_key(key, self.story_seen)
+            else:
+                b = STORY.next_beat(trigger, act, self.story_seen)
         except Exception:
             return None
         if b is None:

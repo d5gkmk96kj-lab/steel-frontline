@@ -59,14 +59,23 @@ class RelayCase(unittest.TestCase):
         else:
             self.proc.terminate()
             self.skipTest("中继服务端没起来")
-        self._old = None
+        # 保存原始中继配置，tearDown 要**完整还原**（真踩过：
+        # 只清空 RELAY_HOSTS 不还原，后面的用例全连不上）
+        from core import relay_client as _rc
+        self._saved = {
+            "host": _rc.DEFAULT_RELAY_HOST,
+            "port": _rc.DEFAULT_RELAY_PORT,
+            "hosts": list(_rc.RELAY_HOSTS),
+        }
 
     def tearDown(self):
-        # 还原被改过的中继配置（否则会污染后面的测试）
+        # 完整还原中继配置（不能只清空，否则后续用例全连不上）
         try:
             from core import relay_client as RC
-            RC.DEFAULT_RELAY_HOST = ""
-            RC.RELAY_HOSTS[:] = []
+            saved = getattr(self, "_saved", None) or {}
+            RC.DEFAULT_RELAY_HOST = saved.get("host", "")
+            RC.DEFAULT_RELAY_PORT = saved.get("port", 9000)
+            RC.RELAY_HOSTS[:] = list(saved.get("hosts", []))
         except Exception:
             pass
         try:
@@ -79,10 +88,12 @@ class RelayCase(unittest.TestCase):
                 pass
 
     def _rc(self):
+        """把中继配置指向本用例起的本地服务器。"""
         from core import relay_client as RC
-        self._old = (RC.DEFAULT_RELAY_HOST, RC.DEFAULT_RELAY_PORT)
         RC.DEFAULT_RELAY_HOST = "127.0.0.1"
         RC.DEFAULT_RELAY_PORT = self.port
+        # connect_any() 读的是 RELAY_HOSTS，这里也要指过去
+        RC.RELAY_HOSTS[:] = [("127.0.0.1", self.port)]
         return RC
 
 

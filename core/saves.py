@@ -46,8 +46,13 @@ SAVE_EXT = ".json"
 SLOT_DIR_NAME = "saves"
 
 
-def slots_dir() -> str:
-    """存档目录。跟随 core.run.DATA_DIR（打包后由入口脚本改写）。"""
+def slots_dir(base: Optional[str] = None) -> str:
+    """存档目录。跟随 core.run.DATA_DIR（打包后由入口脚本改写）。
+
+    ``base`` 可用于指定别的游戏数据目录（管理后台要读任意目录的存档）。
+    """
+    if base:
+        return os.path.join(base, SLOT_DIR_NAME)
     try:
         base = getattr(_run, "DATA_DIR", None) or _run.DATA_DIR
     except Exception:
@@ -201,9 +206,12 @@ def _write(path: str, run, name: str, mtime: Optional[float] = None) -> bool:
 # --------------------------------------------------------------------------
 # 对外接口
 # --------------------------------------------------------------------------
-def slots() -> List[SlotInfo]:
-    """全部存档，按修改时间倒序。目录不存在时返回空列表。"""
-    d = slots_dir()
+def slots(base: Optional[str] = None) -> List[SlotInfo]:
+    """全部存档，按修改时间倒序。目录不存在时返回空列表。
+
+    ``base`` 见 :func:`slots_dir`。
+    """
+    d = slots_dir(base)
     out: List[SlotInfo] = []
     try:
         for fn in os.listdir(d):

@@ -19,12 +19,12 @@ from core import story as S  # noqa: E402
 class TestStoryData(unittest.TestCase):
 
     def test_has_main_beats(self):
-        self.assertGreaterEqual(S.total_beats(), 8,
-                                "主线至少要有 8 段剧情")
+        self.assertGreaterEqual(S.total_beats(), 18,
+                                "主线至少要有 18 段剧情")
 
     def test_has_vignettes(self):
-        self.assertGreaterEqual(len(S.VIGNETTES), 10,
-                                "小人物特写至少 10 段")
+        self.assertGreaterEqual(len(S.VIGNETTES), 18,
+                                "小人物特写至少 18 段")
 
     def test_all_beats_have_content(self):
         for beats in S.MAIN_STORY.values():
@@ -222,3 +222,47 @@ class TestMetaStory(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+class TestStoryDepth(unittest.TestCase):
+    """剧情量：每一幕都要有中段、间章，数量要够。"""
+
+    def test_every_act_has_mid_beats(self):
+        for act in (1, 2, 3):
+            got = S.MAIN_STORY.get("act%d_mid" % act) or []
+            self.assertGreaterEqual(len(got), 2,
+                                    "第 %d 幕至少要有 2 段中段剧情" % act)
+
+    def test_every_act_has_end_beat(self):
+        for act in (1, 2, 3):
+            got = S.MAIN_STORY.get("act%d_end" % act) or []
+            self.assertGreaterEqual(len(got), 1,
+                                    "第 %d 幕至少要有一段间章" % act)
+
+    def test_mid_beats_progress(self):
+        r = R.RunState(); r.new_run(seed=1)
+        titles = []
+        for _ in range(10):
+            b = r.take_story("mid")
+            if not b: break
+            titles.append(b["title"])
+        self.assertGreaterEqual(len(titles), 2, "第一幕中段剧情太少")
+        self.assertEqual(len(titles), len(set(titles)), "中段剧情有重复")
+
+    def test_end_beat_progress(self):
+        r = R.RunState(); r.new_run(seed=1)
+        b = r.take_story("end")
+        self.assertIsNotNone(b, "第一幕应该有时间章")
+        self.assertIsNone(r.take_story("end"), "间章只播一次")
+
+    def test_vignette_count_per_act(self):
+        for act in (1, 2, 3):
+            n = len([v for v in S.VIGNETTES if v.act == act])
+            self.assertGreaterEqual(n, 4,
+                                    "第 %d 幕的特写太少（%d 段）" % (act, n))
+
+    def test_no_duplicate_beat_ids(self):
+        ids = []
+        for beats in S.MAIN_STORY.values():
+            ids += [b.id for b in beats]
+        ids += [v.id for v in S.VIGNETTES]
+        self.assertEqual(len(ids), len(set(ids)), "剧情 id 有重复")

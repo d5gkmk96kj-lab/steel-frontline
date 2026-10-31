@@ -1,22 +1,20 @@
 {
-  "version": "1.0.9",
-  "label": "1.0.9 正式版",
-  "label_en": "1.0.9",
-  "released": "2026-10-18",
+  "version": "1.0.11",
+  "label": "1.0.11 正式版",
+  "label_en": "1.0.11",
+  "released": "2026-10-31",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：联机兑换码函数缺少类型导入（调用即报错）",
-    "修复：AI 僵局检测因变量未定义而静默失效",
-    "修复：卡面 set_card 重复定义（丢失缓存失效）",
-    "优化：服务器违规日志增加轮转（上限 2MB，防打爆磁盘）",
-    "修复：英文模式下 4 处界面文字未翻译"
+    "修复：中继服务器容量占满时会拒绝所有新玩家（改踢空闲连接）",
+    "修复：管理后台读存档不认自己的数据目录",
+    "改进：单 IP 每分钟建房上限 5 -> 20（避免同一 WiFi 被误伤）",
+    "修复：联机测试之间配置互相污染导致偶发失败"
   ],
   "notes_en": [
-    "Fix: netplay redeem() was missing a type import (crashed when called)",
-    "Fix: AI stalemate detection silently failed due to an undefined variable",
-    "Fix: duplicate set_card definition on card views (cache invalidation was lost)",
-    "Hardening: server abuse log now rotates at 2MB (prevents disk exhaustion)",
-    "Fix: 4 UI strings still Chinese in English mode"
+    "Fix: relay server refused all new players when at connection capacity (now evicts idle connections)",
+    "Fix: admin tool read saves from the global dir instead of its own root",
+    "Improved: per-IP room-creation limit 5 -> 20 per minute (avoid punishing shared WiFi)",
+    "Fix: test config pollution causing intermittent relay test failures"
   ]
 }
