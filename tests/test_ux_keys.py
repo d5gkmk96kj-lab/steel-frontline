@@ -29,6 +29,29 @@ def _pump(ms=120):
     loop.exec()
 
 
+def _wait_for(widget, cls_name, timeout_ms=4000):
+    """等界面真的切过去。
+
+    界面切换有淡入动画，动画没走完之前 ``setCurrentWidget`` 还没发生 ——
+    在慢一点的机器（比如 Windows CI）上，固定等 300ms 是不够的。
+    这里轮询等到位，最多等 ``timeout_ms``。
+    """
+    step = 50
+    waited = 0
+    while waited < timeout_ms:
+        try:
+            if widget.stack.currentWidget().__class__.__name__ == cls_name:
+                return True
+        except Exception:
+            pass
+        _pump(step)
+        waited += step
+    try:
+        return widget.stack.currentWidget().__class__.__name__ == cls_name
+    except Exception:
+        return False
+
+
 @unittest.skipUnless(HAS_QT, "需要 PyQt6")
 class TestKeyboard(unittest.TestCase):
 
@@ -65,9 +88,9 @@ class TestKeyboard(unittest.TestCase):
     def test_esc_returns_from_readonly_screen(self):
         w = self._win()
         try:
-            w.show_screen("codex"); _pump(300)
-            self.assertEqual(w.stack.currentWidget().__class__.__name__,
-                             "CodexScreen")
+            w.show_screen("codex")
+            self.assertTrue(_wait_for(w, "CodexScreen"),
+                            "界面没切到图鉴")
             self._press(w, Qt.Key.Key_Escape)
             self.assertNotEqual(w.stack.currentWidget().__class__.__name__,
                                 "CodexScreen", "Esc 没返回")
@@ -79,8 +102,8 @@ class TestKeyboard(unittest.TestCase):
         try:
             m = w.screens["menu"]
             self._press(m, Qt.Key.Key_3)
-            self.assertEqual(w.stack.currentWidget().__class__.__name__,
-                             "SaveScreen", "主菜单按 3 没进存档管理")
+            self.assertTrue(_wait_for(w, "SaveScreen"),
+                            "主菜单按 3 没进存档管理")
         finally:
             w.close()
 
@@ -101,7 +124,8 @@ class TestKeyboard(unittest.TestCase):
                 btns[0].click(); _pump(350)
             w.start_battle(
                 {"kind": "normal", "enemies": ["infantry_squad"], "name": "t"})
-            _pump(500)
+            _wait_for(w, "BattleScreen")
+            _pump(300)
             bs = w.screens["battle"]
             self.assertIsNotNone(bs.battle)
             turn0 = bs.battle.turn
@@ -135,7 +159,8 @@ class TestKeyboard(unittest.TestCase):
                 btns[0].click(); _pump(350)
             w.start_battle(
                 {"kind": "normal", "enemies": ["infantry_squad"], "name": "t"})
-            _pump(500)
+            _wait_for(w, "BattleScreen")
+            _pump(300)
             bs = w.screens["battle"]
             bs.hide_tips()
             hand0 = len((bs._snap or {}).get("hand") or [])
@@ -173,6 +198,7 @@ class TestFirstBattleTips(unittest.TestCase):
                 btns[0].click(); _pump(350)
             w.start_battle(
                 {"kind": "normal", "enemies": ["infantry_squad"], "name": "t"})
+            _wait_for(w, "BattleScreen")
             _pump(700)
             bs = w.screens["battle"]
             self.assertTrue(bs.tips.isVisible(), "第一次进战斗没弹提示")

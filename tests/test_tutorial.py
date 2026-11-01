@@ -30,6 +30,21 @@ def _pump(ms=150):
     loop.exec()
 
 
+def _wait_for(widget, cls_name, timeout_ms=4000):
+    """等界面真的切过去（淡入动画在慢机器上要走更久）。"""
+    step = 50
+    waited = 0
+    while waited < timeout_ms:
+        try:
+            if widget.stack.currentWidget().__class__.__name__ == cls_name:
+                return True
+        except Exception:
+            pass
+        _pump(step)
+        waited += step
+    return False
+
+
 class TestTutorialCoach(unittest.TestCase):
     """教程推进器（纯逻辑）。"""
 
@@ -107,7 +122,10 @@ class TestGameOverAnimation(unittest.TestCase):
                 return orig(ev)
 
             go.paintEvent = counting
-            w.show_screen("gameover"); _pump(500)
+            w.show_screen("gameover")
+            self.assertTrue(_wait_for(w, "GameOverScreen"),
+                            "界面没切到结算")
+            _pump(400)
             self.assertTrue(go._t.isActive(), "结算界面的计时器没起来")
             p0, n0 = go._phase, paints["n"]
             _pump(900)
@@ -123,7 +141,9 @@ class TestGameOverAnimation(unittest.TestCase):
         w = MainWindow(); w.resize(1100, 760); w.show(); _pump(300)
         try:
             go = w.screens["gameover"]
-            w.show_screen("gameover"); _pump(400)
+            w.show_screen("gameover")
+            self.assertTrue(_wait_for(w, "GameOverScreen"))
+            _pump(300)
             self.assertTrue(go._t.isActive())
             w.show_screen("menu"); _pump(400)
             self.assertFalse(go._t.isActive(), "切走后应该停掉计时器")
@@ -143,9 +163,10 @@ class TestTutorialUI(unittest.TestCase):
         from qt.qapp import MainWindow
         w = MainWindow(); w.resize(1280, 820); w.show(); _pump(300)
         try:
-            w.start_tutorial(); _pump(700)
-            self.assertEqual(w.stack.currentWidget().__class__.__name__,
-                             "BattleScreen")
+            w.start_tutorial()
+            self.assertTrue(_wait_for(w, "BattleScreen"),
+                            "教程没进到战斗界面")
+            _pump(400)
             bs = w.screens["battle"]
             self.assertIsNotNone(bs._coach, "教程推进器没挂上")
             self.assertTrue(bs.coach_bar.isVisible(), "提示带没显示")

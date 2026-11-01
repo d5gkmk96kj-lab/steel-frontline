@@ -1,16 +1,18 @@
 {
-  "version": "1.0.13",
-  "label": "1.0.13 正式版",
-  "label_en": "1.0.13",
+  "version": "1.0.14",
+  "label": "1.0.14 正式版",
+  "label_en": "1.0.14",
   "released": "2026-11-01",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：结算界面背景的旋转光芒卡住不动（老 bug：只刷了标签没刷背景）",
-    "新增：新手教程（5 步带打带教，用真界面不是幻灯片）"
+    "修复：结算界面旋转光芒卡死（老 bug）",
+    "新增：新手教程（5 步带打带教）",
+    "修复：Windows 上部分测试因动画时序偶发失败"
   ],
   "notes_en": [
-    "Fix: the rotating sun rays on the game-over screen froze (old bug: only the label was repainted, not the background)",
-    "New: 5-step beginner tutorial that teaches inside a real battle, not a slideshow"
+    "Fix: the rotating sun rays on the game-over screen froze (old bug)",
+    "New: 5-step beginner tutorial taught inside a real battle",
+    "Fix: a few tests were flaky on Windows due to animation timing"
   ]
 }
