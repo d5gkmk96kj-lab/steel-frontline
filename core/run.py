@@ -306,7 +306,8 @@ class RunState:
             "elites_killed": 0, "bosses_killed": 0, "damage_dealt": 0,
             "poison_applied": 0, "minions_summoned": 0, "cards_exhausted": 0,
             "cards_played": 0, "turns": 0, "floors": 0, "kills": 0,
-        }
+            "perfect_acts": 0,
+          }
         self.map_nodes = MapGenerator(self.rng, self.act).generate()
 
     # -- 地图 -------------------------------------------------------------
@@ -770,6 +771,11 @@ class RunState:
         r.seen_events = list(d.get("seen_events", []))
         r.remove_count = int(d.get("remove_count", 0))
         r.daily = bool(d.get("daily", False))
+        # 解锁集合不在存档里（归 meta 管），但必须显式初始化成空集合：
+        # 缺这个字段时 card_unlocked() 会退化成「全部放行」，
+        # 于是读档继续战役的玩家能抽到未解锁的卡（真 bug）。
+        r.unlocked_cards = set()
+        r.unlocked_relics = set()
         nodes = []
         for nd in d.get("map_nodes", []):
             nodes.append(MapNode(id=int(nd["id"]), row=int(nd["row"]),
@@ -962,6 +968,8 @@ class MetaProgress:
             self._ach(newly, "summoner")
         if st.get("cards_exhausted", 0) >= 20:
             self._ach(newly, "exhaust_all")
+        if st.get("perfect_acts", 0) >= 1:
+            self._ach(newly, "perfect_act")
         if len([c for c in run.deck if c.type == "curse"]) >= 5:
             self._ach(newly, "curse_bearer")
         if run.daily:
@@ -1045,6 +1053,20 @@ class MetaProgress:
         if self.unlock(key):
             acc.append(key)
 
+        self._check_true_ending(acc)
+
+    def _check_true_ending(self, acc: List[str]) -> None:
+        """除 true_ending 外全解锁 -> 解锁「钢铁终焉」。"""
+        try:
+            if self.achievements.get("true_ending"):
+                return
+            others = [k for k in ACHIEVEMENTS if k != "true_ending"]
+            if all(self.achievements.get(k) for k in others):
+                self.achievements["true_ending"] = True
+                if "true_ending" not in acc:
+                    acc.append("true_ending")
+        except Exception:
+            pass
     def progress_pct(self) -> float:
         total = len(ACHIEVEMENTS)
         got = sum(1 for k in ACHIEVEMENTS if self.achievements.get(k))

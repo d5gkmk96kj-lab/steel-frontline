@@ -262,6 +262,9 @@ class MenuScreen(QWidget):
     """主菜单：钢铁战线标题 + 战役入口 + 图鉴/成就/设置。"""
 
     new_run = pyqtSignal(int, object, str)  # ascension, seed(None=随机), mode
+    #: 每日挑战专用：ascension, seed。必须走单独信号，
+    #: 否则主窗口不知道这一局要记入每日成绩（之前就是漏了这一步）。
+    new_daily = pyqtSignal(int, object)
     continue_run = pyqtSignal()
     open_codex = pyqtSignal()
     open_achievements = pyqtSignal()
@@ -753,9 +756,10 @@ class MenuScreen(QWidget):
     def _emit_daily(self) -> None:
         try:
             from core import run as run_mod
-            self.new_run.emit(int(self.spin_asc.value()), int(run_mod.daily_seed()))
+            self.new_daily.emit(int(self.spin_asc.value()),
+                                int(run_mod.daily_seed()))
         except Exception:
-            self.new_run.emit(0, None)
+            self.new_daily.emit(0, None)
 
 
 # =====================================================================

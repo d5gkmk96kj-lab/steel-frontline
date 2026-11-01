@@ -648,6 +648,7 @@ class GameWindow(QMainWindow):
     def _wire(self) -> None:
         m = self.screens["menu"]
         m.new_run.connect(self.start_new_run)
+        m.new_daily.connect(self.start_daily_run)
         m.continue_run.connect(self.continue_run)
         m.open_codex.connect(lambda: self.show_screen("codex"))
         m.open_achievements.connect(lambda: self.show_screen("achievements"))
@@ -1091,11 +1092,19 @@ class GameWindow(QMainWindow):
     #: 剧情播完后的去向（"map" / "boss" / "ending"）
     _story_next = None
 
+    def start_daily_run(self, ascension: int = 0, seed=None) -> None:
+        """开始每日挑战：种子固定 + 记为 daily（结算时记入每日成绩）。"""
+        self._pending_daily = True
+        self.start_new_run(ascension, seed, "story")
+
     def start_new_run(self, ascension: int = 0, seed=None,
                       mode: str = "story") -> None:
         """先让玩家选辅助角色，再真正开局。"""
+        self._next_is_daily = False
         self._pending_run = {"ascension": int(ascension), "seed": seed,
-                             "mode": str(mode or "story")}
+                             "mode": str(mode or "story"),
+                             "daily": bool(getattr(self, "_pending_daily", False))}
+        self._pending_daily = False
         try:
             runs = int(getattr(getattr(self, "meta", None), "runs", 0) or 0)
         except Exception:
@@ -1181,7 +1190,8 @@ class GameWindow(QMainWindow):
         p = self._pending_run or {}
         self._pending_run = None
         self._start_run_now(p.get("ascension", 0), p.get("seed"),
-                            str(cid or ""), p.get("mode", "story"))
+                            str(cid or ""), p.get("mode", "story"),
+                            daily=bool(p.get("daily", False)))
 
     def start_run_direct(self, ascension: int = 0, seed=None,
                          commander: str = "", mode: str = "story") -> None:
@@ -1203,11 +1213,15 @@ class GameWindow(QMainWindow):
             print(f"[qt.app] sync unlocks failed: {exc!r}", flush=True)
 
     def _start_run_now(self, ascension: int = 0, seed=None,
-                       commander: str = "", mode: str = "story") -> None:
+                       commander: str = "", mode: str = "story",
+                       daily: bool = False) -> None:
         self._slot_id = None          # 新开局：下次保存时建新槽位
         self.run = run_mod.RunState()
         try:
+            _daily = bool(daily or getattr(self, "_next_is_daily", False))
+            self._next_is_daily = False
             self.run.new_run(seed=seed, ascension=int(ascension),
+                             daily=_daily,
                              mode=str(mode or "story"))
             # 一次性结算指挥官的耐久/金币加成
             self.run.apply_commander(str(commander or ""))
@@ -1476,6 +1490,13 @@ class GameWindow(QMainWindow):
                 self.show_screen("menu")
                 return
         won = (result == "won")
+        # 战斗类成就（过量击杀 / 铜墙铁壁 / 绝地反击 / 毫发无伤 /
+        # 和平主义者 / 力拔山兮）—— 之前这 6 个永远拿不到
+        try:
+            for key in (self.battle.battle_achievements(won) or []):
+                self.meta.unlock(key)
+        except Exception as exc:
+            print(f"[qt.app] battle achievements failed: {exc!r}", flush=True)
         gold_before = self.run.gold
         try:
             self.run.finish_battle(result, self.battle)
@@ -1530,6 +1551,7 @@ class GameWindow(QMainWindow):
     def _advance_act(self) -> None:
         """BOSS 打完之后：播剧情 -> 推进 -> 播下一幕开场。"""
         self.battle = None
+        self._note_perfect_act()
         cur_act = int(getattr(self.run, "act", 1))
         is_story = (getattr(self.run, "mode", "story") != "endless")
 
@@ -1546,6 +1568,17 @@ class GameWindow(QMainWindow):
                     self._pending_advance = (not ending)
                     return
         self._do_advance()
+
+    def _note_perfect_act(self) -> None:
+        """以满血通过一幕 -> stats 记一笔（成就在结算时解锁）。"""
+        try:
+            if self.run is None:
+                return
+            if int(self.run.hp) >= int(self.run.max_hp):
+                self.run.stats["perfect_acts"] = int(
+                    self.run.stats.get("perfect_acts", 0)) + 1
+        except Exception:
+            pass
 
     def _do_advance(self) -> None:
         """真正推进幕数，然后播新一幕的开场剧情。"""

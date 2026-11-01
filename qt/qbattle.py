@@ -1445,6 +1445,8 @@ class BattleScreen(QWidget):
             self._timer.stop()
             self._busy = False
             self.hide_tips()
+            # 战斗结束时也把悬停大图收掉，否则会一直浮在结算横幅上面
+            self._hide_card_preview()
             self._sfx("victory" if res == "won" else "defeat")
             self._coach_notify("battle_end")
             self.banner.setText("战 斗 胜 利" if res == "won" else "总 部 陷 落")

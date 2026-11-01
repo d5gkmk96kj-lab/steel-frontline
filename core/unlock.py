@@ -31,6 +31,8 @@ from core import cards as C
 from core import relics as R
 
 
+#: 全新存档一开始就送几张 uncommon（否则前几局奖励清一色普通卡，太单调）
+STARTER_UNCOMMON = 14
 #: 每局结束（无论胜负）解锁几张 uncommon
 UNCOMMON_PER_RUN = 3
 #: 每局结束额外解锁几张（赢了才给）
@@ -158,6 +160,13 @@ def ensure_starter(meta) -> bool:
     try:
         cur = set(getattr(meta, "unlocked_cards", set()) or set())
         base = starter_cards()
+        # 全新存档：额外送一批 uncommon，保证开局就有稀有度变化
+        if not cur:
+            import random as _random
+            pool = _card_ids_by_rarity(C.RARITY_UNCOMMON)
+            rng = _random.Random(20251101)
+            rng.shuffle(pool)
+            base |= set(pool[:STARTER_UNCOMMON])
         if not base <= cur:
             meta.unlocked_cards = cur | base
             changed = True

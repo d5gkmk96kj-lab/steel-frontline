@@ -38,19 +38,23 @@ def _init() -> None:
     with _LOCK:
         if _INITED:
             return
-        _INITED = True
         try:
             from PyQt6.QtWidgets import QApplication
             if QApplication.instance() is None:
-                # 没有 QApplication 就没法用 QSoundEffect（测试环境常见）
+                # 还没有 QApplication（应用启动早期 / 纯测试环境）。
+                # 这里**不能**把 _INITED 置为 True —— 否则以后永远不再尝试，
+                # 音效就永久哑了。等有 QApplication 时再初始化。
                 return
         except Exception:
+            _INITED = True          # 没装 PyQt6：永久放弃，别反复 import
             return
         try:
             from PyQt6.QtMultimedia import QSoundEffect
             from PyQt6.QtCore import QUrl
         except Exception:
+            _INITED = True          # 没装 QtMultimedia：永久放弃
             return
+        _INITED = True              # 到这里才算初始化完成
         try:
             from core import sfx_gen as _gen
             base = os.path.join(_data_dir(), "sfx")

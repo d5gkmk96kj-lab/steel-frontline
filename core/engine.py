@@ -348,6 +348,13 @@ class BattleState:
         self.log: List[str] = []
         self.cards_played_this_turn = 0
         self.cards_played_total = 0
+        # 成就统计（见 battle_achievements）
+        self.max_hit_damage = 0        # 单次最高伤害
+        self.damage_taken = 0          # 整场受到的伤害
+        self.attack_cards_played = 0   # 打出的攻击牌数
+        self.max_block_this_turn = 0   # 单回合最高掩体
+        self._turn_block = 0           # 本回合累计掩体
+        self.max_strength = 0          # 达到过的最高火力
         self.x_spent = 0
         self.gold_gain = 0
         self._relic_counters: Dict[str, int] = {}
@@ -386,6 +393,31 @@ class BattleState:
         p.draw_pile.sort(key=lambda c: (not c.defn.innate, self.rng.random()))
         return p
 
+    def battle_achievements(self, won: bool) -> List[str]:
+        """本场战斗达成的成就 key 列表（由主窗口喂给 meta.unlock）。
+
+        这 8 个成就之前**只声明了描述，代码里从来没有任何解锁点** ——
+        等于永远拿不到。现在统一在这里判定。
+        """
+        out: List[str] = []
+        try:
+            if self.max_hit_damage >= 50:
+                out.append("overkill")
+            if self.max_block_this_turn >= 50:
+                out.append("block_50")
+            if self.max_strength >= 30:
+                out.append("strength_30")
+            if won:
+                if self.player.hp > 0 and self.player.hp <= 5:
+                    out.append("comeback")
+                if self.damage_taken <= 0:
+                    out.append("no_damage")
+                if self.attack_cards_played <= 0 and self.cards_played_total > 0:
+                    out.append("pacifist")
+        except Exception:
+            pass
+        return out
+
     def log_msg(self, msg: str) -> None:
         self.log.append(str(msg))
         if len(self.log) > MAX_LOG:
@@ -414,6 +446,7 @@ class BattleState:
         p = self.player
         self.turn += 1
         self.cards_played_this_turn = 0
+        self._turn_block = 0
         # 格挡清空（屏障除外）
         if p.get_buff(BUFF_BARRIER) <= 0:
             p.block = 0
@@ -531,6 +564,15 @@ class BattleState:
         if kind == "attack" and source is not None and source.is_player \
                 and source.get_power(POWER_BARNACLE) > 0 and target.alive():
             self.apply_buff(target, BUFF_POISON, source.get_power(POWER_BARNACLE))
+        # 成就统计（8 个战斗类成就之前从来没人解锁 —— 死内容）
+        try:
+            if source is not None and getattr(source, "is_player", False):
+                if dmg > self.max_hit_damage:
+                    self.max_hit_damage = int(dmg)
+            if getattr(target, "is_player", False):
+                self.damage_taken += int(dmg)
+        except Exception:
+            pass
         # 死亡处理
         if not target.alive():
             self._on_death(target)
@@ -855,6 +897,15 @@ class BattleState:
             pass
         self.cards_played_this_turn += 1
         self.cards_played_total += 1
+        try:
+            from core import cards as _C
+            if str(getattr(getattr(card, "defn", None), "type", "")) == "attack":
+                self.attack_cards_played += 1
+            _st = p.get_buff(_C.BUFF_STRENGTH) if hasattr(p, "get_buff") else 0
+            if _st > self.max_strength:
+                self.max_strength = int(_st)
+        except Exception:
+            pass
         self.log_msg(f"你打出了 {ci.display_name}")
         # 效果
         ctx = CardContext(self, self.player, target, ci)

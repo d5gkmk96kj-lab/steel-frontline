@@ -1,26 +1,24 @@
 {
-  "version": "1.1.0",
-  "label": "1.1.0 正式版",
-  "label_en": "1.1.0",
+  "version": "1.1.1",
+  "label": "1.1.1 正式版",
+  "label_en": "1.1.1",
   "released": "2026-11-01",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：药水可在战斗中使用了（之前买了用不掉，bug）",
-    "新增：战斗音效（程序化生成，10 种，零版权）",
-    "新增：解锁系统（卡牌与勋章逐步开放）",
-    "新增：无尽模式每轮叠加「战场态势」",
-    "新增：每日挑战成绩记录与连续天数",
-    "新增：卡牌悬停大图预览",
-    "修复：英文模式大量卡牌/勋章/提示文案残留中文"
+    "修复：每日挑战从来不记成绩（run.daily 从没被设置）",
+    "修复：8 个成就永远解锁不了（死内容，现已全部实现）",
+    "修复：战斗结束悬停大图不消失",
+    "修复：读档继续战役后解锁过滤失效",
+    "修复：音效初始化时机不对可能永久静音",
+    "改进：新存档送一批稀有卡，前期奖励不再清一色普通卡"
   ],
   "notes_en": [
-    "New: potions can now actually be used in battle (they were purchasable but unusable — a real bug)",
-    "New: battle sound effects (10 procedurally generated, zero copyright)",
-    "New: unlock system (cards and relics open up as you play)",
-    "New: Endless mode now stacks a Battlefield Condition each loop",
-    "New: daily challenge scores and streaks",
-    "New: card hover preview",
-    "Fix: lots of card/relic/tooltip text stayed Chinese in English mode"
+    "Fix: daily challenge never recorded any score (the daily flag was never set)",
+    "Fix: 8 achievements could never be earned (dead content, now all implemented)",
+    "Fix: the card hover preview stayed on screen after a battle ended",
+    "Fix: unlock filtering broke after loading a saved run",
+    "Fix: sound effects could end up permanently muted due to init timing",
+    "Improved: new saves start with a batch of rarer cards so early rewards aren't all common"
   ]
 }
