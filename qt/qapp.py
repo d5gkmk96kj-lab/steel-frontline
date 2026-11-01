@@ -614,6 +614,7 @@ class GameWindow(QMainWindow):
         m.open_versus.connect(self.open_lobby)
         m.open_ai_versus.connect(self.open_ai_versus)
         m.open_saves.connect(self.open_saves)
+        m.open_tutorial.connect(self.start_tutorial)
         m.open_profile.connect(self.open_profile)
 
         # --- 联机 1v1 链路 ---
@@ -1174,6 +1175,37 @@ class GameWindow(QMainWindow):
             return
         self.show_screen("map")
 
+    def start_tutorial(self) -> None:
+        """新手教程：一场打过招呼的简单战斗。
+
+        不是幻灯片 —— 用的是真界面，只是旁边有一条提示带。
+        """
+        try:
+            from core import tutorial as TU
+            self.run = run_mod.RunState()
+            self.run.new_run(seed=12345, mode="story")
+            self.run.deck = [__import__("core.cards", fromlist=["x"]).make_card(c)
+                             for c in TU.TUTORIAL_DECK]
+            self.run.hp = 40
+            self.run.max_hp = 40
+            self._pending = dict(TU.TUTORIAL_ENCOUNTER)
+            self._coach = TU.Coach()
+            self.battle = None
+            self.start_battle(dict(TU.TUTORIAL_ENCOUNTER))
+        except Exception as exc:
+            print(f"[qt.app] tutorial failed: {exc!r}", flush=True)
+            return
+        # 把教程推进器挂到战斗界面
+        try:
+            self.screens["battle"].set_tutorial(self._coach)
+        except Exception:
+            pass
+        # 教程里不弹「首次进战斗」的新手提示（教程本身就是提示）
+        try:
+            self.screens["battle"].hide_tips()
+        except Exception:
+            pass
+
     def continue_run(self) -> None:
         r = run_mod.load_run()
         if r is None:
@@ -1372,6 +1404,21 @@ class GameWindow(QMainWindow):
         """战斗结束：结算金币/掉落，然后进奖励或结算界面。"""
         if self.run is None or self.battle is None:
             return
+        # 教程打完了：标记完成、清掉提示带、回主菜单
+        if getattr(self, "_coach", None) is not None:
+            try:
+                self.screens["battle"].set_tutorial(None)
+                self._coach = None
+                self.meta.tutorial_done = True
+                self.meta.save()
+            except Exception:
+                pass
+            if result == "won":
+                self.battle = None
+                self.run = None
+                self._toast("教程完成！去试试主线剧情吧")
+                self.show_screen("menu")
+                return
         won = (result == "won")
         gold_before = self.run.gold
         try:

@@ -268,6 +268,7 @@ class MenuScreen(QWidget):
     open_settings = pyqtSignal()
     open_stats = pyqtSignal()
     open_saves = pyqtSignal()
+    open_tutorial = pyqtSignal()
     open_profile = pyqtSignal()
     open_versus = pyqtSignal()          # 联机对战（局域网 1v1）
     open_ai_versus = pyqtSignal(str)    # 人机 1v1（难度：easy/normal/hard）
@@ -393,7 +394,8 @@ class MenuScreen(QWidget):
         grid = QGridLayout()
         grid.setSpacing(9)
         grid.setContentsMargins(0, 0, 0, 0)
-        entries = (("每日挑战", self._emit_daily, "Ghost"),
+        entries = (("新手教程", self.open_tutorial.emit, "Ghost"),
+                   ("每日挑战", self._emit_daily, "Ghost"),
                    ("图鉴", self.open_codex.emit, "Ghost"),
                    ("成就", self.open_achievements.emit, "Ghost"),
                    ("战绩档案", self.open_stats.emit, "Ghost"),
@@ -1563,7 +1565,8 @@ class GameOverScreen(QWidget):
         self._t = QTimer(self)
         self._t.setInterval(_FRAME_MS)
         self._t.timeout.connect(self._tick)
-        self._t.start()
+        # 不在这里 start：等界面真正显示时再跑（见 showEvent），
+        # 否则一直在后台空转白白烧 CPU。
 
         root = QVBoxLayout(self)
         root.setContentsMargins(80, 50, 80, 50)
@@ -1638,9 +1641,27 @@ class GameOverScreen(QWidget):
         root.addLayout(bar)
         root.addStretch(2)
 
+    def showEvent(self, ev):  # noqa: N802
+        super().showEvent(ev)
+        try:
+            self._t.start()
+        except Exception:
+            pass
+
+    def hideEvent(self, ev):  # noqa: N802
+        super().hideEvent(ev)
+        try:
+            self._t.stop()
+        except Exception:
+            pass
+
     def _tick(self) -> None:
         self._phase = (self._phase + 0.03) % 1.0
+        # 放射状光芒画在**本界面的背景**上（见 paintEvent），
+        # 所以必须 update() 整个界面，只 update 标签是刷不到背景的
+        # —— 这就是「结算界面的太阳转不动」的真正原因（老 bug）。
         self.lbl_big.update()
+        self.update()
 
     def paintEvent(self, ev):  # noqa: N802
         p = QPainter(self)

@@ -755,6 +755,8 @@ class MetaProgress:
         self.seen_story: set = set()
         #: 是否已经看过战斗操作提示（第一次进战斗时弹一次）
         self.seen_battle_tips = False
+        #: 是否完成过新手教程
+        self.tutorial_done = False
 
     # -- 读写 -------------------------------------------------------------
     @classmethod
@@ -787,6 +789,7 @@ class MetaProgress:
             m.seen_vignettes = set(d.get("seen_vignettes", []))
             m.seen_story = set(d.get("seen_story", []))
             m.seen_battle_tips = bool(d.get("seen_battle_tips", False))
+            m.tutorial_done = bool(d.get("tutorial_done", False))
         except Exception:
             pass
         return m
@@ -821,6 +824,7 @@ class MetaProgress:
             "seen_vignettes": sorted(self.seen_vignettes),
             "seen_story": sorted(self.seen_story),
             "seen_battle_tips": bool(self.seen_battle_tips),
+            "tutorial_done": bool(self.tutorial_done),
         }
 
     # -- 解锁 -------------------------------------------------------------

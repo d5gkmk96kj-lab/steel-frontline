@@ -3025,5 +3025,18 @@
  "小": "Small",
  "标准": "Normal",
  "大": "Large",
- "特大": "Extra large"
+ "特大": "Extra large",
+ "欢迎来到钢铁战线。这一局是你的训练场，不会真的失败。\n先点一张「攻击」牌 —— 就是下面带红边的那些。": "Welcome to Steel Frontline. This match is your training ground — you can't really lose.\nStart by clicking an ATTACK card — the ones with red edges below.",
+ "很好。出牌会消耗左边的补给，每回合会重新回满。": "Good. Playing cards spends Supply on the left; it refills every turn.",
+ "再打一张「防御」牌（绿边），它会给总部加上掩体。\n掩体可以挡住伤害，每回合开始会清空。": "Now play a DEFEND card (green edge). It gives your HQ armor.\nArmor absorbs damage, but it's cleared at the start of each turn.",
+ "掩体挡住了伤害。注意：它不累积，下回合会清掉。": "The armor blocked the hit. Note: it doesn't stack — it resets next turn.",
+ "牌打得差不多了，按 空格（或点右下角「结束回合」）结束你的回合。": "When you're done, press Space (or click End Turn at the bottom right).",
+ "现在轮到对面了。看它头顶的图标 —— 那是它下回合要用的招。": "Now it's the enemy's turn. Look at the icon above it — that's its next move.",
+ "敌人头顶的数字就是它下回合要打你的伤害。\n看到大数字就要提前堆掩体，或者先把输出打出去。": "The number above an enemy is the damage it will deal next turn.\nWhen it's big, stack armor first — or kill it before it swings.",
+ "打掉它就能完成教程。之后主线的三幕战役在等你。\n（随时可以按 Esc 离开。）": "Finish it off to complete the tutorial. The three-act main story awaits.\n(You can press Esc to leave anytime.)",
+ "第 %d / %d 步": "Step %d / %d",
+ "教程完成": "Tutorial complete",
+ "新手教程": "Tutorial",
+ "我 知 道 了": "Got it",
+ "训练靶标": "Training Target"
 }

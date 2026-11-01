@@ -1,22 +1,16 @@
 {
-  "version": "1.0.12",
-  "label": "1.0.12 正式版",
-  "label_en": "1.0.12",
+  "version": "1.0.13",
+  "label": "1.0.13 正式版",
+  "label_en": "1.0.13",
   "released": "2026-11-01",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "新增：全局快捷键（F11 全屏 / Esc 返回 / Ctrl+S 存档退出）",
-    "新增：战斗快捷键（空格结束回合 / 1-9 出牌 / Tab 切目标 / H 牌库）",
-    "新增：主菜单数字键与剧情、事件快捷键",
-    "新增：首次进战斗弹一次操作说明",
-    "新增：界面字号可调（小/标准/大/特大）"
+    "修复：结算界面背景的旋转光芒卡住不动（老 bug：只刷了标签没刷背景）",
+    "新增：新手教程（5 步带打带教，用真界面不是幻灯片）"
   ],
   "notes_en": [
-    "New: global shortcuts (F11 fullscreen / Esc back / Ctrl+S save & quit)",
-    "New: battle shortcuts (Space end turn / 1-9 play card / Tab switch target / H piles)",
-    "New: menu number keys, plus story and event shortcuts",
-    "New: one-time battle tips on first entry",
-    "New: adjustable UI font size (Small / Normal / Large / Extra large)"
+    "Fix: the rotating sun rays on the game-over screen froze (old bug: only the label was repainted, not the background)",
+    "New: 5-step beginner tutorial that teaches inside a real battle, not a slideshow"
   ]
 }

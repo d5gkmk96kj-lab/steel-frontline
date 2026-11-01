@@ -414,6 +414,30 @@ class BattleScreen(QWidget):
         self.stage_lay.setRowStretch(1, 0)
         self.stage_lay.setRowStretch(2, 1)
 
+        # ---- 教程提示带（只有教程模式才显示）----
+        self.coach_bar = QFrame(self)
+        self.coach_bar.setObjectName("Panel")
+        self.coach_bar.setStyleSheet(
+            f"QFrame#Panel{{background:{T.a(T.Q_BG_DEEP, 234).name()};"
+            f"border:1px solid {T.GOLD};border-radius:10px;}}")
+        _cbl = QHBoxLayout(self.coach_bar)
+        _cbl.setContentsMargins(16, 10, 12, 10)
+        _cbl.setSpacing(12)
+        self.coach_lbl = QLabel("", self.coach_bar)
+        self.coach_lbl.setWordWrap(True)
+        self.coach_lbl.setStyleSheet(
+            f"color:{T.TEXT};font-size:{T.FONT_BODY}px;background:transparent;")
+        _cbl.addWidget(self.coach_lbl, 1)
+        self.coach_btn = QPushButton("我 知 道 了", self.coach_bar)
+        self.coach_btn.setObjectName("Ghost")
+        self.coach_btn.setFixedWidth(120)
+        self.coach_btn.clicked.connect(self._coach_next)
+        _cbl.addWidget(self.coach_btn)
+        self.coach_bar.setFixedHeight(86)
+        self.coach_bar.hide()
+        # 必须真的加进布局，否则会变成一个浮在左上角的小方块
+        root.addWidget(self.coach_bar, 0)
+
         # 结束回合按钮浮在舞台右上（用布局放在顶栏右侧扩展位）
         root.addWidget(self.stage, 1)
         self.stage.setMinimumHeight(496)
@@ -829,6 +853,47 @@ class BattleScreen(QWidget):
                 return e
         return alive[0]
 
+    # ---- 教程提示带 ---------------------------------------------------
+    def set_tutorial(self, coach) -> None:
+        """挂上教程推进器（None = 关闭教程提示）。"""
+        self._coach = coach
+        if coach is None:
+            self.coach_bar.hide()
+        else:
+            self._refresh_coach()
+
+    def _refresh_coach(self) -> None:
+        c = getattr(self, "_coach", None)
+        if c is None:
+            self.coach_bar.hide()
+            return
+        txt = c.text
+        if not txt:
+            self.coach_bar.hide()
+            return
+        self.coach_lbl.setText("%s\n%s" % (c.progress, T.tr(txt))
+                               if c.progress else T.tr(txt))
+        self.coach_bar.show()
+
+    def _coach_next(self) -> None:
+        """「我知道了」：跳过当前这一步。"""
+        c = getattr(self, "_coach", None)
+        if c is None:
+            return
+        c.advance()
+        self._refresh_coach()
+
+    def _coach_notify(self, event: str) -> None:
+        """告诉教程：玩家做了某件事。"""
+        c = getattr(self, "_coach", None)
+        if c is None:
+            return
+        try:
+            if c.notify(event):
+                self._refresh_coach()
+        except Exception:
+            pass
+
     # ---- 键盘操作 -----------------------------------------------------
     def keyPressEvent(self, ev):  # noqa: N802
         """战斗快捷键。
@@ -943,6 +1008,18 @@ class BattleScreen(QWidget):
             self._play_card_fx(card, from_pt, to_pt)
 
         self._after_action(pre)
+        # 教程：告诉它玩家出了什么类型的牌
+        # （card 是快照里的 dict，不是 CardInstance，所以用 .get）
+        try:
+            from core import tutorial as _TU
+            _ct = ""
+            if isinstance(card, dict):
+                _ct = str(card.get("type") or "")
+            else:
+                _ct = str(getattr(getattr(card, "defn", None), "type", "") or "")
+            self._coach_notify(_TU.classify_card(_ct))
+        except Exception:
+            pass
         # 关键：玩家这一击可能已把最后一个敌人打死，引擎内部会把 phase 设成 "won"。
         # 不检查的话 UI 会永远停在玩家回合，无法进入结算。
         self._check_end()
@@ -1112,6 +1189,7 @@ class BattleScreen(QWidget):
             return
         self._busy = True
         self.btn_end.setEnabled(False)
+        self._coach_notify("end_turn")
         try:
             self.battle.end_turn()      # 只切 phase，不执行敌人行动
         except Exception as exc:
@@ -1160,6 +1238,7 @@ class BattleScreen(QWidget):
             self._timer.stop()
             self._stepping = False
             self._busy = False
+            self._coach_notify("enemy_acted")
             self._sync(animate=True)
             self._check_end()
 
@@ -1180,6 +1259,7 @@ class BattleScreen(QWidget):
             self._ended = True
             self._timer.stop()
             self._busy = False
+            self._coach_notify("battle_end")
             self.banner.setText("战 斗 胜 利" if res == "won" else "总 部 陷 落")
             self.banner.setStyleSheet(
                 f"background:{T.a(T.Q_BG_DEEP, 235).name()};"
