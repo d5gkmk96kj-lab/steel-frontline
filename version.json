@@ -1,18 +1,26 @@
 {
-  "version": "1.0.14",
-  "label": "1.0.14 正式版",
-  "label_en": "1.0.14",
+  "version": "1.1.0",
+  "label": "1.1.0 正式版",
+  "label_en": "1.1.0",
   "released": "2026-11-01",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：结算界面旋转光芒卡死（老 bug）",
-    "新增：新手教程（5 步带打带教）",
-    "修复：Windows 上部分测试因动画时序偶发失败"
+    "新增：药水可在战斗中使用了（之前买了用不掉，bug）",
+    "新增：战斗音效（程序化生成，10 种，零版权）",
+    "新增：解锁系统（卡牌与勋章逐步开放）",
+    "新增：无尽模式每轮叠加「战场态势」",
+    "新增：每日挑战成绩记录与连续天数",
+    "新增：卡牌悬停大图预览",
+    "修复：英文模式大量卡牌/勋章/提示文案残留中文"
   ],
   "notes_en": [
-    "Fix: the rotating sun rays on the game-over screen froze (old bug)",
-    "New: 5-step beginner tutorial taught inside a real battle",
-    "Fix: a few tests were flaky on Windows due to animation timing"
+    "New: potions can now actually be used in battle (they were purchasable but unusable — a real bug)",
+    "New: battle sound effects (10 procedurally generated, zero copyright)",
+    "New: unlock system (cards and relics open up as you play)",
+    "New: Endless mode now stacks a Battlefield Condition each loop",
+    "New: daily challenge scores and streaks",
+    "New: card hover preview",
+    "Fix: lots of card/relic/tooltip text stayed Chinese in English mode"
   ]
 }

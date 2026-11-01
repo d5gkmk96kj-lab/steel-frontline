@@ -22,6 +22,7 @@ packaging/icon.png
 
 # ---- 运行时数据（存档/偏好，不进仓库）----
 data/*.json
+data/sfx/
 data/crash.log
 data/launch.log
 prefs.json

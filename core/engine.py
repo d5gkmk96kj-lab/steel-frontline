@@ -397,6 +397,14 @@ class BattleState:
     def start_battle(self) -> None:
         self.turn = 0
         self.phase = "player"
+        # 无尽模式态势：焦土会在开局直接扣血
+        try:
+            _sd = int(self.run.mutator_sum("start_damage"))
+        except Exception:
+            _sd = 0
+        if _sd > 0:
+            self.player.hp = max(1, int(self.player.hp) - _sd)
+            self.log_msg(f"战场态势「焦土」：总部受到 {_sd} 点伤害。")
         for r in self.player.relics:
             self.fire_relic(r, R.TRIGGER_BATTLE_START)
         self._roll_enemy_intents()
@@ -413,10 +421,20 @@ class BattleState:
             p.add_buff(BUFF_BARRIER, -1)
         # 能量（含指挥官加成）
         _m = self.cmd_mods()
-        p.energy = (p.max_energy + p.get_power(POWER_TIDEPOOL)
-                    + p.get_power(POWER_ABYSSAL_GATE) + int(_m.supply))
+        # 无尽模式的态势会改补给
+        try:
+            _loop_supply = int(self.run.mutator_sum("supply"))
+        except Exception:
+            _loop_supply = 0
+        p.energy = max(0, p.max_energy + p.get_power(POWER_TIDEPOOL)
+                       + p.get_power(POWER_ABYSSAL_GATE) + int(_m.supply)
+                       + _loop_supply)
         # 抽牌（第一回合额外吃「开局手牌」加成）
-        n = (5 + p.get_power(POWER_DEEP_CURRENT)
+        try:
+            _loop_draw = int(self.run.mutator_sum("draw"))
+        except Exception:
+            _loop_draw = 0
+        n = (_loop_draw + 5 + p.get_power(POWER_DEEP_CURRENT)
              + p.get_power(POWER_ABYSSAL_GATE) + int(_m.draw)
              + (int(_m.hand) if first else 0))
         self.draw_cards(p, n)
@@ -592,6 +610,57 @@ class BattleState:
             self.log_msg(f"{target.name} 的神器抵挡了效果。")
             return
         target.add_buff(key, amount)
+
+    # ------------------------------------------------------------------
+    # 药水
+    #
+    # 药水存在 ``run.potions`` 里（最多 3 瓶），战斗中随时能用，用完即消耗。
+    # 之前这个功能**完全没实现** —— 商店能买、事件能给，但战斗里没有任何
+    # 使用入口，等于白买（真 bug）。
+    # ------------------------------------------------------------------
+    def usable_potions(self) -> List[str]:
+        """当前战斗里能用的药水 id 列表。"""
+        out: List[str] = []
+        try:
+            for pid in list(getattr(self.run, "potions", []) or []):
+                if pid in _POTION_EFFECTS:
+                    out.append(pid)
+        except Exception:
+            pass
+        return out
+
+    def use_potion(self, pid: str, target=None) -> bool:
+        """用一瓶药水。成功返回 True（并从背包里扣掉）。"""
+        if self.phase != "player":
+            return False
+        if pid not in _POTION_EFFECTS:
+            return False
+        potions = getattr(self.run, "potions", None)
+        if not potions or pid not in potions:
+            return False
+        tgt = target
+        if pid in _POTION_NEEDS_TARGET and tgt is None:
+            alive = [e for e in self.enemies if e.alive()]
+            if not alive:
+                return False
+            tgt = alive[0]
+        try:
+            _POTION_EFFECTS[pid](self, tgt)
+        except Exception as exc:
+            print(f"[engine] potion {pid} failed: {exc!r}", flush=True)
+            return False
+        try:
+            potions.remove(pid)
+        except ValueError:
+            pass
+        name = pid
+        try:
+            from core import events as _EV
+            name = _EV.POTION_DB.get(pid, {}).get("name", pid)
+        except Exception:
+            pass
+        self.log_msg(f"你使用了「{name}」。")
+        return True
 
     # ------------------------------------------------------------------
     # 牌堆操作
@@ -1088,9 +1157,14 @@ class BattleState:
         for ci in p.hand:
             d = ci.defn
             hand.append({
-                "uid": ci.uid, "def_id": ci.def_id, "name": ci.display_name,
+                "uid": ci.uid, "def_id": ci.def_id,
+                "name": ci.display_name_i18n(),
                 "cost": self.card_cost(ci), "type": d.type, "rarity": d.rarity,
-                "arch": d.arch, "text": C.resolve_text(ci), "upgraded": ci.upgraded,
+                "arch": d.arch,
+                # 必须 translate=True：在**模板**阶段翻译，
+                # 填完数值后再翻就找不到词条了（卡面漏翻的根因）
+                "text": C.resolve_text(ci, translate=True),
+                "upgraded": ci.upgraded,
                 "playable": self.can_play(ci),
                 # 附录 A.2：牌堆长度别名冗余挂在每个 hand 元素上
                 "draw_pile_len": len(p.draw_pile),
@@ -1122,6 +1196,74 @@ class BattleState:
             "gold_gain": self.gold_gain,
         }
         return snap
+
+
+# --------------------------------------------------------------------------
+# 药水效果
+#
+# 每个函数接收 (battle, target)。表放在 engine 里而不是 events.py，
+# 是因为效果要用引擎能力（加 buff / 抽牌 / 造伤害），而 events.py 是
+# 纯数据层，不能反过来依赖 engine。
+# --------------------------------------------------------------------------
+def _pot_heal(b, _t):
+    b.heal(b.player, 20)
+
+
+def _pot_strength(b, _t):
+    b.player.add_buff(BUFF_STRENGTH, 3)
+
+
+def _pot_block(b, _t):
+    b.gain_block(b.player, 15)
+
+
+def _pot_poison(b, t):
+    b.apply_buff(t, BUFF_POISON, 12)
+
+
+def _pot_energy(b, _t):
+    b.player.energy += 2
+
+
+def _pot_draw(b, _t):
+    b.draw_cards(b.player, 3)
+
+
+def _pot_weak(b, _t):
+    for e in [x for x in b.enemies if x.alive()]:
+        b.apply_buff(e, BUFF_WEAK, 3)
+
+
+def _pot_fear(b, _t):
+    for e in [x for x in b.enemies if x.alive()]:
+        b.apply_buff(e, BUFF_VULNERABLE, 3)
+
+
+def _pot_artifact(b, _t):
+    b.player.add_buff(BUFF_ARTIFACT, 2)
+
+
+def _pot_bomb(b, _t):
+    for e in [x for x in b.enemies if x.alive()]:
+        b.deal_damage(b.player, e, 25, kind="potion")
+
+
+#: 药水 id -> 效果函数
+_POTION_EFFECTS = {
+    "potion_heal": _pot_heal,
+    "potion_strength": _pot_strength,
+    "potion_block": _pot_block,
+    "potion_poison": _pot_poison,
+    "potion_energy": _pot_energy,
+    "potion_draw": _pot_draw,
+    "potion_weak": _pot_weak,
+    "potion_fear": _pot_fear,
+    "potion_artifact": _pot_artifact,
+    "potion_bomb": _pot_bomb,
+}
+
+#: 需要指定敌人的药水
+_POTION_NEEDS_TARGET = {"potion_poison"}
 
 
 # --------------------------------------------------------------------------
@@ -1173,6 +1315,14 @@ def make_battle(run, encounter: dict) -> BattleState:
         scale = float(getattr(run, "difficulty_scale", lambda: 1.0)())
     except Exception:
         scale = 1.0
+    # 无尽模式态势「增援不断」：多刷一个敌人
+    try:
+        extra = int(getattr(run, "mutator_sum", lambda k: 0)("extra_enemies"))
+    except Exception:
+        extra = 0
+    if extra > 0:
+        for i in range(min(2, extra)):
+            ids = list(ids) + [("deep_crab", "bone_picker")[(int(act) + i) % 2]]
     enemies = [make_enemy_combatant(i, rng, asc, act, scale) for i in ids]
     b = BattleState(run, enemies, rng, {"kind": kind, "enemies": ids})
     # 辅助角色：只是把 id 带进战斗，让每回合/伤害加成能查到。

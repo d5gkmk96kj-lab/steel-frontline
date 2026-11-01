@@ -273,7 +273,7 @@ class LobbyScreen(QWidget):
         self.btn_match.setCheckable(True)
         self.btn_match.setMinimumWidth(190)
         self.btn_match.setMinimumHeight(42)
-        self.btn_match.setToolTip("自动找对手，不用交换房间号")
+        self.btn_match.setToolTip(T.tr("自动找对手，不用交换房间号"))
         self.btn_match.clicked.connect(lambda: self.set_mode("match"))
         tabrow.addWidget(self.btn_match)
 
@@ -432,9 +432,9 @@ class LobbyScreen(QWidget):
         # 需要房间码（更安全，但对方必须知道码）
         self.cb_code = QCheckBox("需要房间码（更安全）", self.host_box)
         self.cb_code.setChecked(False)
-        self.cb_code.setToolTip(
+        self.cb_code.setToolTip(T.tr(
             "开启后，对方必须输入正确的房间码才能进入，\n"
-            "防止同一个网络里的陌生人乱入。")
+            "防止同一个网络里的陌生人乱入。"))
         hv.addWidget(self.cb_code)
 
         self.lbl_code = QLabel("", self.host_box)

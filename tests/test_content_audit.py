@@ -133,16 +133,32 @@ class TestNoOceanLeftovers(unittest.TestCase):
     def test_locales_clean(self):
         if not os.path.isdir(LOCALES):
             self.skipTest("没有 locales")
+        # 彩蛋卡「鲸鱼吉祥物」的谜面里有海洋词，这是**故意**的
+        # （谜语指向 F1 控制台里的隐藏卡），不算主题残留。
+        allowed = set()
+        try:
+            from core import cheats as _CH, cards as _C
+            _CH._ensure_cheat_cards()
+            egg = _C.CARD_DB.get(_CH.CHEAT_CARD_WHALE)
+            if egg is not None:
+                allowed = {egg.name, egg.text}
+        except Exception:
+            allowed = set()
         bad = []
         for fn in ("zh.json", "en.json", "en_ui.json", "en_data.json"):
             p = os.path.join(LOCALES, fn)
             if not os.path.isfile(p):
                 continue
             with open(p, encoding="utf-8") as f:
-                txt = f.read()
-            for w in self.WORDS:
-                if w in txt:
-                    bad.append((fn, w))
+                raw = json.load(f)
+            for k, v in raw.items():
+                for txt in (str(k), str(v)):
+                    if txt in allowed:
+                        continue
+                    for w in self.WORDS:
+                        if w in txt:
+                            bad.append((fn, w, str(k)[:24]))
+                            break
         self.assertEqual(bad, [], "翻译表里还有海洋词：%s" % bad[:5])
 
 

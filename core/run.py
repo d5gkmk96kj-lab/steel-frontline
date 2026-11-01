@@ -287,6 +287,9 @@ class RunState:
                 self.deck.append(C.make_card(self.rng.choice(curses).id))
         self.relics = [R.STARTER_RELIC]
         self.potions = []
+        #: 已解锁的卡/勋章（由 meta 同步进来；空集合表示"全开"）
+        self.unlocked_cards: set = set()
+        self.unlocked_relics: set = set()
         self.current_node = None
         self.score = 0
         self.pending_node = None
@@ -419,11 +422,31 @@ class RunState:
             return max(1, min(3, int(self.act)))
         return ((max(1, int(self.act)) - 1) % 3) + 1
 
+    # -- 无尽模式战场态势 ------------------------------------------------
+    def loop_mutators(self) -> List[dict]:
+        """当前生效的态势（主线恒为空）。"""
+        if self.mode != "endless":
+            return []
+        return mutators_for_loop(int(getattr(self, "loop", 0) or 0))
+
+    def mutator_sum(self, key: str) -> float:
+        """把所有态势里某个数值字段加起来。"""
+        total = 0.0
+        for m in self.loop_mutators():
+            try:
+                total += float(m.get(key, 0) or 0)
+            except (TypeError, ValueError):
+                continue
+        return total
+
     def difficulty_scale(self) -> float:
         """额外的难度倍率（无尽模式每轮 +18%）。"""
         if self.mode != "endless":
             return 1.0
-        return 1.0 + 0.18 * max(0, int(self.loop))
+        base = 1.0 + 0.18 * max(0, int(self.loop))
+        # 态势里的敌人耐久 / 伤害加成也折进这里
+        base += self.mutator_sum("enemy_hp") + self.mutator_sum("enemy_damage")
+        return max(0.5, base)
 
     def max_act(self) -> int:
         """主线只有 3 幕；无尽没有上限。"""
@@ -565,6 +588,29 @@ class RunState:
     def upgradable_cards(self) -> List[C.CardInstance]:
         return [c for c in self.deck if c.is_upgradable and c.upgraded < 1]
 
+    # -- 解锁（由主窗口把 meta 里的集合同步进来）-------------------------
+    def card_unlocked(self, cid: str) -> bool:
+        """这张卡能不能出现在奖励/商店里。
+
+        集合为空时**一律放行** —— 没初始化过的存档不该突然少东西。
+        """
+        try:
+            u = getattr(self, "unlocked_cards", None)
+            if not u:
+                return True
+            return str(cid) in u
+        except Exception:
+            return True
+
+    def relic_unlocked(self, rid: str) -> bool:
+        try:
+            u = getattr(self, "unlocked_relics", None)
+            if not u:
+                return True
+            return str(rid) in u
+        except Exception:
+            return True
+
     def offer_card_rewards(self, n=3, rng=None, rarity_boost: float = 0.0) -> List[C.CardDef]:
         rng = rng or self.rng
         out: List[C.CardDef] = []
@@ -580,7 +626,8 @@ class RunState:
                     rarity = C.RARITY_RARE
                 pool = C.cards_by_rarity(rarity)
                 pool = [c for c in pool if c.id not in seen
-                        and c.type not in ("status", "curse")]
+                        and c.type not in ("status", "curse")
+                        and self.card_unlocked(c.id)]
                 if pool:
                     pick = rng.choice(pool)
                     seen.add(pick.id)
@@ -592,7 +639,8 @@ class RunState:
         rng = rng or self.rng
         owned = set(self.relics)
         pool = [r for r in R.RELIC_DB.values()
-                if r.id not in owned and r.rarity not in ("starter", "boss")]
+                if r.id not in owned and r.rarity not in ("starter", "boss")
+                and self.relic_unlocked(r.id)]
         rng.shuffle(pool)
         return [r.id for r in pool[:max(0, int(n))]]
 
@@ -604,7 +652,15 @@ class RunState:
             st["turns"] = st.get("turns", 0) + getattr(battle, "turn", 0)
             if battle.player is not None:
                 self.hp = max(0, min(int(self.max_hp), int(battle.player.hp)))
-            self.add_gold(max(0, int(getattr(battle, "gold_gain", 0))))
+            _gold = max(0, int(getattr(battle, "gold_gain", 0)))
+            # 无尽模式态势可能给金币倍率
+            try:
+                _gm = float(self.mutator_sum("gold_mult"))
+            except Exception:
+                _gm = 0.0
+            if _gm > 0:
+                _gold = int(_gold * _gm)
+            self.add_gold(_gold)
             n = self.node_by_id(self.current_node) if self.current_node is not None else None
             if result == "won":
                 if n and n.kind == "elite":
@@ -745,6 +801,11 @@ class MetaProgress:
         self.unlocked_relics: set = set()
         self.total_playtime = 0.0
         self.daily_done: List[str] = []
+        #: 每日挑战成绩：{"2026-11-01": {"score":..,"act":..,"win":bool}}
+        self.daily_results: Dict[str, dict] = {}
+        #: 连续完成每日挑战的天数
+        self.daily_streak = 0
+        self.daily_best_streak = 0
         #: 主线是否通关过（通关后解锁无尽模式）
         self.story_done = False
         #: 主线通关次数
@@ -784,6 +845,16 @@ class MetaProgress:
             m.unlocked_relics = set(d.get("unlocked_relics", []))
             m.total_playtime = float(d.get("total_playtime", 0.0))
             m.daily_done = list(d.get("daily_done", []))
+            try:
+                raw = d.get("daily_results", {}) or {}
+                m.daily_results = {
+                    str(k): dict(v) for k, v in raw.items()
+                    if isinstance(v, dict)
+                }
+            except Exception:
+                m.daily_results = {}
+            m.daily_streak = int(d.get("daily_streak", 0) or 0)
+            m.daily_best_streak = int(d.get("daily_best_streak", 0) or 0)
             m.story_done = bool(d.get("story_done", False))
             m.story_wins = int(d.get("story_wins", 0))
             m.seen_vignettes = set(d.get("seen_vignettes", []))
@@ -819,6 +890,9 @@ class MetaProgress:
             "unlocked_relics": sorted(self.unlocked_relics),
             "total_playtime": self.total_playtime,
             "daily_done": list(self.daily_done),
+            "daily_results": dict(self.daily_results),
+            "daily_streak": int(self.daily_streak),
+            "daily_best_streak": int(self.daily_best_streak),
             "story_done": bool(self.story_done),
             "story_wins": int(self.story_wins),
             "seen_vignettes": sorted(self.seen_vignettes),
@@ -925,10 +999,47 @@ class MetaProgress:
         self.leaderboard.sort(key=lambda x: -x["score"])
         self.leaderboard = self.leaderboard[:10]
         if run.daily:
-            key = time.strftime("%Y-%m-%d")
-            if key not in self.daily_done:
-                self.daily_done.append(key)
+            self._record_daily(run, won, score)
         return newly
+
+    def _record_daily(self, run, won: bool, score: int) -> None:
+        """记录每日挑战成绩 + 连续天数。"""
+        try:
+            key = time.strftime("%Y-%m-%d")
+            prev = self.daily_results.get(key) or {}
+            # 同一天多次打，只留最好成绩
+            best = dict(prev) if prev else {}
+            if not best or int(score) > int(best.get("score", -1)):
+                best = {
+                    "score": int(score),
+                    "act": int(getattr(run, "act", 1) or 1),
+                    "win": bool(won),
+                    "when": time.strftime("%H:%M"),
+                }
+            self.daily_results[key] = best
+            first_today = key not in self.daily_done
+            if first_today:
+                self.daily_done.append(key)
+                # 连续天数：昨天也打过就 +1，否则从 1 重新算
+                try:
+                    import datetime as _dt
+                    y = (_dt.date.today() - _dt.timedelta(days=1)).isoformat()
+                except Exception:
+                    y = ""
+                if y and y in self.daily_done:
+                    self.daily_streak = max(1, int(self.daily_streak) + 1)
+                else:
+                    self.daily_streak = 1
+                self.daily_best_streak = max(int(self.daily_best_streak),
+                                             int(self.daily_streak))
+            # 只保留最近 60 天，别让 meta 无限膨胀
+            if len(self.daily_results) > 60:
+                for k in sorted(self.daily_results)[:-60]:
+                    self.daily_results.pop(k, None)
+            if len(self.daily_done) > 400:
+                self.daily_done = self.daily_done[-400:]
+        except Exception:
+            pass
 
     def _ach(self, acc: List[str], key: str) -> None:
         if self.unlock(key):
@@ -976,6 +1087,73 @@ def has_save(path: Optional[str] = None) -> bool:
     if path is None:
         path = SAVE_PATH
     return os.path.exists(path)
+
+
+# --------------------------------------------------------------------------
+# 无尽模式的「战场态势」
+#
+# 每循环一轮（打穿一次三幕）随机挑一个，让下一轮**玩法真的不一样**，
+# 而不只是数字变大。之前无尽模式只有 +18% 难度，玩家很容易腻。
+# --------------------------------------------------------------------------
+LOOP_MUTATORS: Tuple[dict, ...] = (
+    {
+        "id": "supply_short",
+        "name": "弹药短缺",
+        "text": "每回合补给 -1，但敌人耐久 -10%。",
+        "supply": -1,
+        "enemy_hp": -0.10,
+    },
+    {
+        "id": "iron_wall",
+        "name": "铁壁防线",
+        "text": "敌人耐久 +35%，但击杀金币翻倍。",
+        "enemy_hp": 0.35,
+        "gold_mult": 2.0,
+    },
+    {
+        "id": "burning_ground",
+        "name": "焦土",
+        "text": "每场战斗开始时总部受 8 点伤害。",
+        "start_damage": 8,
+    },
+    {
+        "id": "swarm",
+        "name": "增援不断",
+        "text": "敌人数量 +1，但每回合补给人 +1。",
+        "extra_enemies": 1,
+        "supply": 1,
+    },
+    {
+        "id": "quick_death",
+        "name": "速战速决",
+        "text": "敌方伤害 +30%，你的手牌每回合多抽 1 张。",
+        "enemy_damage": 0.30,
+        "draw": 1,
+    },
+)
+
+
+def mutators_for_loop(loop: int) -> List[dict]:
+    """第 N 轮及之前累积了哪些态势。
+
+    每轮加一个，所以打得越深，叠加的规则越多（最多 3 个）。
+    用 loop 做确定性选择，同一个种子不会有随机漂移。
+    """
+    n = max(0, int(loop))
+    if n <= 0:
+        return []
+    out: List[dict] = []
+    for i in range(min(n, 3)):
+        out.append(LOOP_MUTATORS[(n + i * 2) % len(LOOP_MUTATORS)])
+    # 去重（可能撞到同一个）
+    seen: set = set()
+    uniq: List[dict] = []
+    for m in out:
+        if m["id"] in seen:
+            continue
+        seen.add(m["id"])
+        uniq.append(m)
+    return uniq
 
 
 def daily_seed(date_str: Optional[str] = None) -> int:

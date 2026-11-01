@@ -24,11 +24,11 @@ import os
 import sys
 from typing import Dict, List, Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QMessageBox, QSizePolicy, QStackedWidget, QVBoxLayout,
-    QWidget,
+    QAbstractButton, QApplication, QMainWindow, QMessageBox, QSizePolicy,
+    QStackedWidget, QVBoxLayout, QWidget,
 )
 
 # 允许 `python3 qt/main_qt.py` 直接运行（把项目根加入 sys.path）
@@ -66,6 +66,9 @@ DEFAULT_CFG: Dict = {
     "battle_step_ms": 400,
     #: 界面字号缩放（0.85 / 1.0 / 1.15 / 1.3）
     "ui_scale": 1.0,
+    #: 战斗音效开关（音乐是音乐，音效是音效）
+    "sfx": True,
+    "sfx_volume": 0.55,
 }
 
 
@@ -98,6 +101,14 @@ class GameWindow(QMainWindow):
         self.run = None               # RunState
         self.battle = None            # BattleState
         self.meta = run_mod.MetaProgress.load()
+        # 解锁系统：老存档迁移 + 保证基础内容已解锁（必须在这里做，
+        # 否则图鉴/商店在第一局开始前看到的是空集合）
+        try:
+            from core import unlock as _unlock
+            if _unlock.migrate(self.meta) or _unlock.ensure_starter(self.meta):
+                self.meta.save()
+        except Exception as _exc:
+            print(f"[qt.app] unlock init failed: {_exc!r}", flush=True)
         # ---- 账号（离线优先：先读本地，拿不到再引导注册）----
         self.account = None
         try:
@@ -118,6 +129,13 @@ class GameWindow(QMainWindow):
                 _T.set_ui_scale(float(self.cfg.get("ui_scale", 1.0)))
             except Exception:
                 pass
+            # 战斗音效
+            try:
+                from core import sfx as _SFX
+                _SFX.set_enabled(bool(self.cfg.get("sfx", True)))
+                _SFX.set_volume(float(self.cfg.get("sfx_volume", 0.55)))
+            except Exception:
+                pass
         except Exception:
             pass
         self._pending: Dict = {}      # move_to 返回的遭遇描述
@@ -126,6 +144,13 @@ class GameWindow(QMainWindow):
         self._story_next = None
         self._gold_gain = 0
         self._history: List[str] = ["menu"]
+        # 全局事件过滤器：负责按钮点击音（见 eventFilter）
+        try:
+            app = QApplication.instance()
+            if app is not None:
+                app.installEventFilter(self)
+        except Exception:
+            pass
 
         # --- 联机 1v1 状态 ---
         self._net = None              # core.netplay.Host / Client
@@ -460,6 +485,23 @@ class GameWindow(QMainWindow):
         super().keyPressEvent(ev)
 
     # ---- 快捷键动作 ---------------------------------------------------
+    def eventFilter(self, obj, ev):  # noqa: N802
+        """全局按钮点击音。
+
+        用事件过滤器而不是给每个按钮接 clicked —— 按钮是各处动态建的，
+        逐个接线既容易漏又会重复播。这里只认「按钮被按下的那一刻」。
+        """
+        # 便宜判断放前面：绝大多数事件在这里就返回了
+        if ev.type() != QEvent.Type.MouseButtonPress:
+            return False
+        try:
+            if isinstance(obj, QAbstractButton) and obj.isEnabled():
+                from core import sfx as _sfx
+                _sfx.play("click")
+        except Exception:
+            pass
+        return False
+
     def toggle_fullscreen(self) -> None:
         """F11：全屏 / 窗口切换。"""
         try:
@@ -703,6 +745,7 @@ class GameWindow(QMainWindow):
             try:
                 self.screens["menu"].refresh_mode_buttons(
                     bool(getattr(self.meta, "story_done", False)))
+                self.screens["menu"].refresh_daily(self.meta)
             except Exception:
                 pass
         # 界面过渡：淡入淡出（可在设置里关掉）
@@ -1145,6 +1188,19 @@ class GameWindow(QMainWindow):
         """跳过选角色界面直接开局（自检脚本 / 测试用）。"""
         self._pending_run = None
         self._start_run_now(ascension, seed, commander, mode)
+        self._sync_unlocks()
+
+    def _sync_unlocks(self) -> None:
+        """把 meta 里的解锁集合同步到当前 run，并做老存档迁移。"""
+        try:
+            from core import unlock as _U
+            if _U.migrate(self.meta) or _U.ensure_starter(self.meta):
+                self.meta.save()
+            if self.run is not None:
+                self.run.unlocked_cards = set(self.meta.unlocked_cards or ())
+                self.run.unlocked_relics = set(self.meta.unlocked_relics or ())
+        except Exception as exc:
+            print(f"[qt.app] sync unlocks failed: {exc!r}", flush=True)
 
     def _start_run_now(self, ascension: int = 0, seed=None,
                        commander: str = "", mode: str = "story") -> None:
@@ -1561,11 +1617,20 @@ class GameWindow(QMainWindow):
     def _finish_game(self, won: bool, story: bool = False) -> None:
         self.battle = None
         new_ach: List[str] = []
+        new_unlocks: List[str] = []
         score = 0
         try:
             new_ach = list(self.meta.record_run(self.run, won) or [])
         except Exception as exc:
             print(f"[qt.app] record_run failed: {exc!r}", flush=True)
+        # 解锁：每局都给，赢了给更多
+        try:
+            from core import unlock as _U
+            new_unlocks = list(_U.grant_after_run(self.meta, won) or [])
+            if new_unlocks:
+                self.meta.save()
+        except Exception as exc:
+            print(f"[qt.app] unlock grant failed: {exc!r}", flush=True)
         try:
             score = int(self.run.final_score())
         except Exception:
@@ -1579,7 +1644,8 @@ class GameWindow(QMainWindow):
         except Exception:
             pass
         try:
-            self.screens["gameover"].setup(self.run, won, new_ach, score)
+            self.screens["gameover"].setup(self.run, won, new_ach, score,
+                                           new_unlocks)
         except Exception as exc:
             print(f"[qt.app] gameover setup failed: {exc!r}", flush=True)
         self.show_screen("gameover")

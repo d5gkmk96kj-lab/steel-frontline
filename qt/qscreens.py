@@ -335,13 +335,13 @@ class MenuScreen(QWidget):
         self.btn_new.setObjectName("Primary")
         self.btn_new.setMinimumHeight(52)
         self.btn_new.setFixedWidth(176)
-        self.btn_new.setToolTip("三幕主线，带剧情与结局。通关后解锁无尽模式。")
+        self.btn_new.setToolTip(T.tr("三幕主线，带剧情与结局。通关后解锁无尽模式。"))
         self.btn_new.clicked.connect(lambda: self._emit_new("story"))
         self.btn_endless = QPushButton("无 尽 爬 塔", left)
         self.btn_endless.setObjectName("Primary")
         self.btn_endless.setMinimumHeight(52)
         self.btn_endless.setFixedWidth(156)
-        self.btn_endless.setToolTip("三幕循环，难度每轮递增。通关主线后解锁。")
+        self.btn_endless.setToolTip(T.tr("三幕循环，难度每轮递增。通关主线后解锁。"))
         self.btn_endless.clicked.connect(lambda: self._emit_new("endless"))
         self.btn_endless.setEnabled(False)
         mode_row.addWidget(self.btn_new)
@@ -377,7 +377,7 @@ class MenuScreen(QWidget):
         self.btn_ai.setObjectName("Primary")
         self.btn_ai.setMinimumHeight(46)
         self.btn_ai.setFixedWidth(240)
-        self.btn_ai.setToolTip("和电脑打一局 1v1，不需要联网")
+        self.btn_ai.setToolTip(T.tr("和电脑打一局 1v1，不需要联网"))
         self.cb_ai = QComboBox(left)
         self.cb_ai.setMinimumHeight(46)
         self.cb_ai.setFixedWidth(92)
@@ -408,6 +408,8 @@ class MenuScreen(QWidget):
             b.setMinimumHeight(42)
             b.setMinimumWidth(160)
             b.clicked.connect(sig)
+            if text == "每日挑战":
+                self.btn_daily = b
             if i == len(entries) - 1 and len(entries) % 2 == 1:
                 # 奇数个时，最后一个按钮横跨两列，避免出现孤立的半行
                 grid.addWidget(b, i // 2, 0, 1, 2)
@@ -721,6 +723,32 @@ class MenuScreen(QWidget):
         except Exception:
             key = None
         self.open_ai_versus.emit(str(key or "normal"))
+
+    def refresh_daily(self, meta=None) -> None:
+        """主菜单的每日挑战按钮：显示今天打没打、最好成绩、连续天数。"""
+        try:
+            import time as _t
+            btn = getattr(self, "btn_daily", None)
+            if btn is None:
+                return
+            key = _t.strftime("%Y-%m-%d")
+            res, done, streak = {}, set(), 0
+            if meta is not None:
+                res = dict(getattr(meta, "daily_results", {}) or {})
+                done = set(getattr(meta, "daily_done", []) or [])
+                streak = int(getattr(meta, "daily_streak", 0) or 0)
+            today = res.get(key) or {}
+            if key in done and today:
+                tail = "✓ %d 分" % int(today.get("score", 0) or 0)
+                if today.get("win"):
+                    tail += " · 通关"
+                if streak > 1:
+                    tail += " · 连续 %d 天" % streak
+                btn.setText("每日挑战  " + tail)
+            else:
+                btn.setText("每日挑战  今日可打")
+        except Exception:
+            pass
 
     def _emit_daily(self) -> None:
         try:
@@ -1614,6 +1642,23 @@ class GameOverScreen(QWidget):
         root.addWidget(self.ach_box, 0, Qt.AlignmentFlag.AlignHCenter)
         self.ach_box.hide()
 
+        # 本局新解锁的内容
+        self.unlock_box = QFrame(self)
+        self.unlock_box.setObjectName("Panel")
+        self.unlock_box.setFixedWidth(620)
+        uv = QVBoxLayout(self.unlock_box)
+        uv.setContentsMargins(26, 16, 26, 16)
+        uv.setSpacing(6)
+        uv.addWidget(W.SectionTitle("新 解 锁", self.unlock_box, T.Q_SUPPLY))
+        self.unlock_lbl = QLabel("", self.unlock_box)
+        self.unlock_lbl.setWordWrap(True)
+        self.unlock_lbl.setStyleSheet(
+            f"color:{T.Q_SUPPLY.name()}; font-size:{T.FONT_BODY}px;"
+            f"background:transparent;")
+        uv.addWidget(self.unlock_lbl)
+        root.addWidget(self.unlock_box, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.unlock_box.hide()
+
         # 提示行（内容来自项目根的 tips.txt，胜负各看各的）
         self.lbl_tip = QLabel("", self)
         self.lbl_tip.setWordWrap(True)
@@ -1702,7 +1747,7 @@ class GameOverScreen(QWidget):
         p.end()
 
     def setup(self, run, won: bool, new_achievements: Optional[List[str]] = None,
-              score: int = 0) -> None:
+              score: int = 0, new_unlocks: Optional[List[str]] = None) -> None:
         self._won = bool(won)
         accent = T.GOLD if won else T.RED
         self.lbl_big.setText("战 役 胜 利" if won else "总 部 陷 落")
@@ -1743,6 +1788,17 @@ class GameOverScreen(QWidget):
                     f"<td style='padding:5px 30px 5px 0;color:{col};font-weight:700'>{v}</td>")
             html.append(f"<tr>{''.join(cells)}</tr>")
         self.stats_lbl.setText(f"<table>{''.join(html)}</table>")
+
+        unlocks = list(new_unlocks or [])
+        try:
+            if unlocks:
+                self.unlock_lbl.setText("　·　".join(unlocks[:14])
+                                        + ("　…" if len(unlocks) > 14 else ""))
+                self.unlock_box.show()
+            else:
+                self.unlock_box.hide()
+        except Exception:
+            pass
 
         new = list(new_achievements or [])
         if new:
@@ -1881,10 +1937,21 @@ class CodexScreen(QWidget):
             item.setForeground(T.qc(T.TEXT if got else T.TEXT_MUTED))
             self.enemy_list.addItem(item)
 
+        # 解锁进度（和「见过」分开：解锁=能在奖励里抽到）
+        unlock_txt = ""
+        try:
+            from core import unlock as _U
+            up = _U.progress(meta)
+            unlock_txt = (f" · {T.tr('已解锁')} "
+                          f"{up['cards_unlocked']}/{up['cards_total']}"
+                          f" ({up['cards_pct']:.0f}%)")
+        except Exception:
+            unlock_txt = ""
         self.lbl_prog.setText(
             f"{T.tr('卡牌')} {len(seen_c & set(C.CARD_DB))}/{len(C.CARD_DB)} · "
             f"{T.tr('勋章')} {len(seen_r & set(R.RELIC_DB))}/{len(R.RELIC_DB)} · "
-            f"{T.tr('敌军')} {len(seen_e & set(E.ENEMY_DB))}/{len(E.ENEMY_DB)}")
+            f"{T.tr('敌军')} {len(seen_e & set(E.ENEMY_DB))}/{len(E.ENEMY_DB)}"
+            + unlock_txt)
 
 
 class AchievementScreen(QWidget):
@@ -2662,6 +2729,21 @@ class SettingsScreen(QWidget):
         self.cb_confirm = QCheckBox("结束回合前需要确认", disp)
         self.cb_confirm.setChecked(bool(self.cfg.get("confirm_end_turn", False)))
         dv.addWidget(self.cb_confirm)
+
+        # 音效开关（与背景音乐分开）
+        self.cb_sfx = QCheckBox("启用战斗音效", disp)
+        self.cb_sfx.setChecked(bool(self.cfg.get("sfx", True)))
+
+        def _on_sfx(on: bool) -> None:
+            try:
+                self.cfg["sfx"] = bool(on)
+                from core import sfx as _SFX
+                _SFX.set_enabled(bool(on))
+            except Exception:
+                pass
+
+        self.cb_sfx.toggled.connect(_on_sfx)
+        dv.addWidget(self.cb_sfx)
         dv.addSpacing(6)
         dv.addWidget(QLabel("音乐音量", disp))
         self.sl_vol = QSpinBox(disp)
@@ -2870,6 +2952,7 @@ class PileScreen(QWidget):
             f"QTabBar::tab:selected{{background:{T.PANEL_LIGHT};color:{T.GOLD};"
             f"border-bottom:2px solid {T.GOLD};}}")
         self.piles: Dict[str, CardScroll] = {}
+        # 标题带空格只为中文排版好看；翻译时用去空格的 key 查表
         for key, label in (("draw", "牌 库"), ("discard", "弃 牌 堆"),
                            ("exhaust", "移 除 区")):
             cs = CardScroll(self, card_scale=0.52)
@@ -2906,7 +2989,8 @@ class PileScreen(QWidget):
                 dicts.append(d)
             self.piles[key].set_cards(dicts, footer=False)
             idx = self.tabs.indexOf(self.piles[key])
-            names = {"draw": "牌 库", "discard": "弃 牌 堆", "exhaust": "移 除 区"}
+            names = {"draw": T.tr("牌库"), "discard": T.tr("弃牌堆"),
+                     "exhaust": T.tr("移除区")}
             self.tabs.setTabText(idx, f"{names[key]} ({len(cards)})")
 
 

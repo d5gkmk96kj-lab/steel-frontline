@@ -242,6 +242,15 @@ class CardInstance:
     def display_name(self) -> str:
         return self.name + "+" if self.upgraded else self.name
 
+    def display_name_i18n(self) -> str:
+        """已翻译的显示名（升级后带 +）。界面上优先用这个。"""
+        try:
+            from core import i18n as _i18n
+            base = _i18n.t(self.name)
+        except Exception:
+            base = self.name
+        return base + "+" if self.upgraded else base
+
     # ---- 序列化 -------------------------------------------------------
     def to_dict(self) -> dict:
         return {
@@ -289,7 +298,11 @@ def resolve_text(defn: CardDef, translate: bool = False) -> str:
     ``translate=True`` 时会**先翻译模板再填数值** —— 顺序很重要：
     填完数值后字符串是「造成 6 点伤害。」这种具体文案，已经不在翻译表里了。
     """
-    out = defn.text
+    # 兼容两种入参：CardDef 或 CardInstance。
+    # CardInstance.text 是**已填数值**的中文，拿它去翻译表里查永远查不到，
+    # 所以必须先取回模板（这一点踩过：英文模式卡面文字一直是中文）。
+    base = getattr(defn, "defn", defn)
+    out = base.text
     if translate:
         try:
             from core import i18n as _i18n

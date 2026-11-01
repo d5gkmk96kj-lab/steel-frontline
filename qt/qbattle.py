@@ -135,6 +135,8 @@ class HandArea(QWidget):
     """
 
     card_clicked = pyqtSignal(int)
+    hover_in = pyqtSignal(int)       # 鼠标进入某张手牌
+    hover_out = pyqtSignal(int)      # 鼠标离开
 
     #: 单卡最多被遮挡的比例。0.28 = 至少露出 72% 卡面宽度，
     #: 保证卡名的「造成 6 点伤害」这类核心数值不被邻卡压住。
@@ -158,6 +160,8 @@ class HandArea(QWidget):
             cv = W.CardView(h, self, scale=1.0, interactive=True)
             cv.clicked.connect(self.card_clicked.emit)
             cv.hovered.connect(self.hover_raise)
+            cv.hovered.connect(self.hover_in.emit)
+            cv.unhovered.connect(self.hover_out.emit)
             self.cards.append(cv)
         self._relayout()
         for c in self.cards:
@@ -466,6 +470,8 @@ class BattleScreen(QWidget):
         # 中：手牌
         self.hand = HandArea(self.bottom)
         self.hand.card_clicked.connect(self._on_card_clicked)
+        self.hand.hover_in.connect(self._show_card_preview)
+        self.hand.hover_out.connect(self._hide_card_preview)
         bl.addWidget(self.hand, 1)
 
         # 右：按钮列
@@ -511,6 +517,9 @@ class BattleScreen(QWidget):
             f"color:{T.TEXT}; font-size:{T.FONT_BODY}px;"
             f"background:transparent;")
         self.banner_sub.hide()
+
+        # 手牌悬停大图（懒创建，见 _ensure_preview）
+        self._preview = None
 
         # ---- 新手操作提示（第一次进战斗时出现一次）----
         # 用一个**铺满整个界面的覆盖层**，里面用布局居中放卡片 ——
@@ -631,11 +640,102 @@ class BattleScreen(QWidget):
         self.relic_lay.setSpacing(5)
         lay.addWidget(self.relic_row)
 
+        # 药水槽（最多 3 瓶）：点一下就用掉
+        self.potion_row = QWidget(bar)
+        self.potion_lay = QHBoxLayout(self.potion_row)
+        self.potion_lay.setContentsMargins(0, 0, 0, 0)
+        self.potion_lay.setSpacing(5)
+        lay.addWidget(self.potion_row)
+
         self.lbl_finish = QLabel("", bar)
         self.lbl_finish.setStyleSheet(
             f"color:{T.GOLD}; font-size:{T.FONT_BODY}px; font-weight:700;")
         lay.addWidget(self.lbl_finish)
         return bar
+
+    # ---- 音效 ---------------------------------------------------------
+    def _sfx(self, name: str) -> None:
+        """播一个音效。失败静默 —— 音效永远不该让游戏出问题。"""
+        try:
+            from core import sfx as _sfx
+            _sfx.play(name)
+        except Exception:
+            pass
+
+    # ---- 药水 ---------------------------------------------------------
+    def _refresh_potions(self) -> None:
+        """重建药水槽按钮。"""
+        try:
+            while self.potion_lay.count():
+                it = self.potion_lay.takeAt(0)
+                w = it.widget()
+                if w is not None:
+                    w.deleteLater()
+            if self.battle is None or self.run is None:
+                return
+            from core import events as _EV
+            for pid in list(getattr(self.run, "potions", []) or []):
+                info = _EV.POTION_DB.get(pid, {})
+                name = str(info.get("name", pid))
+                desc = str(info.get("text", ""))
+                b = QPushButton(name, self.potion_row)
+                b.setObjectName("Ghost")
+                b.setFixedHeight(30)
+                b.setMinimumWidth(88)
+                b.setToolTip("%s\n%s\n%s" % (T.tr(name), T.tr(desc),
+                                               T.tr("（点击使用）")))
+                b.setStyleSheet(
+                    "QPushButton{background:%s;border:1px solid %s;"
+                    "border-radius:6px;color:%s;font-size:%dpx;padding:0 8px;}"
+                    "QPushButton:hover{background:%s;}"
+                    % (T.a(T.Q_SUPPLY, 150).name(), T.Q_SUPPLY.name(),
+                       T.TEXT.name() if hasattr(T.TEXT, "name") else "#E8E2D4",
+                       int(T.FONT_TINY), T.Q_SUPPLY.name()))
+                b.clicked.connect(lambda _c=False, p=pid: self.use_potion_ui(p))
+                self.potion_lay.addWidget(b)
+        except Exception as exc:
+            print(f"[qt.battle] refresh potions failed: {exc!r}", flush=True)
+
+    def use_potion_ui(self, pid: str) -> bool:
+        """点药水按钮：用掉它。"""
+        if self.battle is None or self._ended:
+            return False
+        try:
+            tgt = self._target()
+        except Exception:
+            tgt = None
+        pre = self._snapshot()
+        ok = False
+        try:
+            ok = bool(self.battle.use_potion(pid, tgt))
+        except Exception as exc:
+            print(f"[qt.battle] use_potion failed: {exc!r}", flush=True)
+        if not ok:
+            self._toast_potion("现在用不了")
+            return False
+        self._sfx("potion")
+        # 飘字反馈
+        try:
+            cx = self._to_stage(self.player_panel,
+                                QPoint(self.player_panel.width() // 2, 36))
+            if cx is not None and self._overlay is not None:
+                self._overlay.float_text(cx.x(), cx.y(), "药水",
+                                         T.Q_SUPPLY, size=24, rise=50)
+        except Exception:
+            pass
+        self._after_action(pre)
+        self._refresh_potions()
+        self._check_end()
+        return True
+
+    def _toast_potion(self, msg: str) -> None:
+        try:
+            if self._overlay is not None:
+                self._overlay.float_text(
+                    int(self.stage.width() / 2), int(self.stage.height() * 0.5),
+                    str(msg), T.RED, size=20, rise=30)
+        except Exception:
+            pass
 
     def _refresh_static(self) -> None:
         self.hq.kind = "generic"
@@ -655,6 +755,7 @@ class BattleScreen(QWidget):
         self._log_len = -1
         self._hand_sig = ()
         self.banner.hide()
+        self.hide_tips()
         self._clear_enemies()
         try:
             self.battle.start_battle()
@@ -662,6 +763,7 @@ class BattleScreen(QWidget):
             print(f"[qt.battle] start_battle failed: {exc!r}", flush=True)
         self._build_enemies()
         self._sync(animate=False)
+        self._refresh_potions()
         self._ensure_overlay()
         self.setFocus()
 
@@ -679,6 +781,7 @@ class BattleScreen(QWidget):
         # 新手提示开着时，跟着窗口重新居中
         if getattr(self, "tips", None) is not None and self.tips.isVisible():
             self._place_tips()
+        self._place_preview()
 
     def _place_banner(self) -> None:
         self.banner.adjustSize()
@@ -816,8 +919,9 @@ class BattleScreen(QWidget):
                 if it and it.widget():
                     it.widget().relic = dict(r)
                     it.widget().setToolTip(
-                        f"【{r.get('name','')}】"
-                        f"  {T.RARITY_NAMES.get(r.get('rarity',''), '')}\n{r.get('text','')}")
+                        f"【{T.tr(str(r.get('name','')))}】"
+                        f"  {T.RARITY_NAMES.get(r.get('rarity',''), '')}\n"
+                        f"{T.tr(str(r.get('text','')))}")
             return
         while self.relic_lay.count():
             it = self.relic_lay.takeAt(0)
@@ -852,6 +956,70 @@ class BattleScreen(QWidget):
             if e.alive():
                 return e
         return alive[0]
+
+    # ---- 卡牌悬停大图 -------------------------------------------------
+    def _show_card_preview(self, uid: int) -> None:
+        """鼠标悬停手牌时，在旁边显示一张放大的卡面。
+
+        手牌区的卡比较小（缩放过的），新玩家常常看不清效果文字。
+        """
+        try:
+            if self._ended:
+                return
+            self._ensure_preview()
+            if self._preview is None:
+                return
+            card = None
+            for c in ((self._snap or {}).get("hand") or []):
+                if int(c.get("uid", -1)) == int(uid):
+                    card = c
+                    break
+            if card is None:
+                self._hide_card_preview()
+                return
+            self._preview.set_card(card)
+            self._preview.show()
+            self._place_preview()
+        except Exception:
+            pass
+
+    def _ensure_preview(self) -> None:
+        """懒创建悬停大图控件（挂到舞台上，跟随战斗界面）。"""
+        if self._preview is not None:
+            return
+        try:
+            self._preview = W.CardView({}, self.stage, scale=1.55,
+                                       interactive=False)
+            self._preview.setAttribute(
+                Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            self._preview.hide()
+        except Exception as exc:
+            print(f"[qt.battle] preview create failed: {exc!r}", flush=True)
+            self._preview = None
+
+    def _hide_card_preview(self) -> None:
+        try:
+            if self._preview is not None:
+                self._preview.hide()
+        except Exception:
+            pass
+
+    def _place_preview(self) -> None:
+        """把预览卡摆在手牌区上方偏右（不挡住手牌本身）。"""
+        try:
+            pv = self._preview
+            if pv is None or not pv.isVisible():
+                return
+            w = pv.width()
+            h = pv.height()
+            stage_h = self.stage.height()
+            # 悬浮在舞台右下角，避开中间的敌人与左侧总部
+            x = max(8, self.stage.width() - w - 260)
+            y = max(8, stage_h - h - 12)
+            pv.move(x, y)
+            pv.raise_()
+        except Exception:
+            pass
 
     # ---- 教程提示带 ---------------------------------------------------
     def set_tutorial(self, coach) -> None:
@@ -938,6 +1106,15 @@ class BattleScreen(QWidget):
             except Exception:
                 pass
             return
+        # Q / 1-9 冲突，所以药水用 Q 轮换使用第一瓶
+        if key == _Qt.Key.Key_Q:
+            try:
+                pots = list(getattr(self.run, "potions", []) or [])
+                if pots:
+                    self.use_potion_ui(pots[0])
+            except Exception:
+                pass
+            return
         # H：牌库/弃牌/移除区
         if key == _Qt.Key.Key_H:
             try:
@@ -985,6 +1162,7 @@ class BattleScreen(QWidget):
             self._deny_feedback(card)
             return False
 
+        self._sfx("card")
         # 出牌动画：卡飞向目标 + 闪光
         if card_widget is not None and self._overlay is not None:
             fp = self._to_stage(card_widget, QPoint(card_widget.width() // 2,
@@ -1092,10 +1270,12 @@ class BattleScreen(QWidget):
         if cx is None:
             return
         if block_gain:
+            self._sfx("block")
             self._overlay.float_text(cx.x(), cx.y(), f"掩体 +{block_gain}",
                                      T.Q_BLOCK, size=22, rise=42)
             FX.block_effect(self._overlay, cx.x(), cx.y() - 10)
         if dmg_to_player:
+            self._sfx("hit")
             self._overlay.float_text(cx.x(), cx.y() - 16, f"-{dmg_to_player}",
                                      T.RED, size=30, rise=58)
             self._screen_shake(9)
@@ -1114,6 +1294,7 @@ class BattleScreen(QWidget):
             if pt is None:
                 continue
             if not e.get("alive", True) and w.property("hit") != -1:
+                self._sfx("kill")
                 self._overlay.float_text(pt.x(), pt.y(), "击 毁", T.GOLD,
                                          size=26, rise=52)
                 # 击毁：来一发大的
@@ -1123,6 +1304,7 @@ class BattleScreen(QWidget):
             elif e.get("hp") is not None and getattr(w, "_last_hp", None) is not None:
                 d = int(w._last_hp) - int(e.get("hp", 0))
                 if d > 0:
+                    self._sfx("crit" if d >= 18 else "hit")
                     self._overlay.float_text(pt.x(), pt.y(), f"-{d}", T.RED,
                                              size=28, rise=54)
                     # 伤害越高火花越大：0.6 小 / 1.0 中 / 1.6+ 大
@@ -1197,6 +1379,7 @@ class BattleScreen(QWidget):
         self._sync(animate=True)
         # 敌方回合开始：每 400ms 驱动一个敌人行动
         if self.battle.phase == "enemy":
+            self._sfx("turn")
             self.lbl_phase.setText("敌方行动")
             self._stepping = True
             self._timer.start()
@@ -1228,10 +1411,12 @@ class BattleScreen(QWidget):
             if cx is None:
                 cx = QPoint(self.stage.width() // 4, int(self.stage.height() * 0.6))
             if dmg:
+                self._sfx("crit" if dmg >= 18 else "hit")
                 self._overlay.float_text(cx.x(), cx.y(), f"-{dmg}", T.RED,
                                          size=32, rise=60)
                 self._screen_shake(11)
             elif blk:
+                self._sfx("block")
                 self._overlay.float_text(cx.x(), cx.y(), f"掩体 -{blk}", T.Q_BLOCK,
                                          size=20, rise=40)
         if not more:
@@ -1259,6 +1444,8 @@ class BattleScreen(QWidget):
             self._ended = True
             self._timer.stop()
             self._busy = False
+            self.hide_tips()
+            self._sfx("victory" if res == "won" else "defeat")
             self._coach_notify("battle_end")
             self.banner.setText("战 斗 胜 利" if res == "won" else "总 部 陷 落")
             self.banner.setStyleSheet(

@@ -88,7 +88,7 @@ class CardBack(QWidget):
         super().__init__(parent)
         self.setFixedSize(w, h)
         self._seed = int(seed)
-        self.setToolTip("对方手牌（内容不可见）")
+        self.setToolTip(T.tr("对方手牌（内容不可见）"))
 
     def paintEvent(self, ev):  # noqa: N802
         p = QPainter(self)
@@ -1021,9 +1021,9 @@ class VersusScreen(QWidget):
         self.btn_report = QPushButton("🚩 举报对手", right)
         self.btn_report.setObjectName("Ghost")
         self.btn_report.setMinimumHeight(38)
-        self.btn_report.setToolTip(
+        self.btn_report.setToolTip(T.tr(
             "遇到疑似改代码 / 作弊的对手，点这里举报。\n"
-            "举报后会对他启用更严格的检测。")
+            "举报后会对他启用更严格的检测。"))
         self.btn_report.clicked.connect(self._do_report)
         self.btn_report.hide()          # 默认不显示，开了真人局才显示
         self._right_grid.addWidget(self.btn_report, 1, 0)

@@ -755,9 +755,9 @@ class IntentBadge(QWidget):
     def set_intent(self, intent: Optional[dict]) -> None:
         self._intent = intent
         if intent:
-            bits = [f"{T.INTENT_NAMES.get(intent.get('intent',''), '行动')}"]
+            bits = [f"{T.tr(T.INTENT_NAMES.get(intent.get('intent',''), '行动'))}"]
             if intent.get("damage"):
-                d = f"伤害 {intent['damage']}"
+                d = f"{T.tr('伤害')} {intent['damage']}"
                 if int(intent.get("hits", 1)) > 1:
                     d += f" × {intent['hits']}"
                 bits.append(d)
@@ -1505,6 +1505,7 @@ class CardView(QWidget):
     clicked = pyqtSignal(int)          # uid
     right_clicked = pyqtSignal(int)
     hovered = pyqtSignal(int)
+    unhovered = pyqtSignal(int)
 
     BASE_W, BASE_H = T.CARD_W, T.CARD_H
 
@@ -1598,8 +1599,8 @@ class CardView(QWidget):
         c = self.card
         if not c:
             return
-        name = c.get("name", "")
-        if c.get("upgraded"):
+        name = T.tr(str(c.get("name", "")))
+        if c.get("upgraded") and not name.endswith("+"):
             name += "+"
         lines = [
             f"【{name}】  {T.TYPE_NAMES.get(c.get('type',''), c.get('type',''))}"
@@ -1627,6 +1628,7 @@ class CardView(QWidget):
         self._anim_hover.setStartValue(self._lift)
         self._anim_hover.setEndValue(0.0)
         self._anim_hover.start()
+        self.unhovered.emit(int(self.card.get("uid", -1)))
 
     def mousePressEvent(self, ev):  # noqa: N802
         if not self._interactive:
@@ -1912,9 +1914,9 @@ class RelicView(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setToolTip(
-            f"【{self.relic.get('name','')}】"
+            f"【{T.tr(str(self.relic.get('name','')))}】"
             f"  {T.RARITY_NAMES.get(self.relic.get('rarity',''), '')}\n"
-            f"{T.tr(self.relic.get('text',''))}"
+            f"{T.tr(str(self.relic.get('text','')))}"
         )
 
     def enterEvent(self, ev):  # noqa: N802

@@ -523,6 +523,14 @@ class MapHUD(QFrame):
         self.lbl_gold = self._stat(lay, "金币", "99")
         self.lbl_relic = self._stat(lay, "勋章", "1")
 
+        # 无尽模式的战场态势（主线不显示）
+        self.lbl_mutator = QLabel("", self)
+        self.lbl_mutator.setStyleSheet(
+            f"color:{T.qc('#B5651D').name()}; font-size:{T.FONT_TINY}px;")
+        self.lbl_mutator.setWordWrap(True)
+        # 放在 HUD 最左侧的种子标签后面，横跨一行；没态势时隐藏
+        lay.insertWidget(2, self.lbl_mutator, 1)
+
     def _stat(self, lay: QHBoxLayout, title: str, val: str) -> QLabel:
         box = QWidget(self)
         v = QVBoxLayout(box)
@@ -562,6 +570,19 @@ class MapHUD(QFrame):
             f"font-size:{T.FONT_BODY}px; font-weight:700;")
         self.lbl_gold.setText(str(run.gold))
         self.lbl_relic.setText(str(len(run.relics)))
+        # 无尽模式：显示当前叠加的战场态势
+        try:
+            ms = list(run.loop_mutators()) if hasattr(run, "loop_mutators") else []
+        except Exception:
+            ms = []
+        if ms:
+            txt = " · ".join("「%s」%s" % (T.tr(m.get("name", "")),
+                                          T.tr(m.get("text", "")))
+                             for m in ms)
+            self.lbl_mutator.setText(T.tr("战场态势：") + txt)
+            self.lbl_mutator.show()
+        else:
+            self.lbl_mutator.hide()
 
 
 # =====================================================================
