@@ -460,10 +460,14 @@ class BattleScreen(QWidget):
         self.btn_piles.setFixedWidth(150)
         self.btn_piles.clicked.connect(self.request_piles.emit)
         rv.addWidget(self.btn_piles)
-        self.hint = QLabel("点击敌方单位切换目标", right)
-        self.hint.setStyleSheet(f"color:{T.TEXT_MUTED}; font-size:{T.FONT_TINY}px;")
-        self.hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.hint.setFixedWidth(150)
+        # 操作提示：把键位也写上，新玩家不用猜
+        self.hint = QLabel(
+            "空格 结束回合\n1–9 出牌\nTab 切换目标\nH 牌库", right)
+        self.hint.setStyleSheet(
+            f"color:{T.TEXT_MUTED}; font-size:{T.FONT_TINY}px;"
+            f"background:transparent;")
+        self.hint.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.hint.setWordWrap(True)
         rv.addWidget(self.hint)
         bl.addWidget(right, 0)
 
@@ -477,6 +481,105 @@ class BattleScreen(QWidget):
             f"font-size:{T.FONT_TITLE}px; font-weight:800;"
             f"border:2px solid {T.GOLD}; border-radius:12px; padding:14px 36px;")
         self.banner.hide()
+        self.banner_sub = QLabel("", self)
+        self.banner_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.banner_sub.setStyleSheet(
+            f"color:{T.TEXT}; font-size:{T.FONT_BODY}px;"
+            f"background:transparent;")
+        self.banner_sub.hide()
+
+        # ---- 新手操作提示（第一次进战斗时出现一次）----
+        # 用一个**铺满整个界面的覆盖层**，里面用布局居中放卡片 ——
+        # 不用手算坐标，淡入动画/换窗口尺寸都不会跑偏。
+        self.tips = QWidget(self)
+        self.tips.setStyleSheet("background: rgba(8,8,10,190);")
+        _tl = QVBoxLayout(self.tips)
+        _tl.setContentsMargins(40, 40, 40, 40)
+        _tl.addStretch(1)
+        self.tips_card = QLabel("", self.tips)
+        self.tips_card.setStyleSheet(
+            f"background:#141416; color:{T.TEXT};"
+            f"border:2px solid {T.GOLD}; border-radius:12px;"
+            f"padding:22px 30px; font-size:{T.FONT_BODY}px;")
+        self.tips_card.setWordWrap(True)
+        self.tips_card.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.tips_card.setMaximumWidth(560)
+        _tl.addWidget(self.tips_card, 0, Qt.AlignmentFlag.AlignHCenter)
+        _tl.addStretch(1)
+        self.tips.setVisible(False)
+        self._tips_text = (
+            "怎么玩\n\n"
+            "· 点击手牌出牌（或按 1–9）\n"
+            "· 出牌消耗补给，每回合回满 3 点\n"
+            "· 结束回合按 空格\n"
+            "· Tab 切换攻击目标，H 看牌库\n"
+            "· 敌人头顶显示它下回合要做什么\n\n"
+            "（设置里可以关掉战斗特效、调字号）"
+        )
+
+    def show_tips_once(self) -> None:
+        """第一次进战斗时弹一次操作说明（铺满界面、居中卡片）。
+
+        注意：调用时界面可能还没真正显示（淡入动画/切换排队中），
+        而 Qt 里**父控件不可见时子控件也显示不出来** —— 所以要等
+        本界面 visible 之后再弹，否则 setVisible(True) 是空操作。
+        """
+        try:
+            self.tips_card.setText(T.tr(self._tips_text))
+            self._tips_ready = True
+            self._try_show_tips(0)
+        except Exception:
+            pass
+
+    def _try_show_tips(self, _try: int = 0) -> None:
+        """等界面真正可见再弹提示（最多等约 3 秒）。"""
+        try:
+            if not getattr(self, "_tips_ready", False):
+                return
+            if not self.isVisible():
+                if _try < 30:
+                    from PyQt6.QtCore import QTimer as _QT
+                    _QT.singleShot(100, lambda: self._try_show_tips(_try + 1))
+                return
+            self._tips_ready = False
+            self.tips.setVisible(True)
+            self.tips.raise_()
+            self._place_tips()
+        except Exception:
+            pass
+
+    def _place_tips(self, _try: int = 0) -> None:
+        """让覆盖层铺满整个战斗界面。
+
+        界面切换带淡入动画，刚显示时本界面的 rect 还没变成最终尺寸 ——
+        所以尺寸不够就自动重试几次（约 1.5 秒内一定铺满）。
+        """
+        try:
+            if not self.tips.isVisible():
+                return
+            r = self.rect()
+            self.tips.setGeometry(r)
+            self.tips.raise_()
+            if r.width() < 400 and _try < 20:
+                from PyQt6.QtCore import QTimer as _QT
+                _QT.singleShot(80, lambda: self._place_tips(_try + 1))
+        except Exception:
+            pass
+
+
+    def hide_tips(self) -> None:
+        try:
+            self._tips_ready = False
+            self.tips.setVisible(False)
+        except Exception:
+            pass
+
+    def mousePressEvent(self, ev):  # noqa: N802
+        # 点任意处关掉提示
+        if getattr(self, "tips", None) is not None and self.tips.isVisible():
+            self.hide_tips()
+            return
+        super().mousePressEvent(ev)
 
     def _make_topbar(self, parent) -> QWidget:
         bar = QFrame(parent)
@@ -549,6 +652,9 @@ class BattleScreen(QWidget):
         if self._overlay:
             self._overlay.setGeometry(self.stage.rect())
         self._place_banner()
+        # 新手提示开着时，跟着窗口重新居中
+        if getattr(self, "tips", None) is not None and self.tips.isVisible():
+            self._place_tips()
 
     def _place_banner(self) -> None:
         self.banner.adjustSize()
@@ -722,6 +828,59 @@ class BattleScreen(QWidget):
             if e.alive():
                 return e
         return alive[0]
+
+    # ---- 键盘操作 -----------------------------------------------------
+    def keyPressEvent(self, ev):  # noqa: N802
+        """战斗快捷键。
+
+        * 空格 / 回车 —— 结束回合（设置了「需要确认」会先问）
+        * 1–9        —— 打出从左数第 N 张手牌
+        * Tab        —— 切换攻击目标
+        * H          —— 打开牌库（查看弃牌/移除区）
+        * Esc        —— 由主窗口处理（确认放弃）
+        """
+        from PyQt6.QtCore import Qt as _Qt
+        key = ev.key()
+        if self.battle is None or self._ended:
+            super().keyPressEvent(ev)
+            return
+        # 空格 / 回车：结束回合
+        if key in (_Qt.Key.Key_Space, _Qt.Key.Key_Return, _Qt.Key.Key_Enter):
+            try:
+                self.end_turn()
+            except Exception:
+                pass
+            return
+        # 1–9：出第 N 张牌
+        if _Qt.Key.Key_1 <= key <= _Qt.Key.Key_9:
+            idx = key - _Qt.Key.Key_1
+            try:
+                hand = list((self._snap or {}).get("hand") or [])
+                if 0 <= idx < len(hand):
+                    self.play_card(hand[idx].get("uid"))
+            except Exception:
+                pass
+            return
+        # Tab：切换目标
+        if key == _Qt.Key.Key_Tab:
+            try:
+                alive = [i for i, e in enumerate(self.battle.enemies) if e.alive()]
+                if alive:
+                    cur = getattr(self, "_sel_enemy", 0)
+                    nxt = alive[(alive.index(cur) + 1) % len(alive)] \
+                        if cur in alive else alive[0]
+                    self._select_enemy(nxt)
+            except Exception:
+                pass
+            return
+        # H：牌库/弃牌/移除区
+        if key == _Qt.Key.Key_H:
+            try:
+                self.request_piles.emit()
+            except Exception:
+                pass
+            return
+        super().keyPressEvent(ev)
 
     def _on_card_clicked(self, uid: int) -> None:
         if self.battle is None or self._busy or self._ended:

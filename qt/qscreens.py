@@ -665,6 +665,38 @@ class MenuScreen(QWidget):
         except ValueError:
             return abs(hash(s)) % (2 ** 31 - 1)
 
+    def keyPressEvent(self, ev):  # noqa: N802
+        """主菜单快捷键。
+
+        * 1 主线剧情 / 2 无尽爬塔 / 3 存档管理 / 4 联机 / 5 人机
+        * Enter 或 空格 —— 直接开始主线（新手最常做的事）
+        * L 切换语言
+        """
+        from PyQt6.QtCore import Qt as _Qt
+        key = ev.key()
+        maps = {
+            _Qt.Key.Key_1: lambda: self.btn_new.click(),
+            _Qt.Key.Key_2: lambda: (self.btn_endless.click()
+                                    if self.btn_endless.isEnabled() else None),
+            _Qt.Key.Key_3: lambda: self.btn_cont.click(),
+            _Qt.Key.Key_4: lambda: self.btn_versus.click(),
+            _Qt.Key.Key_5: lambda: self.btn_ai.click(),
+        }
+        fn = maps.get(key)
+        if fn is not None:
+            try:
+                fn()
+            except Exception:
+                pass
+            return
+        if key in (_Qt.Key.Key_Return, _Qt.Key.Key_Enter, _Qt.Key.Key_Space):
+            try:
+                self.btn_new.click()
+            except Exception:
+                pass
+            return
+        super().keyPressEvent(ev)
+
     def _emit_new(self, mode: str = "story") -> None:
         self._mode = str(mode or "story")
         self.new_run.emit(int(self.spin_asc.value()), self._seed_or_none(),
@@ -1289,6 +1321,28 @@ class EventScreen(QWidget):
             bh.addWidget(d, 1)
             self.cl.addWidget(box)
             self._buttons.append(btn)
+
+    def keyPressEvent(self, ev):  # noqa: N802
+        """事件快捷键：1–9 选选项，Esc/回车 关闭结果。"""
+        from PyQt6.QtCore import Qt as _Qt
+        key = ev.key()
+        btns = [b for b in getattr(self, "_buttons", []) if b.isEnabled()]
+        if _Qt.Key.Key_1 <= key <= _Qt.Key.Key_9:
+            idx = key - _Qt.Key.Key_1
+            if idx < len(btns):
+                btns[idx].click()
+                return
+        if key in (_Qt.Key.Key_Escape, _Qt.Key.Key_Return, _Qt.Key.Key_Enter):
+            # 结果已出 -> 关闭
+            if getattr(self, "result_box", None) is not None \
+                    and self.result_box.isVisible():
+                try:
+                    self.closed.emit() if hasattr(self, "closed") else None
+                    self.done.emit()
+                except Exception:
+                    pass
+                return
+        super().keyPressEvent(ev)
 
     def _choose(self, choice) -> None:
         if self._run is None:
@@ -2051,6 +2105,44 @@ class StoryScreen(QWidget):
                 out.append(w)
         return out
 
+    # ---- 键盘 ---------------------------------------------------------
+    def keyPressEvent(self, ev):  # noqa: N802
+        """剧情快捷键：空格/回车下一句，1–9 选选项，Esc 跳过。"""
+        from PyQt6.QtCore import Qt as _Qt
+        key = ev.key()
+        if key in (_Qt.Key.Key_Space, _Qt.Key.Key_Return, _Qt.Key.Key_Enter):
+            btn = self.btn_next
+            if btn.isVisible():
+                self._next()
+            else:
+                btns = self._choice_buttons()
+                if btns:
+                    btns[0].click()
+            return
+        if _Qt.Key.Key_1 <= key <= _Qt.Key.Key_9:
+            btns = self._choice_buttons()
+            idx = key - _Qt.Key.Key_1
+            if 0 <= idx < len(btns):
+                btns[idx].click()
+                return
+        if key == _Qt.Key.Key_Escape:
+            self.skip_or_finish()
+            return
+        super().keyPressEvent(ev)
+
+    def skip_or_finish(self) -> None:
+        """Esc：跳完剩下的文字；已经到选项就选第一个。"""
+        try:
+            lines = list(self._beat.get("lines") or [])
+            while self._line_i < len(lines):
+                self._next()
+            if not self.btn_next.isVisible():
+                btns = self._choice_buttons()
+                if btns:
+                    btns[0].click()
+        except Exception:
+            pass
+
     def _next(self) -> None:
         lines = list(self._beat.get("lines") or [])
         if self._line_i < len(lines):
@@ -2502,6 +2594,40 @@ class SettingsScreen(QWidget):
         except Exception:
             pass
         dv.addWidget(self.cb_fx)
+
+        # 界面字号缩放（小屏 / 视力不好都能看清）
+        size_row = QHBoxLayout()
+        size_row.addWidget(QLabel("界面字号", disp))
+        size_row.addStretch(1)
+        self.cb_size = QComboBox(disp)
+        self.cb_size.setFixedWidth(150)
+        for label, val in (("小", 0.85), ("标准", 1.0),
+                           ("大", 1.15), ("特大", 1.3)):
+            self.cb_size.addItem(label, float(val))
+        try:
+            _cur = float(self.cfg.get("ui_scale", 1.0))
+            for _i in range(self.cb_size.count()):
+                if abs(float(self.cb_size.itemData(_i)) - _cur) < 0.01:
+                    self.cb_size.setCurrentIndex(_i)
+                    break
+        except Exception:
+            pass
+
+        def _on_size(idx: int) -> None:
+            try:
+                v = float(self.cb_size.itemData(int(idx)) or 1.0)
+                self.cfg["ui_scale"] = v
+                T.set_ui_scale(v)
+                win = self.window()
+                fn = getattr(win, "rebuild_screens", None)
+                if callable(fn):
+                    fn()
+            except Exception:
+                pass
+
+        self.cb_size.currentIndexChanged.connect(_on_size)
+        size_row.addWidget(self.cb_size)
+        dv.addLayout(size_row)
 
         self.cb_full = QCheckBox("启动时全屏", disp)
         self.cb_full.setChecked(bool(self.cfg.get("fullscreen", False)))

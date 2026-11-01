@@ -3018,5 +3018,12 @@
  "帮他捡砖头": "Help him gather bricks",
  "你还有一小时。": "You had an hour.",
  "修不好的。": "It can't be fixed.",
- "你回头看了一眼。": "You looked back once."
+ "你回头看了一眼。": "You looked back once.",
+ "怎么玩\n\n· 点击手牌出牌（或按 1–9）\n· 出牌消耗补给，每回合回满 3 点\n· 结束回合按 空格\n· Tab 切换攻击目标，H 看牌库\n· 敌人头顶显示它下回合要做什么\n\n（设置里可以关掉战斗特效、调字号）": "How to play\n\n· Click a card to play it (or press 1–9)\n· Playing costs supply; you refill 3 each turn\n· Press Space to end your turn\n· Tab switches targets, H opens the piles\n· The icon above each enemy shows its next move\n\n(You can turn off effects and change font size in Settings)",
+ "空格 结束回合\n1–9 出牌\nTab 切换目标\nH 牌库": "Space  end turn\n1–9  play card\nTab  switch target\nH  piles",
+ "界面字号": "UI font size",
+ "小": "Small",
+ "标准": "Normal",
+ "大": "Large",
+ "特大": "Extra large"
 }

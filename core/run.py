@@ -753,6 +753,8 @@ class MetaProgress:
         self.seen_vignettes: set = set()
         #: 跨局记住的主线剧情 id
         self.seen_story: set = set()
+        #: 是否已经看过战斗操作提示（第一次进战斗时弹一次）
+        self.seen_battle_tips = False
 
     # -- 读写 -------------------------------------------------------------
     @classmethod
@@ -784,6 +786,7 @@ class MetaProgress:
             m.story_wins = int(d.get("story_wins", 0))
             m.seen_vignettes = set(d.get("seen_vignettes", []))
             m.seen_story = set(d.get("seen_story", []))
+            m.seen_battle_tips = bool(d.get("seen_battle_tips", False))
         except Exception:
             pass
         return m
@@ -817,6 +820,7 @@ class MetaProgress:
             "story_wins": int(self.story_wins),
             "seen_vignettes": sorted(self.seen_vignettes),
             "seen_story": sorted(self.seen_story),
+            "seen_battle_tips": bool(self.seen_battle_tips),
         }
 
     # -- 解锁 -------------------------------------------------------------

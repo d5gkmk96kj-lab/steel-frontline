@@ -1,20 +1,22 @@
 {
-  "version": "1.0.11",
-  "label": "1.0.11 正式版",
-  "label_en": "1.0.11",
-  "released": "2026-10-31",
+  "version": "1.0.12",
+  "label": "1.0.12 正式版",
+  "label_en": "1.0.12",
+  "released": "2026-11-01",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：中继服务器容量占满时会拒绝所有新玩家（改踢空闲连接）",
-    "修复：管理后台读存档不认自己的数据目录",
-    "改进：单 IP 每分钟建房上限 5 -> 20（避免同一 WiFi 被误伤）",
-    "修复：联机测试之间配置互相污染导致偶发失败"
+    "新增：全局快捷键（F11 全屏 / Esc 返回 / Ctrl+S 存档退出）",
+    "新增：战斗快捷键（空格结束回合 / 1-9 出牌 / Tab 切目标 / H 牌库）",
+    "新增：主菜单数字键与剧情、事件快捷键",
+    "新增：首次进战斗弹一次操作说明",
+    "新增：界面字号可调（小/标准/大/特大）"
   ],
   "notes_en": [
-    "Fix: relay server refused all new players when at connection capacity (now evicts idle connections)",
-    "Fix: admin tool read saves from the global dir instead of its own root",
-    "Improved: per-IP room-creation limit 5 -> 20 per minute (avoid punishing shared WiFi)",
-    "Fix: test config pollution causing intermittent relay test failures"
+    "New: global shortcuts (F11 fullscreen / Esc back / Ctrl+S save & quit)",
+    "New: battle shortcuts (Space end turn / 1-9 play card / Tab switch target / H piles)",
+    "New: menu number keys, plus story and event shortcuts",
+    "New: one-time battle tips on first entry",
+    "New: adjustable UI font size (Small / Normal / Large / Extra large)"
   ]
 }

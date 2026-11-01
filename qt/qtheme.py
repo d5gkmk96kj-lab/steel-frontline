@@ -417,11 +417,36 @@ def init_fonts() -> str:
     return FONT_FAMILY
 
 
+#: 全局界面字号缩放（1.0 = 标准）。设置里的「界面字号」会改它。
+#: 只影响 QFont 的像素尺寸；卡面绘制里的硬编码尺寸不受影响。
+UI_SCALE: float = 1.0
+
+
+def set_ui_scale(scale) -> float:
+    """设置全局字号缩放。返回实际生效的值（夹在 0.8~1.5）。"""
+    global UI_SCALE
+    try:
+        v = float(scale)
+    except (TypeError, ValueError):
+        v = 1.0
+    UI_SCALE = max(0.8, min(1.5, v))
+    # 顺手把几个字号常量也按比例更新（界面里大量直接引用它们）
+    global FONT_TINY, FONT_SMALL, FONT_BODY, FONT_NUM, FONT_H2, FONT_H1, FONT_TITLE
+    FONT_TINY = int(round(11 * UI_SCALE))
+    FONT_SMALL = int(round(13 * UI_SCALE))
+    FONT_BODY = int(round(15 * UI_SCALE))
+    FONT_NUM = int(round(16 * UI_SCALE))
+    FONT_H2 = int(round(19 * UI_SCALE))
+    FONT_H1 = int(round(26 * UI_SCALE))
+    FONT_TITLE = int(round(40 * UI_SCALE))
+    return UI_SCALE
+
+
 def font(size: int = 14, bold: bool = False, family: Optional[str] = None,
          italic: bool = False) -> QFont:
     """构造 QFont。优先 :family:，否则用探测到的中文字体。"""
     fnt = QFont(family or FONT_FAMILY)
-    fnt.setPixelSize(max(6, int(size)))
+    fnt.setPixelSize(max(6, int(round(float(size) * UI_SCALE))))
     fnt.setBold(bool(bold))
     fnt.setItalic(bool(italic))
     fnt.setHintingPreference(QFont.HintingPreference.PreferFullHinting)

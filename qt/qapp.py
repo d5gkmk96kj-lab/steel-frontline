@@ -64,6 +64,8 @@ DEFAULT_CFG: Dict = {
     "screen_shake": True,
     "confirm_end_turn": False,
     "battle_step_ms": 400,
+    #: 界面字号缩放（0.85 / 1.0 / 1.15 / 1.3）
+    "ui_scale": 1.0,
 }
 
 
@@ -110,6 +112,12 @@ class GameWindow(QMainWindow):
         # 特效开关跟随配置（默认开）
         try:
             qfx.set_enabled(bool(self.cfg.get("animation", True)))
+            # 界面字号缩放（设置里改完会立刻重建界面）
+            try:
+                from . import qtheme as _T
+                _T.set_ui_scale(float(self.cfg.get("ui_scale", 1.0)))
+            except Exception:
+                pass
         except Exception:
             pass
         self._pending: Dict = {}      # move_to 返回的遭遇描述
@@ -419,16 +427,154 @@ class GameWindow(QMainWindow):
         con.raise_()
 
     def keyPressEvent(self, ev):  # noqa: N802
-        """Esc 关闭控制台；F1 切换。"""
+        """全局快捷键。
+
+        * Esc  —— 关控制台 / 返回上一级 / 关弹窗
+        * F1   —— 控制台
+        * F11  —— 全屏切换
+        * Ctrl+S —— 保存并回主菜单
+
+        战斗与剧情界面会先拿到按键（见各自的 keyPressEvent），
+        所以这里的 Esc 只处理"普通界面返回"。
+        """
+        key = ev.key()
+        mods = ev.modifiers()
         con = getattr(self, "console", None)
+        # 控制台开着时，Esc/F1 只关控制台
         if con is not None and con.isVisible():
-            if ev.key() in (Qt.Key.Key_Escape, Qt.Key.Key_F1):
+            if key in (Qt.Key.Key_Escape, Qt.Key.Key_F1):
                 con.hide_console()
                 return
-        if ev.key() == Qt.Key.Key_F1:
+        if key == Qt.Key.Key_F1:
             self.toggle_console()
             return
+        if key == Qt.Key.Key_F11:
+            self.toggle_fullscreen()
+            return
+        if key == Qt.Key.Key_S and (mods & Qt.KeyboardModifier.ControlModifier):
+            self._quick_save()
+            return
+        if key == Qt.Key.Key_Escape:
+            if self._escape_current():
+                return
         super().keyPressEvent(ev)
+
+    # ---- 快捷键动作 ---------------------------------------------------
+    def toggle_fullscreen(self) -> None:
+        """F11：全屏 / 窗口切换。"""
+        try:
+            if self.isFullScreen():
+                self.showNormal()
+                self.cfg["fullscreen"] = False
+            else:
+                self.showFullScreen()
+                self.cfg["fullscreen"] = True
+            self._save_cfg()
+        except Exception as exc:
+            print(f"[qt.app] fullscreen failed: {exc!r}", flush=True)
+
+    def _quick_save(self) -> None:
+        """Ctrl+S：保存当前战役并回主菜单。"""
+        try:
+            if self.run is not None:
+                run_mod.save_run(self.run)
+                self._toast("已保存")
+        except Exception:
+            pass
+        try:
+            self._cleanup_net()
+        except Exception:
+            pass
+        self.show_screen("menu")
+
+    def _escape_current(self) -> bool:
+        """Esc 的当前界面语义。返回 True 表示已处理。"""
+        cur = self.stack.currentWidget()
+        if cur is None:
+            return False
+        cls = cur.__class__.__name__
+
+        # 战斗：先问一句，避免误退出
+        if cls == "BattleScreen":
+            self._confirm_leave_battle()
+            return True
+
+        # 剧情：跳过已显示的行 / 没得跳就返回
+        if cls == "StoryScreen":
+            try:
+                cur.skip_or_finish()
+            except Exception:
+                pass
+            return True
+
+        # 选角色：返回主菜单
+        if cls == "CommanderScreen":
+            try:
+                cur.closed.emit()
+            except Exception:
+                pass
+            return True
+
+        # 大厅：返回主菜单
+        if cls == "LobbyScreen":
+            try:
+                self._cleanup_net()
+            except Exception:
+                pass
+            self.show_screen("menu")
+            return True
+
+        # 只读界面 / 卡组查看：返回上一级
+        if cls in ("CodexScreen", "AchievementScreen", "StatsScreen",
+                   "SaveScreen", "SetupScreen", "ProfileScreen",
+                   "SettingsScreen", "DeckViewScreen"):
+            self._back_to()
+            return True
+
+        # 地图：可以存档退出到主菜单
+        if cls == "MapScreen":
+            self._quick_save()
+            return True
+
+        # 结算界面：回主菜单
+        if cls == "GameOverScreen":
+            self.show_screen("menu")
+            return True
+        return False
+
+    def _confirm_leave_battle(self) -> None:
+        """战斗中按 Esc：确认是否放弃这一局。"""
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            btn = QMessageBox.question(
+                self, "离开战斗",
+                "确定要放弃这一局吗？\n（放弃后这局战役会算作失败）",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No)
+            if btn != QMessageBox.StandardButton.Yes:
+                return
+            self.on_battle_finished("lost")
+        except Exception:
+            pass
+
+    def _toast(self, text: str) -> None:
+        """右下角一条短暂的提示（不阻塞操作）。"""
+        try:
+            from PyQt6.QtWidgets import QLabel
+            lab = QLabel(str(text), self)
+            lab.setStyleSheet(
+                "background:rgba(20,20,24,220);color:#E8D9A0;"
+                "border:1px solid #8A6F1A;border-radius:8px;"
+                "padding:8px 16px;font-size:15px;")
+            lab.adjustSize()
+            lab.move(self.width() - lab.width() - 28,
+                     self.height() - lab.height() - 28)
+            lab.show()
+            lab.raise_()
+            from PyQt6.QtCore import QTimer as _QT
+            _QT.singleShot(1600, lab.deleteLater)
+        except Exception:
+            pass
 
     def resizeEvent(self, ev):  # noqa: N802
         super().resizeEvent(ev)
@@ -1213,6 +1359,14 @@ class GameWindow(QMainWindow):
             pass
         bs.start(self.run, self.battle)
         self.show_screen("battle")
+        # 第一次进战斗：弹一次操作说明（之后不再打扰）
+        try:
+            if not getattr(self.meta, "seen_battle_tips", False):
+                bs.show_tips_once()
+                self.meta.seen_battle_tips = True
+                self.meta.save()
+        except Exception:
+            pass
 
     def on_battle_finished(self, result: str) -> None:
         """战斗结束：结算金币/掉落，然后进奖励或结算界面。"""
