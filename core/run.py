@@ -32,6 +32,20 @@ SAVE_PATH = os.path.join(DATA_DIR, "save.json")
 META_PATH = os.path.join(DATA_DIR, "meta.json")
 
 ACTS = (1, 2, 3)
+
+# --------------------------------------------------------------------------
+# 血量经济（平衡性核心数值）
+#
+# 背景：曾经「一局掉血 ~140、休息只回 ~40、血量上限 75」——
+# 数学上根本走不出第一幕（实测 100 局通关率 0~3%）。
+# 这三个数值一起把经济拉回可玩区间。
+# --------------------------------------------------------------------------
+#: 每场胜利后恢复的耐久（"打扫战场、包扎伤口"）
+POST_BATTLE_HEAL = 6
+#: 打完要塞后的额外回复比例（大仗之后喘口气）
+POST_BOSS_HEAL_RATIO = 0.35
+#: 休息点默认回血比例
+REST_HEAL_RATIO = 0.4
 MAP_ROWS = 15
 NODE_KINDS = ("battle", "elite", "event", "shop", "rest", "treasure", "boss")
 
@@ -238,7 +252,7 @@ class RunState:
         self.floor = 0
         self.gold = 99
         self.hp = 75
-        self.max_hp = 75
+        self.max_hp = 85
         self.deck: List[C.CardInstance] = []
         self.relics: List[str] = []
         self.potions: List[str] = []
@@ -278,8 +292,10 @@ class RunState:
         self.act = 1
         self.floor = 0
         self.gold = max(0, int(99 - 8 * max(0, self.ascension - 10)))
-        self.max_hp = 75
-        self.hp = 75
+        #: 基础血量上限（平衡性核心数值：曾 75，实测走不出第一幕，调到 85）
+        BASE_MAX_HP = 85
+        self.max_hp = BASE_MAX_HP
+        self.hp = BASE_MAX_HP          # 开局满血（不能写死 75，否则一上来就残）
         self.deck = [C.make_card(cid) for cid in C.STARTER_DECK]
         for _ in range(int(par.get("start_curse", 0))):
             curses = C.curse_cards()
@@ -548,7 +564,7 @@ class RunState:
     # -- 资源 -------------------------------------------------------------
     def rest_heal_amount(self) -> int:
         par = ascension_params(self.ascension)
-        return max(1, int(self.max_hp * float(par.get("rest_heal", 0.3))))
+        return max(1, int(self.max_hp * float(par.get("rest_heal", REST_HEAL_RATIO))))
 
     def heal(self, n: int) -> None:
         self.hp = min(self.max_hp, self.hp + max(0, int(n)))
@@ -671,11 +687,23 @@ class RunState:
                 st["kills"] = st.get("kills", 0) + 1
         if result == "won":
             self.score += 10 + self.floor * 2
-            # 指挥官：战后回复
+            # 战后基础回复：整幕光靠休息点根本回不上来。
+            # 实测一局掉血 ~140、休息只回 ~40、上限 75 —— 数学上必死。
+            try:
+                self.heal(int(POST_BATTLE_HEAL))
+            except Exception:
+                pass
+            # 指挥官：战后额外回复
             try:
                 _heal = int(self.cmd_mods().heal)
                 if _heal > 0:
                     self.heal(_heal)
+            except Exception:
+                pass
+            # 打完要塞：额外回复一大截，否则下一幕一上来就残血
+            try:
+                if self.is_boss_node():
+                    self.heal(int(self.max_hp * POST_BOSS_HEAL_RATIO))
             except Exception:
                 pass
         else:
@@ -753,7 +781,7 @@ class RunState:
         r.floor = int(d.get("floor", 0))
         r.gold = int(d.get("gold", 0))
         r.hp = int(d.get("hp", 75))
-        r.max_hp = int(d.get("max_hp", 75))
+        r.max_hp = int(d.get("max_hp", 85))
         r.deck = [C.CardInstance.from_dict(x) for x in d.get("deck", [])]
         r.relics = list(d.get("relics", []))
         r.potions = list(d.get("potions", []))

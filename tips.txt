@@ -6,7 +6,7 @@
 
 
 # ========== 通用（主菜单/加载/胜利/失败 都可能显示）==========
-蒋介石游戏反动派AI！ | Chiang Kai-shek's reactionary AI game!
+孙中山游戏反动派AI！ | Sun Yat-sen's reactionary AI game!
 屎山代码！ | Codebase? More like a landfill.
 英文翻译堪比土豆 | The English translation is potato-grade.
 AI：lets me fixit！ | AI: let me fix it!
@@ -38,5 +38,5 @@ kards老玩家了 | KARDS veteran, I see.
 # ========== 只在战败时显示 ==========
 [失败]
 LOL😂 | LOL 😂
-蒋介石都比你强哈哈哈 | Even Chiang Kai-shek beats you, hahaha
+孙中山都比你强哈哈哈 | Even Sun Yat-sen beats you, hahaha
 

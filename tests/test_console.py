@@ -174,7 +174,10 @@ class TestConsoleTk(unittest.TestCase):
     # -- 兑换码 -------------------------------------------------------- #
     def test_redeem_code_via_console(self):
         self._run("manpower")
-        self.assertEqual(self.app.run.max_hp, 75 + 50)
+        # 基础上限是平衡性可调值，不要写死（曾因 75 -> 85 这里误报）
+        from core import run as _R
+        base = _R.RunState().max_hp
+        self.assertEqual(self.app.run.max_hp, base + 50)
 
     def test_redeem_is_flexible(self):
         self._run("Research All")

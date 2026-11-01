@@ -688,13 +688,13 @@ ENEMY_LIST: List[EnemyDef] = [
         desc="精锐：钢筋混凝土浇筑的巨型工事，越打越硬。"),
 
     # ---- ACT 1 BOSS ----
-    EnemyDef("abyss_watcher", "要塞·观测所", 96, 106, "boss", 1, (
+    EnemyDef("abyss_watcher", "要塞·观测所", 76, 84, "boss", 1, (
         MoveDef("gaze", "战场标定", INTENT_DEBUFF, effect=eff_abyss_mark,
                 text="湮灭印记：回合结束按层数灼伤你"),
-        MoveDef("crush", "重炮碾压", INTENT_ATTACK, damage=14, text="碾压而下"),
+        MoveDef("crush", "重炮碾压", INTENT_ATTACK, damage=11, text="碾压而下"),
         MoveDef("mark_of_abyss", "标定印记", INTENT_ATTACK_DEBUFF, damage=8,
                 effect=eff_abyss_mark3, text="刻印加深，并施加易伤"),
-        MoveDef("abyss_rend", "三段覆盖射击", INTENT_ATTACK, damage=9, hits=3,
+        MoveDef("abyss_rend", "三段覆盖射击", INTENT_ATTACK, damage=7, hits=3,
                 text="狂暴阶段：三段撕裂"),
     ), ai=ai_abyss_watcher, art="abyss_abyss_watcher",
         desc="【BOSS·多阶段】高地上的观测所，用标定射击把整片区域变成死亡区。耐久过半后转为三段覆盖射击，并持续标定你的位置。"
@@ -819,16 +819,16 @@ ENEMY_LIST: List[EnemyDef] = [
         desc="精锐：持续压制并呼叫支援单位，越拖越难打。"),
 
     # ---- ACT 2 BOSS ----
-    EnemyDef("leviathan_rex", "要塞·装甲军团长", 168, 182, "boss", 2, (
+    EnemyDef("leviathan_rex", "要塞·装甲军团长", 96, 106, "boss", 2, (
         MoveDef("summon_shoal", "呼叫装甲集群", INTENT_BUFF, effect=eff_summon_two,
                 text="召出两个回声体助战"),
-        MoveDef("crushing_pressure", "深压碾碎", INTENT_ATTACK, damage=18, text="水压碾碎"),
+        MoveDef("crushing_pressure", "深压碾碎", INTENT_ATTACK, damage=10, text="水压碾碎"),
         MoveDef("roar", "军团长咆哮", INTENT_BUFF, effect=eff_strength_up3, text="咆哮，力量 +3"),
-        MoveDef("devour", "抵近射击", INTENT_ATTACK_DEFEND, damage=12, block=14,
+        MoveDef("devour", "抵近射击", INTENT_ATTACK_DEFEND, damage=9, block=12,
                 effect=eff_self_heal_missing, text="撕咬并回复"),
         MoveDef("frenzy_roar", "狂暴咆哮", INTENT_BUFF, effect=eff_double_strength,
                 text="力量翻倍（狂暴阶段）"),
-        MoveDef("tidal_wrath", "终末轰击", INTENT_ATTACK, damage=11, hits=3,
+        MoveDef("tidal_wrath", "终末轰击", INTENT_ATTACK, damage=7, hits=3,
                 text="终末阶段：三段潮怒"),
     ), ai=ai_leviathan_rex, art="abyss_leviathan_rex",
         desc="【BOSS·三阶段】耐久 >60% 时呼叫装甲集群并以重炮压制；≤60% 进入狂暴，火力翻倍；≤30% 转终末阶段，改为三段覆盖轰击。"
@@ -954,14 +954,14 @@ ENEMY_LIST: List[EnemyDef] = [
     ), art="abyss_elite_coral_tyrant", desc="精锐：极厚掩体 + 征召支援，需要穿甲或燃烧。"),
 
     # ---- ACT 3 BOSS ----
-    EnemyDef("hollow_whale", "要塞·最高统帅部", 210, 230, "boss", 3, (
+    EnemyDef("hollow_whale", "要塞·最高统帅部", 165, 180, "boss", 3, (
         MoveDef("void_veil", "升起烟幕", INTENT_DEFEND, block=24,
                 effect=eff_intangible, text="获得无形，几乎免疫伤害"),
-        MoveDef("soul_drain", "灵魂汲取", INTENT_ATTACK, damage=20,
+        MoveDef("soul_drain", "灵魂汲取", INTENT_ATTACK, damage=15,
                 effect=eff_self_heal_missing, text="汲取生命并回复"),
         MoveDef("mark_of_abyss", "标定印记", INTENT_DEBUFF, effect=eff_abyss_mark3,
                 text="湮灭印记 +3"),
-        MoveDef("echo_of_oblivion", "湮灭回响", INTENT_ATTACK_DEBUFF, damage=9, hits=2,
+        MoveDef("echo_of_oblivion", "湮灭回响", INTENT_ATTACK_DEBUFF, damage=7, hits=2,
                 effect=eff_memory_loss, text="记忆流失 + 双段"),
     ), ai=ai_hollow_whale, art="abyss_hollow_whale",
         desc="【BOSS·独特机制】每 3 回合升起「烟幕」获得无形，几乎免疫伤害；用「标定印记」在回合结束时持续灼烧我军；耐久过半后改为灵魂汲取 + 湮灭回响。"

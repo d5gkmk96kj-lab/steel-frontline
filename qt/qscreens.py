@@ -62,6 +62,10 @@ class TitleBar(QWidget):
         self.title = title
         self.subtitle = subtitle
         self.color = color or T.Q_GOLD
+        # 高度必须在这里就定死：之前只在 set_subtitle() 里设，
+        # 于是**没副标题的 TitleBar 高度是 0，标题整个看不见**
+        # （事件界面、图鉴等界面都中招）。
+        self.setFixedHeight(64)
 
     def set_subtitle(self, text: str) -> None:
         """换副标题并重绘（联机大厅切换模式时用）。"""
@@ -1277,13 +1281,16 @@ class EventScreen(QWidget):
         self.lbl_text.setStyleSheet(
             f"color:{T.TEXT}; font-size:{T.FONT_H2-3}px; background:transparent;"
             f"")
-        self.lbl_text.setMinimumHeight(150)
+        # 事件文案都很短（29~39 字），之前最小高度 150 会留一大片空白
+        self.lbl_text.setMinimumHeight(56)
         self.lbl_text.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         bv.addWidget(self.lbl_text)
 
         # 事件插画（程序化）
+        # 文字在上、插画垂直居中：上下各一个 stretch 让留白均分
+        bv.addStretch(1)
         self.art = EventArt(body)
-        bv.addWidget(self.art)
+        bv.addWidget(self.art, 0)
         bv.addStretch(1)
         root.addWidget(body, 1)
 
@@ -1400,8 +1407,12 @@ class EventArt(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(150)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        # 之前写死 150px 高，结果插画是中间一条细带、下方一大片空白。
+        # 改成可伸缩 + 最小高度，让它按剩余空间撑开。
+        # 插画按固定高度更耐看：撑满整个面板会让中间的坦克显得很小、很空。
+        self.setFixedHeight(260)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding,
+                           QSizePolicy.Policy.Fixed)
         self._key = ""
         self._phase = 0.0
         self._t = QTimer(self)

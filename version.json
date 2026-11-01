@@ -1,24 +1,26 @@
 {
-  "version": "1.1.1",
-  "label": "1.1.1 正式版",
-  "label_en": "1.1.1",
+  "version": "1.2.0",
+  "label": "1.2.0 正式版",
+  "label_en": "1.2.0",
   "released": "2026-11-01",
   "url": "https://github.com/d5gkmk96kj-lab/steel-frontline/releases",
   "mandatory": false,
   "notes": [
-    "修复：每日挑战从来不记成绩（run.daily 从没被设置）",
-    "修复：8 个成就永远解锁不了（死内容，现已全部实现）",
-    "修复：战斗结束悬停大图不消失",
-    "修复：读档继续战役后解锁过滤失效",
-    "修复：音效初始化时机不对可能永久静音",
-    "改进：新存档送一批稀有卡，前期奖励不再清一色普通卡"
+    "平衡：通关率 2% → 29%（要塞削弱 / 战后回复 / 上限 85）",
+    "修复：开局就是残血状态（75/85）",
+    "修复：10 个界面的标题完全不显示（TitleBar 高度为 0）",
+    "修复：图鉴剪影像素竟泄露卡牌真实效果",
+    "修复：事件界面排版（插画细条 + 大片空白）",
+    "修复：提示语里还有蒋介石",
+    "新增：联机完整对局自动化测试"
   ],
   "notes_en": [
-    "Fix: daily challenge never recorded any score (the daily flag was never set)",
-    "Fix: 8 achievements could never be earned (dead content, now all implemented)",
-    "Fix: the card hover preview stayed on screen after a battle ended",
-    "Fix: unlock filtering broke after loading a saved run",
-    "Fix: sound effects could end up permanently muted due to init timing",
-    "Improved: new saves start with a batch of rarer cards so early rewards aren't all common"
+    "Balance: completion rate 2% -> 29% (weaker fortresses, post-battle healing, 85 base HP)",
+    "Fix: you started every run already wounded (75/85 HP)",
+    "Fix: titles were completely invisible on 10 screens (TitleBar had zero height)",
+    "Fix: codex silhouettes leaked the real card effects",
+    "Fix: event screen layout (thin art strip + huge empty space)",
+    "Fix: a tip line still mentioned Chiang Kai-shek",
+    "New: automated full-match multiplayer test"
   ]
 }

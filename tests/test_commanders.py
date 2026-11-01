@@ -114,7 +114,8 @@ class TestEffects(unittest.TestCase):
         b = _battle("")
         self.assertEqual(b.player.energy, 3)
         self.assertEqual(len(b.player.hand), 5)
-        self.assertEqual(b.player.max_hp, 75)
+        from core import run as _R
+        self.assertEqual(b.player.max_hp, _R.RunState().max_hp)
 
     def test_guderian_supply_and_hand(self):
         b = _battle("guderian")
@@ -123,14 +124,17 @@ class TestEffects(unittest.TestCase):
 
     def test_patton_damage_but_low_hp(self):
         b = _battle("patton")
-        self.assertLess(b.player.max_hp, 75, "巴顿应该减耐久")
+        from core import run as _R
+        self.assertLess(b.player.max_hp, _R.RunState().max_hp, "巴顿应该减耐久")
         m = CM.mods_of("patton")
         self.assertGreater(m.damage, 1.0)
 
     def test_zhukov_more_hp(self):
         b = _battle("zhukov")
-        self.assertGreater(b.player.max_hp, 75, "朱可夫应加耐久")
-        self.assertEqual(b.player.max_hp, 90)
+        from core import run as _R
+        base = _R.RunState().max_hp
+        self.assertGreater(b.player.max_hp, base, "朱可夫应加耐久")
+        self.assertEqual(b.player.max_hp, base + int(CM.get("zhukov").mods.hp))
 
     def test_turing_extra_draw(self):
         b = _battle("turing")
@@ -199,7 +203,8 @@ class TestNoStatStacking(unittest.TestCase):
             with self.subTest(cmd=cid):
                 r = self._run(cid)
                 c = CM.get(cid)
-                want = 75 + int(c.mods.hp)
+                from core import run as _R
+                want = _R.RunState().max_hp + int(c.mods.hp)
                 self.assertEqual(r.max_hp, want,
                                  "%s 耐久上限应该是 %d" % (cid, want))
                 self.assertEqual(r.hp, want)
@@ -264,8 +269,11 @@ class TestNoStatStacking(unittest.TestCase):
                     r, {"kind": "normal", "enemies": ["infantry_squad"]})
                 b.player.hp = 40
                 r.finish_battle("won", b)
-                self.assertEqual(int(r.hp), 40 + int(c.mods.heal),
-                                 "%s 战后应该回复 %d" % (cid, c.mods.heal))
+                from core import run as _R
+                want = 40 + int(_R.POST_BATTLE_HEAL) + int(c.mods.heal)
+                self.assertEqual(int(r.hp), want,
+                                 "%s 战后应该回复 基础%d+指挥官%d"
+                                 % (cid, _R.POST_BATTLE_HEAL, c.mods.heal))
 
     def test_heal_never_exceeds_max(self):
         r = self._run("zhukov")

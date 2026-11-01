@@ -1467,6 +1467,17 @@ def _card_text(c: dict) -> str:
     卡面上直接印着字面的 ``{damage}``（真 bug）。
     """
     raw = str(c.get("text") or "")
+    # 图鉴里未见过的卡会传入占位文案（「尚未在战场上缴获过…」）。
+    # 这种**不能再按 def_id 重新解析**，否则会把真实效果印出来，
+    # 剪影就失去意义了（真 bug：图鉴里 ??? 的卡却能看到全部效果）。
+    if raw and "{" not in raw:
+        try:
+            from core.cards import CARD_DB as _DB
+            defn0 = _DB.get(str(c.get("def_id") or c.get("id") or ""))
+            if defn0 is not None and raw != getattr(defn0, "text", raw):
+                return T.tr(raw)
+        except Exception:
+            pass
     # 先填数值
     try:
         from core.cards import resolve_text as _resolve
